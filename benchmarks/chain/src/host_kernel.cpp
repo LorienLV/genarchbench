@@ -5,9 +5,9 @@
 #include "omp.h"
 #include "host_kernel.h"
 #include "common.h"
-#include "minimap.h"
-#include "mmpriv.h"
-#include "kalloc.h"
+// #include "minimap.h"
+// #include "mmpriv.h"
+// #include "kalloc.h"
 
 static const signed char LogTable256[256] = {
 #define LT(n) n, n, n, n, n, n, n, n, n, n, n, n, n, n, n, n

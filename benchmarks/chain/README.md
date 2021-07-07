@@ -22,12 +22,25 @@ If you find `chain` useful, please cite:
 ### GCC
 
 ```
-TODO
+module load gcc/10.2.0
+make -f Makefile.gcc
 ```
 
 ### FCC
 
 ```
-TODO
+module load fuji
+make -f Makefile.fcc
 ```
 
+## Execute
+
+Download the inputs [here](https://genomicsbench.eecs.umich.edu/input-datasets.tar.gz).
+
+### Execute small input
+
+`./chain -i inputs/small/in-1k.txt -o out-small.txt`
+
+### Execute large input
+
+`./chain -i inputs/large/c_elegans_40x.10k.txt -o out-large.txt`

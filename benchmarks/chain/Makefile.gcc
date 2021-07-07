@@ -1,4 +1,3 @@
-#CXX = icpc
 CC = gcc
 CXX = g++
 
@@ -51,9 +50,9 @@ ARCH_FLAGS=	-march=native
 #COMPILE_FLAGS = -std=c++11 -Wall -Wextra -g -O3 -fopenmp -xAVX2 -axAVX2
 #VTUNE_HOME= /opt/intel/vtune_profiler
 COMPILE_FLAGS = -std=c++11 -Wall -Wextra -g -O3 -fopenmp $(ARCH_FLAGS)
-INCLUDES = -I$(BUILD_PATH)/minimap2
+# INCLUDES = -I$(BUILD_PATH)/minimap2
 # Space-separated pkg-config libraries used by this project
-LIBS = -L$(BUILD_PATH)/minimap2 -lminimap2 -ldl
+# LIBS = -L$(BUILD_PATH)/minimap2 -lminimap2 -ldl
 
 # ifneq ($(VTUNE_HOME),)
 # COMPILE_FLAGS += -DVTUNE_ANALYSIS=1
@@ -66,8 +65,7 @@ default_target: release
 
 .PHONY: release
 release: export CXXFLAGS := $(CXXFLAGS) $(COMPILE_FLAGS)
-release: dirs
-	@$(MAKE) all
+release: dirs all
 
 .PHONY: dirs
 dirs:
@@ -91,7 +89,7 @@ all: $(BIN_PATH)/$(BIN_NAME)
 	@ln -s $(BIN_PATH)/$(BIN_NAME) $(BIN_NAME)
 
 # Creation of the executable
-$(BIN_PATH)/$(BIN_NAME): $(BUILD_PATH)/libminimap2.a $(OBJECTS)
+$(BIN_PATH)/$(BIN_NAME): $(OBJECTS)
 	@echo "Linking: $@"
 	#$(CXX) -O3 -fopenmp -xAVX2 -axAVX2 $(OBJECTS) -o $@
 	$(CXX) -O3 -fopenmp $(ARCH_FLAGS) $(OBJECTS) $(INCLUDES) $(LIBS) -o $@
@@ -105,11 +103,3 @@ $(BIN_PATH)/$(BIN_NAME): $(BUILD_PATH)/libminimap2.a $(OBJECTS)
 $(BUILD_PATH)/%.o: $(SRC_PATH)/%.$(SRC_EXT)
 	@echo "Compiling: $< -> $@"
 	$(CXX) $(CXXFLAGS) $(INCLUDES) $(LIBS) -MP -MMD -c $< -o $@
-
-# Lib rules
-$(BUILD_PATH)/libminimap2.a:
-	cp minimap2.tar.bz2 $(BUILD_PATH)
-	tar -xf $(BUILD_PATH)/minimap2.tar.bz2 -C $(BUILD_PATH)
-	rm -f $(BUILD_PATH)/minimap2.tar.bz2
-	cd $(BUILD_PATH)/minimap2 && \
-	make
