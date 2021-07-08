@@ -19,28 +19,26 @@ If you find `chain` useful, please cite:
 
 ## Compile in AFX64:
 
-### GCC
-
 ```
-module load gcc/10.2.0
-make -f Makefile.gcc
+pjsub --interact
+bash scripts/compile.sh -c "compiler (gcc or fcc)"
 ```
-
-### FCC
-
+OR
 ```
-module load fuji
-make -f Makefile.fcc
+pjsub scripts/compile.sh -c "compiler (gcc or fcc)"
 ```
 
 ## Execute
 
 Download the inputs [here](https://genomicsbench.eecs.umich.edu/input-datasets.tar.gz).
 
-### Execute small input
+```
+pjsub --interact
+bash scripts/run.sh -i "inputs folder path" -s "size of the input (small or large)" -c "compiler (gcc or fcc)"
+```
+OR
+```
+pjsub scripts/run.sh -i "inputs folder path" -s "size of the input (small or large)" -c "compiler (gcc or fcc)"
+```
 
-`./chain -i inputs/small/in-1k.txt -o out-small.txt`
-
-### Execute large input
-
-`./chain -i inputs/large/c_elegans_40x.10k.txt -o out-large.txt`
+You can set the number of threads of the execution modifying the run.sh script.
