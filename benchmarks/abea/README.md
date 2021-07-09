@@ -19,19 +19,39 @@ If you find `abea` useful, please cite:
 
 ## Compile in AFX64:
 
-### GCC
+1. Select the compiler to use by modifying the `compiler` variable in `scripts/compile.sh`. 
+2. Execute the script:
+    ```
+    pjsub --interact
+    bash scripts/compile.sh
+    ```
+    OR
+    ```
+    pjsub scripts/compile.sh
+    ```
 
-```
-module load gcc/10.2.0
-make -f Makefile.gcc
-```
+## Execute
 
-### FCC
+1. Download the inputs [here](https://genomicsbench.eecs.umich.edu/input-datasets.tar.gz).
 
-```
-module load fuji
-# To prevent this error: Catastrophic error: could not set locale "" to allow processing of multibyte characters
-export LANG=en_US.utf8
-export LC_ALL=en_US.utf8
-make -f Makefile.fcc
-```
+2. Before executing you have to generate the index files for the input .fastq files. Select the compiler to use modifying the `compiler` variable in `scripts/config.sh`. Then execute the script:
+    ```
+    pjsub --interact
+    bash scripts/config.sh
+    ```
+    OR
+    ```
+    pjsub scripts/config.sh
+    ```
+
+2. Select the inputs folder, compiler to use, and input to use by modifying the required variables in `scripts/run.sh`. 
+
+3. Execute the script:
+    ```
+    pjsub --interact
+    bash scripts/run.sh
+    ```
+    OR
+    ```
+    pjsub scripts/run.sh
+    ```
