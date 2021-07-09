@@ -7,37 +7,12 @@
 
 export OMP_NUM_THREADS=1
 
-compiler="gcc"
+compiler="gcc" # The compiler to use, "gcc" or "fcc".
 
-usage() {
-    echo "usage: ./$0 options"
-    echo "    -c, --compiler"
-    echo "        The compiler to use, GCC or FCC [default=gcc]"
-    echo "    -h, --help"
-    echo "        Show usage"
-}
-
-while [ "$1" != "" ]; do
-    case $1 in
-    -c | --compiler)
-        shift
-        compiler=$1
-        if [[ $compiler != "gcc" && $compiler != "fcc" ]]; then
-            echo "ERROR: The compiler must be gcc or fcc"
-            exit 1
-        fi
-        ;;
-    -h | --help)
-        usage
-        exit 0
-        ;;
-    *)
-        usage
-        exit 1
-        ;;
-    esac
-    shift
-done
+if [[ $compiler != "gcc" && $compiler != "fcc" ]]; then
+    echo "ERROR: The compiler must be gcc or fcc"
+    exit 1
+fi
 
 if [[ $compiler == "gcc" ]]; then
     module load gcc/10.2.0

@@ -19,26 +19,30 @@ If you find `chain` useful, please cite:
 
 ## Compile in AFX64:
 
-```
-pjsub --interact
-bash scripts/compile.sh -c "compiler (gcc or fcc)"
-```
-OR
-```
-pjsub scripts/compile.sh -c "compiler (gcc or fcc)"
-```
+1. Select the compiler to use by modifying the `compiler` variable in `scripts/compile.sh`. 
+2. Execute the script:
+    ```
+    pjsub --interact
+    bash scripts/compile.sh
+    ```
+    OR
+    ```
+    pjsub scripts/compile.sh
+    ```
 
 ## Execute
 
-Download the inputs [here](https://genomicsbench.eecs.umich.edu/input-datasets.tar.gz).
+1. Download the inputs [here](https://genomicsbench.eecs.umich.edu/input-datasets.tar.gz).
 
-```
-pjsub --interact
-bash scripts/run.sh -i "inputs folder path" -s "size of the input (small or large)" -c "compiler (gcc or fcc)"
-```
-OR
-```
-pjsub scripts/run.sh -i "inputs folder path" -s "size of the input (small or large)" -c "compiler (gcc or fcc)"
-```
+2. Select the number of threads, inputs folder, compiler to use, and input to use by modifying the required variables in `scripts/run.sh`. 
 
-You can set the number of threads of the execution modifying the run.sh script.
+3. Execute the script:
+    ```
+    pjsub --interact
+    bash scripts/run.sh
+    ```
+    OR
+    ```
+    pjsub scripts/run.sh
+    ```
+
