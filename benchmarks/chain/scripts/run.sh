@@ -28,12 +28,10 @@ fi
 
 echo "Executing..."
 
-echo "TREADS $OMP_NUM_THREADS"
-
 if [[ $input_size == "small" ]]; then
-    ./chain_"$compiler" -i "$inputs_path"/small/in-1k.txt -o out-small.txt -t $OMP_NUM_THREADS
+    ./chain_"$compiler" -i "$inputs_path"/small/in-1k.txt -o out-small-$compiler-$OMP_NUM_THREADS.txt -t $OMP_NUM_THREADS
 else
-    ./chain_"$compiler" -i "$inputs_path"/large/c_elegans_40x.10k.txt -o out-large.txt -t $OMP_NUM_THREADS
+    ./chain_"$compiler" -i "$inputs_path"/large/c_elegans_40x.10k.txt -o out-large-$compiler-$OMP_NUM_THREADS.txt -t $OMP_NUM_THREADS
 fi
 
 if [ $? -eq 0 ]; then
