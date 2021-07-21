@@ -19,8 +19,7 @@ If you find `abea` useful, please cite:
 
 ## Compile in AFX64:
 
-1. Select the compiler to use by modifying the `compiler` variable in `scripts/compile.sh`. 
-2. Execute the script:
+1. Execute `compile.sh` to compiler with both GCC and FCC:
     ```
     pjsub --interact
     bash scripts/compile.sh
@@ -34,7 +33,7 @@ If you find `abea` useful, please cite:
 
 1. Download the inputs [here](https://genomicsbench.eecs.umich.edu/input-datasets.tar.gz).
 
-2. Before executing you have to generate the index files for the input .fastq files. Select the compiler to use modifying the `compiler` variable in `scripts/config.sh`. Then execute the script:
+2. Before executing you have to generate the index files for the input .fastq files. Set the inputs folder, and the binary to use modifying the `inputs_path` and `compiler` variable in `scripts/config.sh`. Then execute the script:
     ```
     pjsub --interact
     bash scripts/config.sh
@@ -44,11 +43,12 @@ If you find `abea` useful, please cite:
     pjsub scripts/config.sh
     ```
 
-2. Select the inputs folder, compiler to use, and input to use by modifying the required variables in `scripts/run.sh`. 
+2. Set the inputs folder in `scripts/regression_small.sh` and `scripts/regression_large.sh`. 
 
-3. Execute the script:
+3. Execute the scripts:
     ```
     pjsub --interact
+    bash scripts/run.sh
     bash scripts/run.sh
     ```
     OR
