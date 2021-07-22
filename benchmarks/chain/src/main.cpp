@@ -10,7 +10,7 @@
 #include "host_data.h"
 #include "host_kernel.h"
 
-// #define PRINT_OUTPUT 1
+#define PRINT_OUTPUT 0
 
 // #define VTUNE_ANALYSIS 1
 
