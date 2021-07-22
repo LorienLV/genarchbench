@@ -11,7 +11,7 @@ scriptfolder="$(realpath $0)"
 binaries_path="$(dirname "$(dirname "$(realpath $0)")")"
 
 # Clean the stage folder of the jobs after finishing? 1 -> yes, 0 -> no.
-clean=0
+clean=1
 
 # The name of the job.
 job="ABEA-REGRESSION-LARGE"
@@ -71,9 +71,9 @@ after_run() {
     # Can access $scriptfolder
     job_name="$1"
 
-    wall_time="$(tac "$job_name.err" | grep -m 1 "real" | cut -d ' ' -f 2)"
+    wall_time="$(tac "$job_name.err" | grep -m 1 "Data processing time:" | cut -d ' ' -f 5)"
 
-    echo "Wall time: $wall_time s"
+    echo "Data processing time: $wall_time s"
 
     # Check if the output file is identical to the reference
     diff --brief "events.tsv" "$inputs_path/large-reference.tsv" > /dev/null 2>&1
@@ -225,7 +225,7 @@ for command in "${commands[@]}"; do
             echo "$run_out"
 
             nfailed_jobs=$((nfailed_jobs + 1))
-            jobs_status+="F" # Failed
+            jobs_status+=("F") # Failed
         else
             if [[ "$job_scheduler" == "SLURM" ]]; then
                 job_id="$(echo "$run_out" | cut -d ' ' -f4)"
@@ -238,7 +238,7 @@ for command in "${commands[@]}"; do
             echo "[----------]"
             echo ""
 
-            jobs_status+="R" # Ready
+            jobs_status+=("R") # Ready
         fi
 
         jobs_id+=("$job_id")
@@ -294,7 +294,6 @@ for i in "${!jobs_id[@]}"; do
     done
 
     status="$job_state"
-    wall_time="NULL"
     after_run_out=""
 
     if [[ ("$job_scheduler" == "SLURM" && "$slurmstate" == "COMPLETED") || \

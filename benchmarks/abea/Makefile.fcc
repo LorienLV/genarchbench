@@ -41,7 +41,7 @@ LDFLAGS += $(HTS_SYS_LIB) $(HDF5_SYS_LIB)
 CC       = fcc
 CXX      = FCC
 LANG 	 = -x c++
-CFLAGS   += -g -Wall -O2 -std=c++11
+CFLAGS   += -g -Wall -O3 -std=c++11
 LDFLAGS  += $(LIBS) -lpthread -lz -rdynamic
 BUILD_DIR = build_fcc
 

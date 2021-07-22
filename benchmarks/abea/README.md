@@ -19,39 +19,24 @@ If you find `abea` useful, please cite:
 
 ## Compile in AFX64:
 
-1. Execute `compile.sh` to compiler with both GCC and FCC:
-    ```
-    pjsub --interact
-    bash scripts/compile.sh
-    ```
-    OR
-    ```
-    pjsub scripts/compile.sh
-    ```
+To compile ABEA you can use [scripts/compile.sh](scripts/compile.sh). By default the script compiles ABEA with GCC and FCC. To execute the script:
 
-## Execute
+```
+pjsub --interact
+bash scripts/compile.sh
+```
+OR
+```
+pjsub scripts/compile.sh
+```
 
-1. Download the inputs [here](https://genomicsbench.eecs.umich.edu/input-datasets.tar.gz).
+Alternatively, you can load the required modules and use (Makefile.gcc)[Makefile.gcc] to compile with GCC and (Makefile.fcc)[Makefile.fcc] to compile with FCC.
 
-2. Before executing you have to generate the index files for the input .fastq files. Set the inputs folder, and the binary to use modifying the `inputs_path` and `compiler` variable in `scripts/config.sh`. Then execute the script:
-    ```
-    pjsub --interact
-    bash scripts/config.sh
-    ```
-    OR
-    ```
-    pjsub scripts/config.sh
-    ```
+## Run regression tests
 
-2. Set the inputs folder in `scripts/regression_small.sh` and `scripts/regression_large.sh`. 
+There are two regression tests provided: [scripts/regression_small.sh](scripts/regression_small.sh), that executes a small test-case, and [scripts/regression_large.sh](scripts/regression_large.sh), that executes a large test-case. Each test executes the corresponding test-case using the GCC and FCC versions of ABEA. The tests check that the results are correct by comparing the obtained output with the results obtained on an Intel machine. The scripts also print the execution time of each benchmark. To execute the tests:
 
-3. Execute the scripts:
-    ```
-    pjsub --interact
-    bash scripts/run.sh
-    bash scripts/run.sh
-    ```
-    OR
-    ```
-    pjsub scripts/run.sh
-    ```
+```
+bash scripts/regression_small.sh
+bash scripts/regression_large.sh
+```
