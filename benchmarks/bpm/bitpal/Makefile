@@ -1,7 +1,7 @@
 ###############################################################################
 # Definitions
 ###############################################################################
-FOLDER_BUILD=../build
+FOLDER_BUILD=../build_$(CC)
 
 CC=gcc
 CC_FLAGS=-Wall -O3 -march=native -Wno-unused-variable -Wno-unused-but-set-variable -Wno-char-subscripts

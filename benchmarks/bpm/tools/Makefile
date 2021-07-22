@@ -2,9 +2,9 @@
 # Definitions
 ###############################################################################
 FOLDER_ROOT=..
-FOLDER_BUILD=../build
-FOLDER_BIN=../bin
-FOLDER_RESOURCES=../resources
+FOLDER_BUILD=../build_$(CC)
+FOLDER_BIN=../bin_$(CC)
+FOLDER_RESOURCES=../resources_$(CC)
 
 ###############################################################################
 # Version
