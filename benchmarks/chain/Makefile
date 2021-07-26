@@ -3,11 +3,11 @@ CXX = g++
 
 # path #
 SRC_PATH = src
-BUILD_PATH = build_gcc
+BUILD_PATH = build_$(CC)
 BIN_PATH = $(BUILD_PATH)/bin
 
 # executable #
-BIN_NAME = chain_gcc
+BIN_NAME = chain_$(CC)
 
 # extensions #
 SRC_EXT = cpp
@@ -22,29 +22,26 @@ OBJECTS = $(SOURCES:$(SRC_PATH)/%.$(SRC_EXT)=$(BUILD_PATH)/%.o)
 # Set the dependency files that will be used to add header dependencies
 DEPS = $(OBJECTS:.o=.d)
 
-
-ARCH_FLAGS=	-march=native
-
-# ifeq ($(arch),sse41)
-# 	ARCH_FLAGS=-msse4.1
-# else ifeq ($(arch),avx2)
-# 	ifeq ($(CXX), icpc)
-# 		ARCH_FLAGS=-march=core-avx2 #-xCORE-AVX2
-# 	else	
-# 		ARCH_FLAGS=-mavx2
-# 	endif
-# else ifeq ($(arch),avx512)
-# 	ifeq ($(CXX), icpc)
-# 		ARCH_FLAGS=-xCORE-AVX512
-# 	else	
-# 		ARCH_FLAGS=-mavx512bw
-# 	endif
-# else ifeq ($(arch),native)
-# 		ARCH_FLAGS=-march=native
-# else ifneq ($(arch),)
-# 	## To provide a different architecture flag like -march=core-avx2.
-# 		ARCH_FLAGS=$(arch)
-# endif
+ifeq ($(arch),sse41)
+	ARCH_FLAGS=-msse4.1
+else ifeq ($(arch),avx2)
+	ifeq ($(CXX), icpc)
+		ARCH_FLAGS=-march=core-avx2 #-xCORE-AVX2
+	else	
+		ARCH_FLAGS=-mavx2
+	endif
+else ifeq ($(arch),avx512)
+	ifeq ($(CXX), icpc)
+		ARCH_FLAGS=-xCORE-AVX512
+	else	
+		ARCH_FLAGS=-mavx512bw
+	endif
+else ifeq ($(arch),native)
+		ARCH_FLAGS=-march=native
+else ifneq ($(arch),)
+	## To provide a different architecture flag like -march=core-avx2.
+		ARCH_FLAGS=$(arch)
+endif
 
 # flags #
 #COMPILE_FLAGS = -std=c++11 -Wall -Wextra -g -O3 -fopenmp -xAVX2 -axAVX2
