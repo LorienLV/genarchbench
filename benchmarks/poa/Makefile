@@ -87,4 +87,5 @@ all: $(MSA_SPOA_OMP)
 .PHONY: clean
 
 clean:
+	rm msa_spoa_omp_$(CC)
 	rm -rf build_$(CC)
