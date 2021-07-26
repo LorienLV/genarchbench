@@ -17,9 +17,9 @@
 #include <exception>
 #include <getopt.h>
 #include <omp.h>
-#include "spoa/spoa.hpp"
-#include "spoa/graph.hpp"
-#include "spoa/alignment_engine.hpp"
+#include "spoa.hpp"
+#include "graph.hpp"
+#include "alignment_engine.hpp"
 #include <x86intrin.h>
 
 
@@ -230,7 +230,7 @@ int main(int argc, char** argv) {
 #pragma omp parallel num_threads(numThreads)
 {
     int tid = omp_get_thread_num();
-    #pragma omp for schedule(dynamic, 1)
+    #pragma omp for schedule(static)
         for (int i = 0; i < batches.size(); i++) {
             int64_t st1 = __rdtsc();
             // gettimeofday(&t_start, NULL);
