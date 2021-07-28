@@ -1,0 +1,5 @@
+/build_*
+/chain*
+
+# FCC creates dependency files in root folder... 
+/*.d
