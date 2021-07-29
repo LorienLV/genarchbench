@@ -46,7 +46,7 @@ endif
 # flags #
 #COMPILE_FLAGS = -std=c++11 -Wall -Wextra -g -O3 -fopenmp -xAVX2 -axAVX2
 #VTUNE_HOME= /opt/intel/vtune_profiler
-COMPILE_FLAGS = -std=c++11 -Wall -Wextra -g -O3 -fopenmp $(ARCH_FLAGS)
+COMPILE_FLAGS = -std=c++11 -Wall -Wextra -g -O3 -fopenmp $(ARCH_FLAGS) -fopt-info-vec-all
 # INCLUDES = -I$(BUILD_PATH)/minimap2
 # Space-separated pkg-config libraries used by this project
 # LIBS = -L$(BUILD_PATH)/minimap2 -lminimap2 -ldl

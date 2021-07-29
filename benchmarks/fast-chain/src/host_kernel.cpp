@@ -54,108 +54,79 @@ static void chain_dp(call_t *a, return_t *ret) {
     ret->targets.resize(n);
     ret->peak_scores.resize(n);
 
-    int64_t st = 0;
-
     // TODO: GET THIS OUT OF HERE.
     // Array of structs to structs of arrays.
     std::vector<uint64_t> anchors_x; // ERROR: THIS CAN NOT BE uint32, what can we do?
     anchors_x.reserve(n);
-    std::vector<uint32_t> anchors_y;
+    std::vector<uint64_t> anchors_y;
     anchors_y.reserve(n);
     std::vector<int32_t> anchors_q_span;
     anchors_q_span.reserve(n);
-    std::vector<int32_t> anchors_sid;
-    anchors_sid.reserve(n);
+    // std::vector<int32_t> anchors_sid;
+    // anchors_sid.reserve(n);
 
     for (int64_t i = 0; i < n; ++i) {
         anchors_x.push_back(a->anchors[i].x);
         anchors_y.push_back(a->anchors[i].y);
         anchors_q_span.push_back(a->anchors[i].y >> 32 & 0xff);
-        anchors_sid.push_back((a->anchors[i].y & MM_SEED_SEG_MASK) >> MM_SEED_SEG_SHIFT);
+        // anchors_sid.push_back((a->anchors[i].y & MM_SEED_SEG_MASK) >> MM_SEED_SEG_SHIFT);
     }
+
+    int64_t st = 0;
 
     // fill the score and backtrack arrays
     for (int64_t i = 0; i < n; ++i) {
         const auto ri = anchors_x[i];
+        const auto qi = anchors_y[i];
+        const auto q_spani = anchors_q_span[i];
 
-        const auto qi = (int32_t)anchors_y[i];
-        const auto q_span = anchors_q_span[i];
-
-        const auto sidi = anchors_sid[i];
-
-        int64_t max_j = -1;
-        int64_t max_f = q_span;
+        int32_t max_j = -1;
+        int32_t max_f = q_spani;
         int32_t n_skip = 0;
-        int32_t min_d;
 
         while (st < i && ri > anchors_x[st] + max_dist_x) {
-            ++st;
+            ++st; //predecessor's position is too far
         }
         if (i - st > max_iter) {
-            st = i - max_iter;
+            st = i - max_iter; //predecessor's index is too far
         }
         
+        #pragma omp simd
         for (int64_t j = i - 1; j >= st; --j) {
-            int32_t dr = ri - anchors_x[j];
-            int32_t dq = qi - (int32_t)anchors_y[j];
-            int32_t sidj = anchors_sid[i];
+            const auto rj = anchors_x[j];
+            const auto qj = anchors_y[j];
 
-            if ((sidi == sidj && dr == 0) || dq <= 0) {
-                continue;    // don't skip if an anchor is used by multiple segments; see below
-            }
-            if ((sidi == sidj && dq > max_dist_y) || dq > max_dist_x) {
+            int32_t dr = ri - rj;
+            int32_t dq = qi - qj;
+
+            int32_t dd = std::abs(dr - dq);
+
+            if ((dr == 0 || dq <= 0) ||
+               (dq > max_dist_y || dq > max_dist_x) ||
+               (dd > bw)) {
                 continue;
             }
-            int32_t dd = dr > dq ? dr - dq : dq - dr;
-            if (sidi == sidj && dd > bw) {
-                continue;
-            }
-            if (n_segs > 1 && !is_cdna && sidi == sidj && dr > max_dist_y) {
-                continue;
-            }
-            min_d = dq < dr ? dq : dr;
-            int32_t sc = min_d > q_span ? q_span : dq < dr ? dq : dr;
-            int32_t log_dd = dd ? ilog2_32(dd) : 0;
-            int32_t gap_cost = 0;
-            if (is_cdna || sidi != sidj) {
-                int c_log, c_lin;
-                c_lin = (int)(dd * .01 * avg_qspan);
-                c_log = log_dd;
-                if (sidi != sidj && dr == 0) {
-                    ++sc;    // possibly due to overlapping paired ends; give a minor bonus
-                }
-                else if (dr > dq || sidi != sidj) {
-                    gap_cost = c_lin < c_log ? c_lin : c_log;
-                }
-                else {
-                    gap_cost = c_lin + (c_log >> 1);
-                }
-            }
-            else {
-                gap_cost = (int)(dd * .01 * avg_qspan) + (log_dd >> 1);
-            }
-            sc -= (int)((double)gap_cost * gap_scale + .499);
-            sc += ret->scores[j];
-            if (sc > max_f) {
-                max_f = sc, max_j = j;
-                if (n_skip > 0) {
-                    --n_skip;
-                }
-            }
-            else if (ret->targets[j] == i) {
-                if (++n_skip > max_skip) {
-                    break;
-                }
-            }
-            if (ret->parents[j] >= 0) {
-                ret->targets[ret->parents[j]] = i;
+
+            int32_t oc = (dq < dr) ? dq : dr;
+            oc = (oc > q_spani) ? q_spani : oc;
+
+            int32_t score = ret->scores[j] + oc;
+
+            int32_t log_dd = (dd) ? ilog2_32(dd) : 0;
+
+            int32_t gap_cost = (int)(dd * .01 * avg_qspan) + (log_dd >> 1);
+
+            score -= gap_cost;
+
+            if (score > max_f) {
+                max_f = score;
+                max_j = j;
             }
         }
         ret->scores[i] = max_f;
         ret->parents[i] = max_j;
         ret->peak_scores[i] = max_j >= 0 && ret->peak_scores[max_j] > max_f ? ret->peak_scores[max_j] : max_f;
     }
-
     // // fill the score and backtrack arrays
     // for (int32_t i = 0; i < n; ++i) {
     //     const auto ri = anchors_x[i];
