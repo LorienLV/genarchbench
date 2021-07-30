@@ -20,7 +20,7 @@
 #include "spoa.hpp"
 #include "graph.hpp"
 #include "alignment_engine.hpp"
-#include <x86intrin.h>
+// #include <x86intrin.h>
 
 
 // #define VTUNE_ANALYSIS 1
@@ -162,12 +162,19 @@ int main(int argc, char** argv) {
     std::int8_t e2 = -1;
 
     if (argc == 1) {
+        fprintf(stderr, "argc = %d\n", argc);
         help();
         exit(EXIT_FAILURE);
     }
 
-    char opt, *s; int n_seqs = 0, numThreads = 1;
-    while ((opt = getopt(argc, argv, "l:m:x:o:n:e:q:c:s:t:h")) != -1) {
+    char *s; 
+    int n_seqs = 0;
+    int numThreads = 1;
+    while(1) {
+        int opt = getopt(argc, argv, "m:x:o:e:n:s:t:h");
+        if (opt == -1) {
+            break;
+        }
         switch (opt) {
             case 'm': m = atoi(optarg); break;
             case 'x': x = 0-atoi(optarg); break;
@@ -177,7 +184,7 @@ int main(int argc, char** argv) {
             case 's': seq_file = optarg; break;
             case 't': numThreads = atoi(optarg); break;
             case 'h': help(); return 0;
-            default: help(); return 1;
+            default: help(); fprintf(stderr, "%c\n", (char)opt); return 1;
         }
     }
 
@@ -215,8 +222,8 @@ int main(int argc, char** argv) {
 
     readFile(fp_seq, batches);
     fprintf(stderr, "Number of batches: %lu, Size of batch struct %d\n", batches.size(), sizeof(Batch));
-    int64_t workTicks[CLMUL * numThreads];
-    std::memset(workTicks, 0, CLMUL * numThreads * sizeof(int64_t));
+    // int64_t workTicks[CLMUL * numThreads];
+    // std::memset(workTicks, 0, CLMUL * numThreads * sizeof(int64_t));
     gettimeofday(&start_time, NULL); real_start = get_realtime();
 
 #ifdef VTUNE_ANALYSIS
@@ -232,7 +239,7 @@ int main(int argc, char** argv) {
     int tid = omp_get_thread_num();
     #pragma omp for schedule(dynamic, 1)
         for (int i = 0; i < batches.size(); i++) {
-            int64_t st1 = __rdtsc();
+            // int64_t st1 = __rdtsc();
             // gettimeofday(&t_start, NULL);
             auto graph = spoa::createGraph();
             // gettimeofday(&t_end, NULL);
@@ -252,10 +259,10 @@ int main(int argc, char** argv) {
             batches[i].consensus_seq = graph->generate_consensus();
             // gettimeofday(&t_end, NULL);
             // generateConsensusTime += (t_end.tv_sec - t_start.tv_sec)*1e6 + t_end.tv_usec - t_start.tv_usec;
-            int64_t et1 = __rdtsc();
-            workTicks[CLMUL * tid] += (et1 - st1);
+            // int64_t et1 = __rdtsc();
+            // workTicks[CLMUL * tid] += (et1 - st1);
         }
-    printf("%d] workTicks = %ld\n", tid, workTicks[CLMUL * tid]);
+    // printf("%d] workTicks = %ld\n", tid, workTicks[CLMUL * tid]);
 
 }
 #ifdef ENABLE_SORT
@@ -273,11 +280,11 @@ int main(int argc, char** argv) {
     int64_t maxTicks = 0;
     for(int i = 0; i < numThreads; i++)
     {
-        sumTicks += workTicks[CLMUL * i];
-        if(workTicks[CLMUL * i] > maxTicks) maxTicks = workTicks[CLMUL * i];
+        // sumTicks += workTicks[CLMUL * i];
+        // if(workTicks[CLMUL * i] > maxTicks) maxTicks = workTicks[CLMUL * i];
     }
     double avgTicks = (sumTicks * 1.0) / numThreads;
-    printf("avgTicks = %lf, maxTicks = %ld, load imbalance = %lf\n", avgTicks, maxTicks, maxTicks/avgTicks);
+    // printf("avgTicks = %lf, maxTicks = %ld, load imbalance = %lf\n", avgTicks, maxTicks, maxTicks/avgTicks);
 #ifdef PRINT_OUTPUT
     for (int i = 0; i < batches.size(); i++) {
         cout << ">Consensus_sequence" << endl;

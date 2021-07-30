@@ -1,7 +1,7 @@
 #!/bin/bash
 
 # The folder that contains the inputs for this app.
-inputs_path="/home/lorien/Repos/genomicsbench/inputs/genarch-inputs/poa/small"
+inputs_path="/fefs/scratch/bsc18/bsc18248/genarch-inputs/poa/small"
 
 if [[ -z "$inputs_path" || ! -d "$inputs_path" ]]; then
   echo "ERROR: You have not set a valid input folder $inputs_path"
@@ -37,7 +37,7 @@ job_options=(
 #)
 commands=(
     "$binaries_path/msa_spoa_omp_gcc"
-    # "$binaries_path/msa_spoa_omp_fcc"
+    "$binaries_path/msa_spoa_omp_fcc"
 )
 
 # Additional arguments to pass to the commands.
@@ -46,8 +46,13 @@ command_opts="-s \"$inputs_path/input-1000.fasta\" -t \$OMP_NUM_THREADS > out.fa
 # Nodes, MPI ranks and OMP theads used to execute with each command.
 parallelism=(
     'nodes=1, mpi=1, omp=1'
-    'nodes=1, mpi=1, omp=2'
-    'nodes=1, mpi=1, omp=4'
+    # 'nodes=1, mpi=1, omp=2'
+    # 'nodes=1, mpi=1, omp=4'
+    # 'nodes=1, mpi=1, omp=8'
+    # 'nodes=1, mpi=1, omp=12'
+    # 'nodes=1, mpi=1, omp=24'
+    # 'nodes=1, mpi=1, omp=36'
+    # 'nodes=1, mpi=1, omp=48'
 )
 
 #
@@ -186,7 +191,7 @@ for command in "${commands[@]}"; do
                 jobscript+="#SBATCH $job_option\n"
             done
         elif [[ "$job_scheduler" == "PJM" ]]; then
-            jobscript+="#PJM -N $job_name\n"
+            # jobscript+="#PJM -N $job_name\n"
             jobscript+="#PJM -L node=$nodes\n"
             jobscript+="#PJM --mpi proc=$mpi\n"
             jobscript+="#PJM -o ${job_name}.out\n"
@@ -279,14 +284,14 @@ for i in "${!jobs_id[@]}"; do
         sleep 1
         if [[ "$job_scheduler" == "SLURM" ]]; then
             job_state="$(sacct -p -n -j $job_id | grep "^$job_id|" | cut -d '|' -f 6)"
-            if [[ -n "$slurmstate" && "$slurmstate" != "PENDING" && "$slurmstate" != "RUNNING" && \
-                "$slurmstate" != "REQUEUED" && "$slurmstate" != "RESIZING" && \
-                "$slurmstate" != "SUSPENDED" && "$slurmstate" != "REVOKED" ]]; then
+            if [[ -n "$job_state" && "$job_state" != "PENDING" && "$job_state" != "RUNNING" && \
+                "$job_state" != "REQUEUED" && "$job_state" != "RESIZING" && \
+                "$job_state" != "SUSPENDED" && "$job_state" != "REVOKED" ]]; then
                 break
             fi
         elif [[ "$job_scheduler" == "PJM" ]]; then
             job_state="$(pjstat -H -S $job_id | grep "^[ ]*STATE[ ]*:[ ]*" | tr -s ' ' | cut -d ' ' -f 4)"
-            if [[ -n "$slurmstate" ]]; then
+            if [[ -n "$job_state" ]]; then
                 # Has finished
                 break
             fi
@@ -300,8 +305,8 @@ for i in "${!jobs_id[@]}"; do
     status="$job_state"
     after_run_out=""
 
-    if [[ ("$job_scheduler" == "SLURM" && "$slurmstate" == "COMPLETED") || \
-           ("$job_scheduler" == "PJM" && "$slurmstate" == "EXT") || \
+    if [[ ("$job_scheduler" == "SLURM" && "$job_state" == "COMPLETED") || \
+           ("$job_scheduler" == "PJM" && "$job_state" == "EXT") || \
             "$job_state" == "OK" ]]; then
         #
         # Sanity check

@@ -13,6 +13,8 @@ compilers=(
     'fcc'
 )
 
+module load cmake/3.19-arm
+
 for compiler in "${compilers[@]}"; do
     echo "$compiler"
     if [[ $compiler != "gcc" && $compiler != "fcc" ]]; then
