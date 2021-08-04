@@ -8,8 +8,8 @@ if [[ -z "$inputs_path" || ! -d "$inputs_path" ]]; then
   exit 1
 fi
 
-scriptfolder="$(realpath $0)"
-binaries_path="$(dirname "$(dirname "$(realpath $0)")")"
+scriptfolder="$(dirname $(realpath $0))"
+binaries_path="$(dirname "$scriptfolder")"
 
 # Clean the stage folder of the jobs after finishing? 1 -> yes, 0 -> no.
 clean=1
@@ -76,14 +76,8 @@ after_run() {
 
     echo "Data processing time: $wall_time s"
 
-    # Check if the output file is identical to the reference
-    diff --brief "events.tsv" "$inputs_path/small-reference.tsv" > /dev/null 2>&1
-    if [[ $? -ne 0 ]]; then
-        echo "The output file is not identical to the reference file"
-        return 1 # Failure
-    fi
-
-    return 0 # OK
+    python "$scriptfolder/sanity_check.py" "$inputs_path/small-reference.tsv" "events.tsv"
+    return $?
 }
 
 ################################################################################
@@ -305,11 +299,15 @@ for i in "${!jobs_id[@]}"; do
         #
         current_folder="$(pwd)"
         cd "$job_name"
-        after_run_out="$(after_run "$job_name")"
+        after_run_out="$(after_run "$job_name" 2>&1)"
         if [[ $? -eq 0 ]]; then
             status="OK"
+
+            jobs_status[$i]='V' # Valid
         else
             status="SANITY CHECK FAILED"
+
+            jobs_status[$i]='F' # Failed
             nfailed_jobs=$((nfailed_jobs + 1))
         fi
         cd "$current_folder"
@@ -350,7 +348,14 @@ echo "[==========] Finished on $(date)"
 
 # Clean all the stage directories.
 if [[ $clean -eq 1 ]]; then
-    for job_name in "${jobs_name[@]}"; do
-        rm -rf "$job_name"
+    for i in "${!jobs_id[@]}"; do
+
+        status="${jobs_status[i]}"
+        job_name="${jobs_name[i]}"
+
+        # Only remove the directory if the execution was OK.
+        if [[ "$status" == 'V' ]]; then
+            rm -rf "$job_name"
+        fi
     done
 fi
