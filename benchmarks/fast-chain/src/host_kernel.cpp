@@ -2,6 +2,7 @@
 #include <ctime>
 #include <cstdio>
 #include <cstdlib>
+#include <limits>
 #include <cmath>
 #include "omp.h"
 #include "host_kernel.h"
@@ -75,13 +76,16 @@ static void chain_dp(call_t *a, return_t *ret) {
     int64_t st = 0;
 
     // fill the score and backtrack arrays
-    for (int64_t i = 0; i < n; ++i) {
+    for (int32_t i = 0; i < n; ++i) {
         const auto ri = anchors_x[i];
         const auto qi = anchors_y[i];
         const auto q_spani = anchors_q_span[i];
 
         int32_t max_j = -1;
         int32_t max_f = q_spani;
+
+        std::pair<int32_t, int32_t> max = std::make_pair(-1, q_spani);
+
         int32_t n_skip = 0;
 
         while (st < i && ri > anchors_x[st] + max_dist_x) {
@@ -90,9 +94,14 @@ static void chain_dp(call_t *a, return_t *ret) {
         if (i - st > max_iter) {
             st = i - max_iter; //predecessor's index is too far
         }
-        
-        #pragma omp simd
-        for (int64_t j = i - 1; j >= st; --j) {
+
+        #pragma omp declare reduction \
+            (maxpair:std::pair<int32_t,int32_t>:omp_out=omp_in.second > omp_out.second ? omp_in : omp_out) \
+            initializer(omp_priv=std::make_pair(-1, std::numeric_limits<std::int32_t>::min()))
+
+        #pragma omp simd reduction(maxpair:max)
+        //#pragma omp simd reduction(max:max_f)
+        for (int32_t j = i - 1; j >= st; --j) {
             const auto rj = anchors_x[j];
             const auto qj = anchors_y[j];
 
@@ -118,14 +127,20 @@ static void chain_dp(call_t *a, return_t *ret) {
 
             score -= gap_cost;
 
-            if (score > max_f) {
-                max_f = score;
-                max_j = j;
-            }
+            // max_j = (score > max_f) ? j : max_j;
+            max = (score > max.second) ? std::make_pair(j, score) : max;
+
+            // if (score > max_f) {
+            //     max_f = score;
+            //     max_j = j;
+            // }
         }
-        ret->scores[i] = max_f;
-        ret->parents[i] = max_j;
-        ret->peak_scores[i] = max_j >= 0 && ret->peak_scores[max_j] > max_f ? ret->peak_scores[max_j] : max_f;
+        ret->scores[i] = max.second;
+        ret->parents[i] = max.first;
+        ret->peak_scores[i] = max.first >= 0 && ret->peak_scores[max.first] > max.second ? ret->peak_scores[max.first] : max.second;
+        //ret->scores[i] = max_f;
+        //ret->parents[i] = max_j;
+        //ret->peak_scores[i] = max_j >= 0 && ret->peak_scores[max_j] > max_f ? ret->peak_scores[max_j] : max_f;
     }
     // // fill the score and backtrack arrays
     // for (int32_t i = 0; i < n; ++i) {
