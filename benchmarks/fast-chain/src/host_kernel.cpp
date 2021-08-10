@@ -77,6 +77,9 @@ static void chain_dp(call_t *a, return_t *ret) {
             st = i - max_iter; //predecessor's index is too far
         }
 
+        // TODO: Iterate forward to vectorize the loop.
+        // for (int64_t j_inv = st; j_inv < i; ++j_inv) {
+        //     const int64_t j = (i - 1) - j_inv + st;
         for (int64_t j = i - 1; j >= st; --j) {
             const auto rj = anchors_x[j];
             const int32_t qj = static_cast<int32_t>(anchors_y[j]);
