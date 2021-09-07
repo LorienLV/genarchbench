@@ -67,8 +67,15 @@ after_run() (
 
     echo "Data processing time: $wall_time s"
 
-    python "$scriptfolder/sanity_check.py" "$inputs_path/small-reference.tsv" "events.tsv"
-    return $?
+    # Check that columns "reference_kmer" and "model_kmer" are identical in the 
+    # reference and the output files.
+    awk -F $'\t' 'NR==FNR{a[$3$10]++;next} a[$3$10] == 0 {exit 1}' "events.tsv" "$inputs_path/small-reference.tsv"
+    if [[ $? -ne 0 ]]; then
+        echo "The output file is not identical to the reference file"
+        return 1 # Failure
+    fi
+
+    return 0 # OK
 )
 
 source "$scriptfolder/../../regression.sh"

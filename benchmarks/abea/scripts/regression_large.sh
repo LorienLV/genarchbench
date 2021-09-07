@@ -34,7 +34,7 @@ commands=(
 )
 
 # Additional arguments to pass to the commands.
-command_opts="eventalign -b "$inputs_path"/small/1000reads.bam -g "$inputs_path"/humangenome.fa -r "$inputs_path"/1000reads.fastq -B 3.7M > events.tsv"
+command_opts="eventalign -b "$inputs_path"/large/10000reads.bam -g "$inputs_path"/humangenome.fa -r "$inputs_path"/10000reads.fastq -B 3.7M > events.tsv"
 
 # Nodes, MPI ranks and OMP theads used to execute with each command.
 parallelism=(
@@ -67,8 +67,15 @@ after_run() (
 
     echo "Data processing time: $wall_time s"
 
-    python "$scriptfolder/sanity_check.py" "$inputs_path/large-reference.tsv" "events.tsv"
-    return $?
+    # Check that columns "reference_kmer" and "model_kmer" are identical in the 
+    # reference and the output files.
+    awk -F $'\t' 'NR==FNR{a[$3$10]++;next} a[$3$10] == 0 {exit 1}' "events.tsv" "$inputs_path/large-reference.tsv"
+    if [[ $? -ne 0 ]]; then
+        echo "The output file is not identical to the reference file"
+        return 1 # Failure
+    fi
+
+    return 0 # OK
 )
 
 source "$scriptfolder/../../regression.sh"
