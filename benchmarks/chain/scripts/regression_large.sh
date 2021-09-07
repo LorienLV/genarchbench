@@ -37,7 +37,7 @@ job_options=(
 #)
 commands=(
     "$binaries_path/chain_gcc"
-    # "$binaries_path/chain_fcc"
+    "$binaries_path/chain_fcc"
 )
 
 # Additional arguments to pass to the commands.
@@ -46,8 +46,13 @@ command_opts="-i \"$inputs_path/c_elegans_40x.10k.in\" -o out.txt -t \$OMP_NUM_T
 # Nodes, MPI ranks and OMP theads used to execute with each command.
 parallelism=(
     'nodes=1, mpi=1, omp=1'
-    # 'nodes=1, mpi=1, omp=2'
-    # 'nodes=1, mpi=1, omp=4'
+    'nodes=1, mpi=1, omp=2'
+    'nodes=1, mpi=1, omp=4'
+    'nodes=1, mpi=1, omp=8'
+    'nodes=1, mpi=1, omp=12'
+    'nodes=1, mpi=1, omp=24'
+    'nodes=1, mpi=1, omp=36'
+    'nodes=1, mpi=1, omp=48'
 )
 
 #
