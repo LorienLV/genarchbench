@@ -37,13 +37,13 @@ job_options=(
 #    "command \$MPI_RANKS \$OMP_NUM_THREADS"
 #)
 commands=(
-    "$binaries_path/kmer-cnt_gcc"
+    "module load gcc/10.2.0; $binaries_path/kmer-cnt_gcc"
     "$binaries_path/kmer-cnt_fcc"
 )
 
 # Additional arguments to pass to the commands.
 command_opts="--reads \"$inputs_path/Loman_E.coli_MAP006-1_2D_50x_1000.fasta\" \
-              --config \"$configfolder/asm_raw_reads.cfg\" out.txt --threads \$OMP_NUM_THREADS"
+              --config \"$configfolder/asm_raw_reads.cfg\" --debug --threads \$OMP_NUM_THREADS"
 
 # Nodes, MPI ranks and OMP theads used to execute with each command.
 parallelism=(
@@ -79,7 +79,19 @@ before_run() (
 after_run() (
     job_name="$1"
 
-    wall_time="$(tac "$job_name.err" | grep -m 1 "Kernel time:" | cut -d ' ' -f 3)"
+    refkmers="$(cat "$inputs_path/output-reference.txt" | grep -m 1 -Eo "Total k-mers [0-9]+" | cut -d ' ' -f 3)"
+    outkmers="$(cat "$job_name.err" | grep -m 1 -Eo "Total k-mers [0-9]+" | cut -d ' ' -f 3)"
+
+    wall_time="$(cat "$job_name.err" | grep -m 1 "Kernel time:" | cut -d ' ' -f 3)"
+
+    if [[ -z "$wall_time" ]]; then
+        echo "Error in the execution"
+        return 1 # Failure
+    fi
+    if [[ "$refkmers" != "$outkmers" ]]; then
+        echo "Reference number of k-mers != output number of k-mers"
+        return 1 # Failure
+    fi
 
     echo "Kernel time: $wall_time s"
 
