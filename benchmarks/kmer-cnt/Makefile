@@ -3,9 +3,8 @@ CXX     = g++
 #CXX		 = icpc
 #VTUNE_HOME= /opt/intel/vtune_profiler
 BIN=kmer-cnt_$(CC)
-LIBS= -lz -lm -fopenmp
-# -lz -lm -lbz2 -llzma -ldl -fopenmp
-CXXFLAGS   = -O3 -fopenmp
+LIBS= -lz -lm -lbz2 -llzma -ldl -fopenmp
+CXXFLAGS=-O3 -fopenmp -std=c++11
 INC = -Ilibcuckoo
 
 ifneq ($(VTUNE_HOME),)
