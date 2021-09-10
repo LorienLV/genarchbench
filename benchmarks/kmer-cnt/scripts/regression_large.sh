@@ -37,7 +37,7 @@ job_options=(
 #    "command \$MPI_RANKS \$OMP_NUM_THREADS"
 #)
 commands=(
-    "$binaries_path/kmer-cnt_gcc"
+    "module load gcc/10.2.0; $binaries_path/kmer-cnt_gcc"
     "$binaries_path/kmer-cnt_fcc"
 )
 
