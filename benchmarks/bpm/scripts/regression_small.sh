@@ -58,8 +58,6 @@ parallelism=(
 #
 before_run() (
     job_name="$1"
-
-    echo "HOLA" > SALIDA.TXT
 )
 
 #
