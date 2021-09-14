@@ -28,9 +28,6 @@
 ##                                Heng Li <hli@jimmy.harvard.edu> 
 ##*****************************************************************************************/
 
-
-#CXX=fcc -Nclang -lstdc++
-#CC=fcc
 CC=gcc
 CXX=g++
 EXE=bsw_$(CXX)
@@ -68,11 +65,10 @@ else ifneq ($(arch),)
 		ARCH_FLAGS=$(arch)
 endif
 
-CXXFLAGS=-DSORT_PAIRS -DENABLE_PREFETCH -DBWA_OTHER_ELE=0 -O3 -std=c++11 -fopenmp $(ARCH_FLAGS) -mtune=native -march=native
-# RUBEN: CXXFLAGS=-DENABLE_PREFETCH -DBWA_OTHER_ELE=0 -O3 -std=c++11 -fopenmp $(ARCH_FLAGS) #-mtune=native -march=native
+CXXFLAGS=-DSORT_PAIRS -DENABLE_PREFETCH -DBWA_OTHER_ELE=0 -O3 -std=c++11 -fopenmp $(ARCH_FLAGS)
 # VTUNE_HOME= /opt/intel/oneapi/vtune/2021.1.1
-INCLUDES= # RUBEN: -DENABLE_PARSEC_HOOKS -I/romol/hooks/include
-LIBS=-fopenmp -lz -ldl # RUBEN: -L/romol/hooks/lib -lhooks
+INCLUDES=
+LIBS=-fopenmp -lz -ldl
 
 ifneq ($(VTUNE_HOME),)
 CXXFLAGS+=-DVTUNE_ANALYSIS=1

@@ -22,9 +22,9 @@ for compiler in "${compilers[@]}"; do
 
     if [[ $compiler == "gcc" ]]; then
         module load gcc/10.2.0
-        make CC=gcc CXX=g++
+        make CC=gcc CXX=g++ arch=-march=armv8-a+sve
     elif [[ $compiler == "fcc" ]]; then
         module load fuji
-        make CC=fcc CXX=FCC
+        make CC=fcc CXX='FCC -Nclang -lstdc++' arch=-march=armv8-a+sve
     fi
 done

@@ -36,8 +36,8 @@ job_options=(
 #    "command \$MPI_RANKS \$OMP_NUM_THREADS"
 #)
 commands=(
-    "$binaries_path/build_gcc/main_bsw"
-    "$binaries_path/build_fcc/main_bsw"
+    "module load gcc/10.2.0; $binaries_path/build_gcc/main_bsw"
+    "module load fuji; $binaries_path/build_fcc/main_bsw"
 )
 
 # Additional arguments to pass to the commands.
