@@ -349,5 +349,5 @@ int main(int argc, char *argv[])
     }
 	
 	fclose(pairFile);
-	return 1;
+	return EXIT_SUCCESS;
 }
