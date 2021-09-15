@@ -22,6 +22,8 @@
  * DESCRIPTION: Wavefront Alignments Algorithms Benchmark
  */
 
+#include <omp.h>
+
 #include "utils/commons.h"
 #include "system/profiler_timer.h"
 
@@ -47,6 +49,7 @@ typedef struct {
   char *algorithm;
   char *input;
   char *output;
+  int threads;
   // Profile
   profiler_timer_t timer_global;
   int progress;
@@ -57,6 +60,7 @@ benchmark_args parameters = {
   // Input
   .algorithm=NULL,
   .input=NULL,
+  .threads=1,
   .progress = 10000,
   .verbose = false
 };
@@ -65,88 +69,130 @@ benchmark_args parameters = {
  * Benchmark
  */
 void align_benchmark(const alg_algorithm_type alg_algorithm) {
-  // Parameters
-  FILE *input_file = NULL;
-  char *line1 = NULL, *line2 = NULL;
-  int line1_length=0, line2_length=0;
-  size_t line1_allocated=0, line2_allocated=0;
-  align_input_t align_input;
   // Init
   timer_reset(&(parameters.timer_global));
   timer_start(&(parameters.timer_global));
-  input_file = fopen(parameters.input, "r");
-  if (input_file==NULL) {
+
+  FILE *input_file = fopen(parameters.input, "r");
+  if (input_file == NULL) {
     fprintf(stderr,"Input file '%s' couldn't be opened\n",parameters.input);
     exit(1);
   }
+
+  FILE *output_file = NULL;
   if (parameters.output != NULL) {
-    align_input.output_file = fopen(parameters.output,"w");
-  } else {
-    align_input.output_file = NULL;
+    output_file = fopen(parameters.output,"w");
   }
-  align_input.verbose = parameters.verbose;
-  align_input.mm_allocator = mm_allocator_new(BUFFER_SIZE_8M);
-  timer_reset(&align_input.timer);
+
   // Read-align loop
-  int reads_processed = 0, progress = 0;
-  while (true) {
-    // Read queries
-    line1_length = getline(&line1,&line1_allocated,input_file);
-    if (line1_length==-1) break;
-    line2_length = getline(&line2,&line2_allocated,input_file);
-    if (line1_length==-1) break;
-    // Configure input
-    align_input.sequence_id = reads_processed;
-    align_input.pattern = line1+1;
-    align_input.pattern_length = line1_length-2;
-    align_input.pattern[align_input.pattern_length] = '\0';
-    align_input.text = line2+1;
-    align_input.text_length = line2_length-2;
-    align_input.text[align_input.text_length] = '\0';
-    // Align queries using DP
-    switch (alg_algorithm) {
-      case alignment_edit_bpm:
-        benchmark_edit_bpm(&align_input);
-        break;
-      case alignment_bitpal_edit:
-        benchmark_bitpal_m0_x1_g1(&align_input);
-        break;
-      case alignment_bitpal_scored:
-        benchmark_bitpal_m1_x4_g2(&align_input);
-        break;
-      default:
-        fprintf(stderr,"Algorithm unknown or not implemented\n");
-        exit(1);
-        break;
+  int seqs_processed = 0;
+  int seqs_read = 0;
+
+  #pragma omp parallel num_threads(parameters.threads)
+  {
+    char *line1 = NULL; 
+    char *line2 = NULL;
+
+    int line1_length = 0; 
+    int line2_length = 0;
+
+    size_t line1_allocated = 0;
+    size_t line2_allocated = 0;
+
+    align_input_t align_input;
+
+    align_input.output_file = output_file;
+    align_input.verbose = parameters.verbose;
+    align_input.mm_allocator = mm_allocator_new(BUFFER_SIZE_8M);
+
+    // timer_reset(&align_input.timer);
+
+    // Iterate until there are no more sequences to read.
+    char more_seqs = 1;
+    while(more_seqs) {
+
+      // Read from file in mutual exclusion.
+      #pragma omp critical 
+      {
+        line1_length = getline(&line1, &line1_allocated, input_file);
+        line2_length = getline(&line2, &line2_allocated, input_file);
+
+        if (line1_length == -1 || line2_length == -1) {
+          more_seqs = 0;
+        }
+        else {
+          align_input.sequence_id = seqs_read;
+          ++seqs_read;
+        }
+      }
+
+      if (more_seqs) {
+
+        align_input.pattern = line1 + 1;
+        align_input.pattern_length = line1_length - 2;
+        align_input.pattern[align_input.pattern_length] = '\0';
+        align_input.text = line2 + 1;
+        align_input.text_length = line2_length - 2;
+        align_input.text[align_input.text_length] = '\0';
+
+        // Align queries using DP
+        switch (alg_algorithm) {
+          case alignment_edit_bpm:
+            benchmark_edit_bpm(&align_input);
+            break;
+          case alignment_bitpal_edit:
+            benchmark_bitpal_m0_x1_g1(&align_input);
+            break;
+          case alignment_bitpal_scored:
+            benchmark_bitpal_m1_x4_g2(&align_input);
+            break;
+          default:
+            fprintf(stderr,"Algorithm unknown or not implemented\n");
+            exit(1);
+            break;
+        }
+
+        // Update counters and print debug info if verbose.
+        if (parameters.verbose) {
+          #pragma omp critical 
+          {
+            ++seqs_processed;
+            if (seqs_processed % parameters.progress == 0) {
+              // Compute speed
+              const uint64_t time_elapsed_global = timer_get_current_total_ns(&(parameters.timer_global));
+              const float rate_global = (float)seqs_processed/(float)TIMER_CONVERT_NS_TO_S(time_elapsed_global);
+              // const uint64_t time_elapsed_alg = timer_get_current_total_ns(&align_timer);
+              // const float rate_alg = (float)seqs_processed/(float)TIMER_CONVERT_NS_TO_S(time_elapsed_alg);
+              fprintf(stderr,"...processed %d reads "
+                  "(benchmark=%2.3f reads/s)\n",
+                  seqs_processed, rate_global);
+              
+              // fprintf(stderr,"...processed %d reads "
+              //     "(benchmark=%2.3f reads/s;alignment=%2.3f reads/s)\n",
+              //     seqs_processed, rate_global, rate_alg);
+            }
+          }
+        }
+      }
     }
-    // Update progress
-    ++reads_processed;
-    if (++progress == parameters.progress) {
-      progress = 0;
-      // Compute speed
-      const uint64_t time_elapsed_global = timer_get_current_total_ns(&(parameters.timer_global));
-      const float rate_global = (float)reads_processed/(float)TIMER_CONVERT_NS_TO_S(time_elapsed_global);
-      const uint64_t time_elapsed_alg = timer_get_current_total_ns(&(align_input.timer));
-      const float rate_alg = (float)reads_processed/(float)TIMER_CONVERT_NS_TO_S(time_elapsed_alg);
-      fprintf(stderr,"...processed %d reads "
-          "(benchmark=%2.3f reads/s;alignment=%2.3f reads/s)\n",
-          reads_processed,rate_global,rate_alg);
-    }
+
+    // Free private data.
+    mm_allocator_delete(align_input.mm_allocator);
+    free(line1);
+    free(line2);
   }
+
   timer_stop(&(parameters.timer_global));
   // Print benchmark results
   fprintf(stderr,"[Benchmark]\n");
-  fprintf(stderr,"=> Total.reads            %d\n",reads_processed);
+  fprintf(stderr,"=> Total.reads            %d\n", seqs_read);
   fprintf(stderr,"=> Time.Benchmark      ");
   timer_print(stderr,&parameters.timer_global,NULL);
-  fprintf(stderr,"  => Time.Alignment    ");
-  timer_print(stderr,&align_input.timer,&parameters.timer_global);
+  // fprintf(stderr,"  => Time.Alignment    ");
+  // timer_print(stderr,&align_timer, &parameters.timer_global);
   // Free
   fclose(input_file);
-  if (align_input.output_file != NULL) fclose(align_input.output_file);
-  mm_allocator_delete(align_input.mm_allocator);
-  free(line1);
-  free(line2);
+  if (output_file != NULL) fclose(output_file);
 }
 /*
  * Generic Menu
@@ -161,6 +207,7 @@ void usage() {
       "              bitpal-edit                                            \n"
       "              bitpal-scored                                          \n"
       "          --input|i <File>                                           \n"
+      "          --threads|t <integer>                                      \n"
       "        [Misc]                                                       \n"
       "          --progress|P <integer>                                     \n"
       "          --help|h                                                   \n");
@@ -171,6 +218,7 @@ void parse_arguments(int argc,char** argv) {
     { "algorithm", required_argument, 0, 'a' },
     { "input", required_argument, 0, 'i' },
     { "output", required_argument, 0, 'o' },
+    { "threads", required_argument, 0, 't' },
     /* Misc */
     { "progress", required_argument, 0, 'P' },
     { "verbose", no_argument, 0, 'v' },
@@ -182,7 +230,7 @@ void parse_arguments(int argc,char** argv) {
     exit(0);
   }
   while (1) {
-    c=getopt_long(argc,argv,"a:i:o:p:g:P:c:vh",long_options,&option_index);
+    c=getopt_long(argc,argv,"a:i:o:t:p:g:P:c:vh",long_options,&option_index);
     if (c==-1) break;
     switch (c) {
     /*
@@ -196,6 +244,9 @@ void parse_arguments(int argc,char** argv) {
       break;
     case 'o':
       parameters.output = optarg;
+      break;
+    case 't':
+      parameters.threads = atoi(optarg);
       break;
     /*
      * Misc

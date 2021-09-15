@@ -30,29 +30,35 @@ int bitwise_alignment_m0_x1_g1(char * s1,char* s2,int words);
 void benchmark_bitpal_m0_x1_g1(
     align_input_t* const align_input) {
   // Align
-  timer_start(&align_input->timer);
+  // timer_start(&align_input->timer);
   const int score = bitwise_alignment_m0_x1_g1(
       align_input->pattern,align_input->text,
       MAX(align_input->pattern_length,align_input->text_length)/63 + 1);
-  timer_stop(&align_input->timer);
+  // timer_stop(&align_input->timer);
   // NOTE:
   //   No CIGAR is produced, just score
   if (align_input->output_file != NULL) {
-    fprintf(align_input->output_file,"[%d] score=%d\n",align_input->sequence_id,score);
+    #pragma omp critical 
+    {
+      fprintf(align_input->output_file,"[%d] score=%d\n",align_input->sequence_id,score);
+    }
   }
 }
 int bitwise_alignment_m1_x4_g2(char * s1,char* s2,int words);
 void benchmark_bitpal_m1_x4_g2(
     align_input_t* const align_input) {
   // Align
-  timer_start(&align_input->timer);
+  // timer_start(&align_input->timer);
   const int score = bitwise_alignment_m1_x4_g2(
       align_input->pattern,align_input->text,
       MAX(align_input->pattern_length,align_input->text_length)/63 + 1);
-  timer_stop(&align_input->timer);
+  // timer_stop(&align_input->timer);
   // NOTE:
   //   No CIGAR is produced, just score
   if (align_input->output_file != NULL) {
-    fprintf(align_input->output_file,"[%d] score=%d\n",align_input->sequence_id,score);
+    #pragma omp critical
+    {
+      fprintf(align_input->output_file,"[%d] score=%d\n",align_input->sequence_id,score);
+    }
   }
 }

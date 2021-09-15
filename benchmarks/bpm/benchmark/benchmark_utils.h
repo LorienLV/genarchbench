@@ -58,7 +58,7 @@ typedef struct {
   // MM
   mm_allocator_t* mm_allocator;
   // DEBUG
-  profiler_timer_t timer;
+  // profiler_timer_t timer;
   bool verbose;
 } align_input_t;
 
