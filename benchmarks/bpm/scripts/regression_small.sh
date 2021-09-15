@@ -77,9 +77,9 @@ before_run() (
 after_run() (
     job_name="$1"
 
-    benchmark_time="$(tac "$job_name.err" | grep -m 1 "Time.Benchmark" | tr -s ' ' | cut -d ' ' -f 3)"
+    benchmark_time="$(tac "$job_name.err" | grep -m 1 "Time.Benchmark" | tr -s ' ' | cut -d ' ' -f 3,4)"
 
-    echo "Time.Benchmark: $benchmark_time s"
+    echo "Time.Benchmark: $benchmark_time"
 
     # Check if the output file is identical to the reference
     sort -n -t '[' -k 2,2 "checksum.file" | diff --brief - "$inputs_path/output-reference.file" > /dev/null 2>&1
