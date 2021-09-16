@@ -30,7 +30,7 @@
 /*
  * Benchmark Edit
  */
-void benchmark_edit_bpm(
+int benchmark_edit_bpm(
     align_input_t* const align_input);
 
 #endif /* BENCHMARK_EDIT_H_ */

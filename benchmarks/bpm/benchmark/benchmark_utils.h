@@ -54,7 +54,7 @@ typedef struct {
   char* text;
   int text_length;
   // Output
-  FILE* output_file;
+  // FILE* output_file;
   // MM
   mm_allocator_t* mm_allocator;
   // DEBUG

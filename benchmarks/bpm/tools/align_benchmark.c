@@ -65,13 +65,28 @@ benchmark_args parameters = {
   .verbose = false
 };
 
+typedef struct sequence_t {
+  char *data;
+  int length;
+  size_t allocated;
+} sequence_t;
+
+typedef struct seq_pair_t {
+  int id;
+  sequence_t seq1;
+  sequence_t seq2;
+
+  int score;
+
+  struct seq_pair_t *next;
+} seq_pair_t;
+
 /*
  * Benchmark
  */
 void align_benchmark(const alg_algorithm_type alg_algorithm) {
   // Init
   timer_reset(&(parameters.timer_global));
-  timer_start(&(parameters.timer_global));
 
   FILE *input_file = fopen(parameters.input, "r");
   if (input_file == NULL) {
@@ -84,67 +99,78 @@ void align_benchmark(const alg_algorithm_type alg_algorithm) {
     output_file = fopen(parameters.output,"w");
   }
 
-  // Read-align loop
-  int seqs_processed = 0;
   int seqs_read = 0;
-
+  int seqs_processed = 0;
   #pragma omp parallel num_threads(parameters.threads)
   {
-    char *line1 = NULL; 
-    char *line2 = NULL;
-
-    int line1_length = 0; 
-    int line2_length = 0;
-
-    size_t line1_allocated = 0;
-    size_t line2_allocated = 0;
-
     align_input_t align_input;
 
-    align_input.output_file = output_file;
     align_input.verbose = parameters.verbose;
     align_input.mm_allocator = mm_allocator_new(BUFFER_SIZE_8M);
 
     // timer_reset(&align_input.timer);
 
-    // Iterate until there are no more sequences to read.
+    // Linked list of read sequences.
+    seq_pair_t *head = malloc(sizeof(*head));
+    head->next = NULL;
+
+    // Read and assign the same number of sequences to each thread.
+    seq_pair_t *it = head;
     char more_seqs = 1;
     while(more_seqs) {
+      #pragma omp for schedule(static, 1) ordered
+      for (size_t i = 0; i < omp_get_num_threads(); ++i) {
+        #pragma omp ordered
+        {
+          it->seq1.data = NULL;
+          it->seq2.data = NULL;
 
-      // Read from file in mutual exclusion.
-      #pragma omp critical 
-      {
-        line1_length = getline(&line1, &line1_allocated, input_file);
-        line2_length = getline(&line2, &line2_allocated, input_file);
+          it->seq1.length = getline(&it->seq1.data, &it->seq1.allocated, input_file);
+          it->seq2.length = getline(&it->seq2.data, &it->seq2.allocated, input_file);
 
-        if (line1_length == -1 || line2_length == -1) {
-          more_seqs = 0;
-        }
-        else {
-          align_input.sequence_id = seqs_read;
-          ++seqs_read;
+          if (it->seq1.length == -1 || it->seq2.length == -1) {
+            more_seqs = 0;
+          }
+          else {
+            it->id = seqs_read;
+            ++seqs_read;
+
+            it->next = malloc(sizeof(*it));
+            it = it->next;
+          }
         }
       }
+    }
 
-      if (more_seqs) {
+    #pragma omp barrier
+    #pragma omp master
+    {
+      timer_start(&(parameters.timer_global));
+    }
 
-        align_input.pattern = line1 + 1;
-        align_input.pattern_length = line1_length - 2;
+    // Process the sequences.
+
+    it = head;
+    while(it != NULL) {
+      if (it->seq1.length >= 0 && it->seq2.length >= 0) {
+
+        align_input.pattern = it->seq1.data + 1;
+        align_input.pattern_length = it->seq1.length - 2;
         align_input.pattern[align_input.pattern_length] = '\0';
-        align_input.text = line2 + 1;
-        align_input.text_length = line2_length - 2;
+        align_input.text = it->seq2.data + 1;
+        align_input.text_length = it->seq2.length - 2;
         align_input.text[align_input.text_length] = '\0';
 
         // Align queries using DP
         switch (alg_algorithm) {
           case alignment_edit_bpm:
-            benchmark_edit_bpm(&align_input);
+            it->score = benchmark_edit_bpm(&align_input);
             break;
           case alignment_bitpal_edit:
-            benchmark_bitpal_m0_x1_g1(&align_input);
+            it->score = benchmark_bitpal_m0_x1_g1(&align_input);
             break;
           case alignment_bitpal_scored:
-            benchmark_bitpal_m1_x4_g2(&align_input);
+            it->score = benchmark_bitpal_m1_x4_g2(&align_input);
             break;
           default:
             fprintf(stderr,"Algorithm unknown or not implemented\n");
@@ -174,15 +200,34 @@ void align_benchmark(const alg_algorithm_type alg_algorithm) {
           }
         }
       }
+
+      it = it->next;
     }
 
-    // Free private data.
+    #pragma omp barrier
+    #pragma omp master
+    {
+      timer_stop(&(parameters.timer_global));
+    }
+
+    // Print scores and free private data.
+    it = head;
+    while(it != NULL) {
+      if (it->seq1.length >= 0 && it->seq2.length >= 0 && output_file != NULL) {
+        fprintf(output_file,"[%d] score=%d\n", it->id, it->score);
+      }
+
+      free(it->seq1.data);
+      free(it->seq2.data);
+
+      seq_pair_t *temp = it;
+      it = it->next;
+      free(temp);
+    }
+
     mm_allocator_delete(align_input.mm_allocator);
-    free(line1);
-    free(line2);
   }
 
-  timer_stop(&(parameters.timer_global));
   // Print benchmark results
   fprintf(stderr,"[Benchmark]\n");
   fprintf(stderr,"=> Total.reads            %d\n", seqs_read);

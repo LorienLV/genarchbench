@@ -28,7 +28,7 @@
 /*
  * Benchmark Edit
  */
-void benchmark_edit_bpm(
+int benchmark_edit_bpm(
     align_input_t* const align_input) {
   // Allocate
   bpm_pattern_t bpm_pattern;
@@ -40,20 +40,17 @@ void benchmark_edit_bpm(
       &bpm_matrix,align_input->pattern_length,
       align_input->text_length,align_input->mm_allocator);
   // Align
-//   timer_start(&align_input->timer);
+  //   timer_start(&align_input->timer);
   edit_bpm_compute(
       &bpm_matrix,&bpm_pattern,align_input->text,
       align_input->text_length,align_input->pattern_length);
-//   timer_stop(&align_input->timer);
+  //   timer_stop(&align_input->timer);
   // Output
-  if (align_input->output_file != NULL) {
-    #pragma omp critical 
-    {
-        fprintf(align_input->output_file,"[%d] score=%d\n",
-            align_input->sequence_id,-edit_cigar_score_edit(&bpm_matrix.edit_cigar));
-    }
-  }
+  int score = -edit_cigar_score_edit(&bpm_matrix.edit_cigar);
+
   // Free
   edit_bpm_pattern_free(&bpm_pattern,align_input->mm_allocator);
   edit_bpm_matrix_free(&bpm_matrix,align_input->mm_allocator);
+
+  return score;
 }

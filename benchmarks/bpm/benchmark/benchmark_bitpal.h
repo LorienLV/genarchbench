@@ -29,9 +29,9 @@
 /*
  * BitPal
  */
-void benchmark_bitpal_m0_x1_g1(
+int benchmark_bitpal_m0_x1_g1(
     align_input_t* const align_input);
-void benchmark_bitpal_m1_x4_g2(
+int benchmark_bitpal_m1_x4_g2(
     align_input_t* const align_input);
 
 #endif /* BENCHMARK_BITPAL_H_ */
