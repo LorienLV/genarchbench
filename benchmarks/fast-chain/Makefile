@@ -3,11 +3,11 @@ CXX = g++
 
 # path #
 SRC_PATH = src
-BUILD_PATH = build_$(CC)
+BUILD_PATH = build
 BIN_PATH = $(BUILD_PATH)/bin
 
 # executable #
-BIN_NAME = chain_$(CC)
+BIN_NAME = chain
 
 # extensions #
 SRC_EXT = cpp
@@ -45,17 +45,17 @@ endif
 
 # flags #
 #COMPILE_FLAGS = -std=c++11 -Wall -Wextra -g -O3 -fopenmp -xAVX2 -axAVX2
-#VTUNE_HOME= /opt/intel/vtune_profiler
 COMPILE_FLAGS = -std=c++11 -Wall -Wextra -g -O3 -fopenmp $(ARCH_FLAGS) -fopt-info-vec-all
 # INCLUDES = -I$(BUILD_PATH)/minimap2
 # Space-separated pkg-config libraries used by this project
 # LIBS = -L$(BUILD_PATH)/minimap2 -lminimap2 -ldl
 
-# ifneq ($(VTUNE_HOME),)
-# COMPILE_FLAGS += -DVTUNE_ANALYSIS=1
-# INCLUDES += -I${VTUNE_HOME}/include
-# LIBS +=  -L${VTUNE_HOME}/lib64 -littnotify
-# endif
+ifneq ($(VTUNE_HOME),)
+VTUNE_HOME= /opt/intel/vtune_profiler
+COMPILE_FLAGS += -DVTUNE_ANALYSIS=1
+INCLUDES += -I${VTUNE_HOME}/include
+LIBS +=  -L${VTUNE_HOME}/lib64 -littnotify
+endif
 
 .PHONY: default_target
 default_target: release

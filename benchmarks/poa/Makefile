@@ -1,5 +1,4 @@
 # Set compiler.
-CC=gcc
 CXX=g++
 #CXX=icpc
 
@@ -25,32 +24,29 @@ else ifneq ($(arch),)
 		ARCH_FLAGS=$(arch)
 endif
 
-CXXFLAGS=-O3 $(ARCH_FLAGS) -fopenmp
+CXXFLAGS=-O3 -fopenmp $(ARCH_FLAGS)
 
 # Directories.
 SRC_DIR=src
-BUILD_DIR=build_$(CC)
-
-# Includes
-CXXFLAGS+=-I$(BUILD_DIR)/spoa/include
+BUILD_DIR=build
 
 #
 # Libraries
 #
 
+LDFLAGS+=-fopenmp -ldl
+
 # Spoa library
 SPOA_LIB=$(BUILD_DIR)/spoa/build/lib/libspoa.a
-CXXFLAGS+=-I$(BUILD_DIR)/spoa/include/spoa
-LDFLAGS+=$(SPOA_LIB)
+INCLUDES+=-I$(BUILD_DIR)/spoa/include/spoa
+LDFLAGS+=-L$(BUILD_DIR)/spoa/build/lib/ -lspoa
 
 #VTUNE_HOME= /opt/intel/vtune_profiler
-
 ifneq ($(VTUNE_HOME),)
-CXXFLAGS+=-DVTUNE_ANALYSIS=1 -I${VTUNE_HOME}/include
+CXXFLAGS+=-DVTUNE_ANALYSIS=1
+INCLUDES+=-I${VTUNE_HOME}/include
 LDFLAGS+=-L${VTUNE_HOME}/lib64 -littnotify
 endif
-
-LDFLAGS+=-ldl
 
 # Files.
 SRCS:=$(shell find $(SRC_DIR) -name "*.cpp")
@@ -60,7 +56,7 @@ DEPS:=$(subst $(SRC_DIR),$(BUILD_DIR),$(SRCS:%.cpp=%.d))
 #
 # Executables.
 #
-MSA_SPOA_OMP=msa_spoa_omp_$(CC)
+MSA_SPOA_OMP=msa_spoa_omp
 MSA_SPOA_OMP_OBJS=$(BUILD_DIR)/msa_spoa_omp.o
 
 #
@@ -75,7 +71,7 @@ $(MSA_SPOA_OMP): $(SPOA_LIB) $(MSA_SPOA_OMP_OBJS)
 #
 $(BUILD_DIR)/%.o: $(SRC_DIR)/%.cpp
 	mkdir -p $(@D)
-	$(CXX) $(CXXFLAGS) -c $< -o $@
+	$(CXX) $(CXXFLAGS) $(INCLUDES) -c $< -o $@
 
 #
 # Compile SPOA library
@@ -87,12 +83,12 @@ $(SPOA_LIB):
 	rm -f $(BUILD_DIR)/spoa.tar.bz2
 	cd $(BUILD_DIR)/spoa/build && \
 	cmake -DCMAKE_BUILD_TYPE=Release .. && \
-	make
+	$(MAKE)
 
 all: $(MSA_SPOA_OMP)
 
-.PHONY: clean
+msa_spoa_omp: $(MSA_SPOA_OMP)
 
+.PHONY: clean
 clean:
-	rm msa_spoa_omp_$(CC)
-	rm -rf build_$(CC)
+	rm -rf $(BUILD_DIR) $(MSA_SPOA_OMP)

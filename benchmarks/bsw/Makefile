@@ -30,18 +30,18 @@
 
 CC=gcc
 CXX=g++
-EXE=bsw_$(CXX)
+EXE=main_bsw
 
-BUILDDIR=build_$(CC)
+BUILDDIR=build
 OBJDIR=$(BUILDDIR)/obj
 
-SHELLARCH:=$(shell arch)
-ifeq ($(SHELLARCH),x86_64)
+TARGET_ARCH:=$(shell arch)
+ifeq ($(TARGET_ARCH),x86_64)
     SRCDIR=src/x86_64
-else ifeq ($(SHELLARCH),aarch64)
+else ifeq ($(TARGET_ARCH),aarch64)
     SRCDIR=src/sve
 else
-    $(error Architecture $(SHELLARCH) not supported)
+    $(error Architecture $(TARGET_ARCH) not supported)
 endif
 
 ifeq ($(arch),sse41)
@@ -86,14 +86,14 @@ DEPS:=$(subst $(SRCDIR),$(OBJDIR),$(SRCS:%.cpp=%.d))
 #
 # Executables.
 #
-MAIN_BSW=$(BUILDDIR)/main_bsw
+MAIN_BSW=$(BUILDDIR)/$(EXE)
 MAIN_BSW_OBJS=$(OBJDIR)/main_banded.o \
 			  $(OBJDIR)/bandedSWA.o
 
 $(info $(MAIN_BSW_OBJS))
 
 .PHONY: all
-all: main_bsw
+all: $(MAIN_BSW)
 
 main_bsw: $(MAIN_BSW)
 

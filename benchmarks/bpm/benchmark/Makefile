@@ -1,8 +1,7 @@
 ###############################################################################
 # Definitions
 ###############################################################################
-FOLDER_ROOT=..
-FOLDER_BUILD=../build_$(CC)
+FOLDER_ROOT:=..
 
 ###############################################################################
 # Modules
@@ -12,7 +11,7 @@ MODULES=benchmark_bitpal \
         benchmark_utils
         
 SRCS=$(addsuffix .c, $(MODULES))
-OBJS=$(addprefix $(FOLDER_BUILD)/, $(SRCS:.c=.o))
+OBJS=$(addprefix ../$(FOLDER_BUILD)/, $(SRCS:.c=.o))
 
 ###############################################################################
 # Rules
@@ -20,6 +19,6 @@ OBJS=$(addprefix $(FOLDER_BUILD)/, $(SRCS:.c=.o))
 all: $(OBJS) 
 
 # General building rule
-$(FOLDER_BUILD)/%.o : %.c
+../$(FOLDER_BUILD)/%.o : %.c
 	$(CC) $(CC_FLAGS) -I$(FOLDER_ROOT) -c $< -o $@
 	

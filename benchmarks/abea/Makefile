@@ -41,11 +41,11 @@ CXX      = g++
 LANG 	 = -x c++
 CFLAGS   += -g -Wall -O2 -std=c++11
 LDFLAGS  += $(LIBS) -lpthread -lz -rdynamic
-BUILD_DIR = build_$(CC)
+BUILD_DIR = build
 
-$(info $(shell mkdir -p build_$(CC)))
+$(info $(shell mkdir -p $(BUILD_DIR)))
 
-BINARY = f5c_$(CC)
+BINARY = f5c
 OBJ = $(BUILD_DIR)/main.o \
       $(BUILD_DIR)/meth_main.o \
       $(BUILD_DIR)/f5c.o \
@@ -143,8 +143,8 @@ $(BUILD_DIR)/lib/libhts.a:
 	rm -f $(BUILD_DIR)/htslib.tar.bz2
 	cd $(BUILD_DIR)/htslib && \
 	./configure --prefix=`pwd`/../ --enable-bz2=no --enable-lzma=no --with-libdeflate=no --enable-libcurl=no  --enable-gcs=no --enable-s3=no && \
-	make -j8 && \
-	make install
+	$(MAKE) -j8 && \
+	$(MAKE) install
 
 $(BUILD_DIR)/lib/libhdf5.a:
 	cp hdf5.tar.bz2 $(BUILD_DIR)
@@ -153,8 +153,8 @@ $(BUILD_DIR)/lib/libhdf5.a:
 	rm -f $(BUILD_DIR)/hdf5.tar.bz2
 	cd $(BUILD_DIR)/hdf5 && \
 	./configure --prefix=`pwd`/../ && \
-	make -j8 && \
-	make install
+	$(MAKE) -j8 && \
+	$(MAKE) install
 
 clean:
 	rm -rf $(BINARY) $(BUILD_DIR)

@@ -3,11 +3,11 @@ CXX = g++
 
 # path #
 SRC_PATH = src
-BUILD_PATH = build_$(CC)
+BUILD_PATH = build
 BIN_PATH = $(BUILD_PATH)/bin
 
 # executable #
-BIN_NAME = chain_$(CC)
+BIN_NAME = chain
 
 # extensions #
 SRC_EXT = cpp

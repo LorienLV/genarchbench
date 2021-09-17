@@ -6,8 +6,8 @@ CPP=g++
 LD_FLAGS=-lm -lrt
 CC_FLAGS=-Wall -g
 
-FOLDER_BIN=bin_$(CC)
-FOLDER_BUILD=build_$(CC)
+FOLDER_BIN=bin
+FOLDER_BUILD=build
 ###############################################################################
 # Compile rules
 ###############################################################################
@@ -37,10 +37,10 @@ clean:
 ###############################################################################
 export
 $(SUBDIRS):
-	$(MAKE) --directory=$@ all
+	make --directory=$@ all
 	
 tools:
-	$(MAKE) --directory=$@ $(MODE)
+	make --directory=$@ $(MODE)
 
 .PHONY: $(SUBDIRS) tools
 
