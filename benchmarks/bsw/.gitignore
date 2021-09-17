@@ -1,1 +1,2 @@
-/build_*
+# Ignore regression test stage folders.
+BSW-REGRESSION-*

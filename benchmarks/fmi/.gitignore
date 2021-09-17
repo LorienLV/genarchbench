@@ -1,6 +1,1 @@
-/fmi
-/fmi_*
-*.o
-
-# FCC creates dependency files in root folder... 
-/*.d
+/fmi*

@@ -1,5 +1,4 @@
-/build_*
 /chain*
 
-# FCC creates dependency files in root folder... 
-/*.d
+# Ignore regression test stage folders.
+CHAIN-REGRESSION-*

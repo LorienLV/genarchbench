@@ -1,2 +1,4 @@
-/build_*
 /f5c*
+
+# Ignore regression test stage folders.
+ABEA-REGRESSION-*

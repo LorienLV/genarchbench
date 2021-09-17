@@ -1,1 +1,4 @@
-/kmer-cnt_*
+/kmer-cnt*
+
+# Ignore regression test stage folders.
+KMERCNT-REGRESSION-*
