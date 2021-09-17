@@ -8,7 +8,7 @@
 export OMP_NUM_THREADS=1
 
 # The folder that contains the inputs.
-inputs_path="/fefs/scratch/bsc18/bsc18248/genarch-inputs/abea"
+inputs_path="$GENARCH_BENCH_INPUTS_ROOT/abea"
 
 scriptfolder="$(realpath $0)"
 binaries_path="$(dirname "$(dirname "$(realpath $0)")")"

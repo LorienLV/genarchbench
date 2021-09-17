@@ -1,7 +1,7 @@
 #!/bin/bash
 
 # The folder that contains the inputs for this app.
-inputs_path="/fefs/scratch/bsc18/bsc18248/genarch-inputs/chain/large"
+inputs_path="$GENARCH_BENCH_INPUTS_ROOT/chain/large"
 
 if [[ -z "$inputs_path" || ! -d "$inputs_path" ]]; then
   echo "ERROR: You have not set a valid input folder $inputs_path"
@@ -12,7 +12,7 @@ scriptfolder="$(dirname $(realpath $0))"
 binaries_path="$(dirname "$scriptfolder")"
 
 # Clean the stage folder of the jobs after finishing? 1 -> yes, 0 -> no.
-clean=0
+clean=1
 
 # The name of the job.
 job="CHAIN-REGRESSION-LARGE"

@@ -1,7 +1,7 @@
 #!/bin/bash
 
 # The folder that contains the inputs for this app.
-inputs_path="/fefs/scratch/bsc18/bsc18248/genarch-inputs/poa/large"
+inputs_path="$GENARCH_BENCH_INPUTS_ROOT/poa/large"
 
 if [[ -z "$inputs_path" || ! -d "$inputs_path" ]]; then
   echo "ERROR: You have not set a valid input folder $inputs_path"
@@ -37,7 +37,7 @@ job_options=(
 #)
 commands=(
     "$binaries_path/msa_spoa_omp_gcc"
-    # "$binaries_path/msa_spoa_omp_fcc"
+    "$binaries_path/msa_spoa_omp_fcc"
 )
 
 # Additional arguments to pass to the commands.
@@ -45,9 +45,14 @@ command_opts="-s \"$inputs_path/input.fasta\" -t \$OMP_NUM_THREADS > out.fasta"
 
 # Nodes, MPI ranks and OMP theads used to execute with each command.
 parallelism=(
-    # 'nodes=1, mpi=1, omp=1'
-    'nodes=1, mpi=1, omp=2'
+    'nodes=1, mpi=1, omp=1'
+    # 'nodes=1, mpi=1, omp=2'
     # 'nodes=1, mpi=1, omp=4'
+    # 'nodes=1, mpi=1, omp=8'
+    # 'nodes=1, mpi=1, omp=12'
+    # 'nodes=1, mpi=1, omp=24'
+    # 'nodes=1, mpi=1, omp=36'
+    # 'nodes=1, mpi=1, omp=48'
 )
 
 #

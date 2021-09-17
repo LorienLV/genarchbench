@@ -1,7 +1,7 @@
 #!/bin/bash
 
 # The folder that contains the inputs.
-inputs_path="/fefs/scratch/bsc18/bsc18248/genarch-inputs/abea"
+inputs_path="$GENARCH_BENCH_INPUTS_ROOT/abea"
 
 if [[ -z "$inputs_path" || ! -d "$inputs_path" ]]; then
   echo "ERROR: You have not set a valid input folder $inputs_path"
