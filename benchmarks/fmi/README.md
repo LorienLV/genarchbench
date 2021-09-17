@@ -1,3 +1,5 @@
+# FM-Index (FMI)
+
 `fmi` uses the same license as [BWA-MEM2](https://github.com/bwa-mem2/bwa-mem2).
 
 If you use `fmi`, please cite:
@@ -22,5 +24,7 @@ If you use `fmi`, please cite:
   bibsource = {dblp computer science bibliography, https://dblp.org}
 }
 ```
+
+TODO
 
 
