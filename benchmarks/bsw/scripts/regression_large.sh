@@ -77,11 +77,12 @@ before_run() (
 after_run() (
     job_name="$1"
 
-    pairs_processed="$(cat "$job_name.out" | grep "Total Pairs processed" | cut -d ' ' -f 4)"
     kernel_time="$(cat "$job_name.out" | grep "Overall SW cycles" | cut -d ' ' -f 6)"
 
-    if [[ $pairs_processed -ne 10606460 ]]; then
-        echo "Error in the execution $pairs_processed"
+    # Check if the output file is identical to the reference
+    cat "$job_name.err" | grep "score=" | diff --brief - "$inputs_path/output-reference.file" > /dev/null 2>&1
+    if [[ $? -ne 0 ]]; then
+        echo "The output file is not identical to the reference file"
         return 1 # Failure
     fi
 

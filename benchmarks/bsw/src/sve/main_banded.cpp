@@ -307,12 +307,17 @@ int main(int argc, char *argv[])
     #ifdef VTUNE_ANALYSIS
         __itt_pause();
     #endif
+
     totalTicks += __rdtsc() - startTick;
     printf("Executed SVE vector code...\n");
 
 	tim = __rdtsc();
 	sleep(1);
 	freq = __rdtsc() - tim;
+
+	for (int64_t i = 0; i < roundNumPairs; ++i) {
+		fprintf(stderr, "[%d] score=%d\n", i, seqPairArray[i].score);
+    }
 	
 	printf("Processor freq: %0.2lf MHz\n", freq/1e6);
 

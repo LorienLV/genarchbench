@@ -276,6 +276,7 @@ int main(int argc, char *argv[])
     #endif
     int64_t workTicks[CLMUL * numThreads];
     memset(workTicks, 0, CLMUL * numThreads * sizeof(int64_t));
+
 #pragma omp parallel num_threads(numThreads)
 {
     int tid = omp_get_thread_num();
@@ -300,6 +301,10 @@ int main(int argc, char *argv[])
 	sleep(1);
 	freq = __rdtsc() - tim;
 	
+	for (int64_t i = 0; i < roundNumPairs; ++i) {
+		fprintf(stderr, "[%d] score=%d\n", i, seqPairArray[i].score);
+    }
+
 	printf("Processor freq: %0.2lf MHz\n", freq/1e6);
 
 	//int64_t myTicks = bsw->getTicks();
