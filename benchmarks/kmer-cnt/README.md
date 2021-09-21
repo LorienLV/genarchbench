@@ -35,7 +35,7 @@ Alternatively, you can directly use the provided Makefile.
 ## Execution
 
 ```
-./kmer-cnt --reads <input_file> --config <config_file> -t <num_threads> [--debug]
+./kmer-cnt --reads <input_file> --config <config_file> --threads <num_threads> [--debug]
 ```
 
 ## Run regression tests
