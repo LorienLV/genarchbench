@@ -1,4 +1,5 @@
 # Set compiler.
+CC=gcc
 CXX=g++
 #CXX=icpc
 
@@ -82,7 +83,7 @@ $(SPOA_LIB):
 	tar -xf $(BUILD_DIR)/spoa.tar.bz2 -C $(BUILD_DIR)
 	rm -f $(BUILD_DIR)/spoa.tar.bz2
 	cd $(BUILD_DIR)/spoa/build && \
-	cmake -DCMAKE_BUILD_TYPE=Release .. && \
+	CC=$(CC) CXX=$(CXX) cmake -DCMAKE_BUILD_TYPE=Release .. && \
 	$(MAKE)
 
 all: $(MSA_SPOA_OMP)
