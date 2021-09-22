@@ -32,6 +32,8 @@ Authors: Vasimuddin Md <vasimuddin.md@intel.com>; Sanchit Misra <sanchit.misra@i
 #include<stdint.h>
 #include <omp.h>
 #include <string.h>
+#include <chrono>
+
 #include "bwa.h"
 #include "FMI_search.h"
 
@@ -44,6 +46,8 @@ Authors: Vasimuddin Md <vasimuddin.md@intel.com>; Sanchit Misra <sanchit.misra@i
 #ifdef VTUNE_ANALYSIS
     #include <ittnotify.h>
 #endif
+
+#define PRINT_OUTPUT 1
 
 #define CLMUL 8 // 8 x 64 bit cache line
 // #define QUERY_DB_SIZE 1280000000
@@ -71,6 +75,8 @@ int main(int argc, char **argv) {
 	}
     
     printf("before reading sequences\n");
+    std::chrono::steady_clock::time_point begin_reading = std::chrono::steady_clock::now();
+
     bseq1_t *seqs = bseq_read_one_fasta_file(QUERY_DB_SIZE, &numReads, fp, &total_size);
 
     if(seqs == NULL)
@@ -82,7 +88,8 @@ int main(int argc, char **argv) {
 
     FMI_search *fmiSearch = new FMI_search(argv[1]);
     fmiSearch->load_index();
-
+    
+    std::chrono::steady_clock::time_point end_reading = std::chrono::steady_clock::now();
 
     int max_readlength = seqs[0].l_seq;
     int min_readlength = seqs[0].l_seq;
@@ -184,6 +191,8 @@ int main(int argc, char **argv) {
 #ifdef ENABLE_PARSEC_HOOKS
     __parsec_roi_begin();
 #endif
+
+    std::chrono::steady_clock::time_point begin_computing = std::chrono::steady_clock::now();
 
 #pragma omp parallel num_threads(numthreads)
     {
@@ -293,6 +302,8 @@ int main(int argc, char **argv) {
         //printf("%d] %ld ticks, workTicks = %ld\n", tid, endTick - startTick, workTicks[CLMUL * tid]);
     }
 
+    std::chrono::steady_clock::time_point end_computing = std::chrono::steady_clock::now();
+
 #ifdef ENABLE_PARSEC_HOOKS
     __parsec_roi_end();
 #endif
@@ -320,6 +331,11 @@ int main(int argc, char **argv) {
         totalSmem += numTotalSmem[batch_id];
     }
     printf("totalSmems = %ld\n", totalSmem);
+
+    printf("Reading time: %ld s\n", 
+        std::chrono::duration_cast<std::chrono::seconds>(end_reading - begin_reading).count());
+    printf("Computing time: %ld s\n", 
+        std::chrono::duration_cast<std::chrono::seconds>(end_computing - begin_computing).count());
 
 #ifdef PRINT_OUTPUT
     int32_t prevRid = -1;
