@@ -23,7 +23,7 @@ for compiler in "${compilers[@]}"; do
             ;;
         fcc)
             module load fuji
-            make CC=gcc CXX='FCC -Nclang -lstdc++' arch=-march=armv8-a+sve TARGET_ARCH=aarch64 BUILDDIR=build_gcc
+            make CC=fcc CXX='FCC -Nclang -lstdc++' arch=-march=armv8-a+sve TARGET_ARCH=aarch64 BUILDDIR=build_fcc
             ;;
         *)
             echo "ERROR: Compiler '$compiler' not supported."
