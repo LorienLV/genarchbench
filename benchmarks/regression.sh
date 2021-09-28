@@ -30,8 +30,21 @@
 #          "sleep 10"
 #     )
 #
+# Optional variables:
+#
+#    Everything you want to do before executing the commands. For example, you 
+#    may want to load some module or to prepend /usr/time to the commands.
+#    before_command="module load cmake; /usr/time"
+#
 #    Additional arguments to pass to the commands.
 #    command_opts="-s 1"
+#
+#    Everything you want to do after executing the commands. For example, you 
+#    may want to append something to the commands or to process the output of 
+#    the commands inside the compute node.
+#    IMPORTANT: If you do not want to append anything to the command, the first 
+#    character of this variable must be ';' or '\n'.
+#    after_command=""
 #
 #    Nodes, MPI ranks and OMP theads used to execute with each command.
 #    parallelism=(
@@ -44,8 +57,6 @@
 #        'nodes=1, mpi=1, omp=36'
 #        'nodes=1, mpi=1, omp=48'
 #    )
-#
-# Optional variables:
 #    
 #    Maximum allowed execution time of each command.
 #    time="hh:mm:ss"
@@ -212,7 +223,7 @@ for command in "${commands[@]}"; do
         jobscript+="export MPI_RANKS=$mpi\n"
         jobscript+="export OMP_NUM_THREADS=$omp\n"
 
-        jobscript+="$command $command_opts"
+        jobscript+="$before_command $command $command_opts $after_command"
 
         # cd to the stage folder of the job.
         current_folder="$(pwd)"
