@@ -33,34 +33,22 @@ ifneq ($(portable),)
 endif
 
 EXE=		bwa-mem2
-#CXX=		icpc
-ifeq ($(CXX), icpc)
-	CC= icc
-else ifeq ($(CXX), g++)
-	CC=gcc
-endif
-
-TARGET_ARCH:=$(shell arch)
-ifeq ($(TARGET_ARCH),x86_64)
-    BSW_SRC=src/x86_64
-else ifeq ($(TARGET_ARCH),aarch64)
-    BSW_SRC=src/sve
-else
-    $(error Architecture $(TARGET_ARCH) not supported)
-endif
-
+#CXX=        fccpx -Nclang -lstdc++ -ffj-no-largepage
+CXX=        armclang++
+CC=         armclang
+#CXX=         g++
+#CC=          gcc
+#ARCH_FLAGS=	-march=armv8-a+sve -ffast-math -ffp-contract=fast
 MEM_FLAGS=	-DSAIS=1
-CPPFLAGS+=	-DENABLE_PREFETCH -DV17=1 -DMATE_SORT=0 $(MEM_FLAGS) 
-INCLUDES=   -Isrc -Iext/safestringlib/include
-# Include architecture dependent headers.
-INCLUDES+=-I$(BSW_SRC)
-LIBS=		-lpthread -lm -lz -L. -lbwa -Lext/safestringlib -lsafestring -fopenmp $(STATIC_GCC)
+CPPFLAGS=	-DENABLE_PREFETCH -DV17=1 -DPERF=0 -DFIPP=0 -DFAPP=0 -DCOUNT_LF=0 -DPWR=0 -DPWRTOT=0 -DPWRSEC=0 $(MEM_FLAGS) $(COMP)
+INCLUDES=   -Isrc -I../ext/safestringlib/include
+LIBS=		-lpthread -lm -lz -L. -lbwa -L../ext/safestringlib -lsafestring $(STATIC_GCC)
 OBJS=		src/fastmap.o src/bwtindex.o src/utils.o src/memcpy_bwamem.o src/kthread.o \
-			src/kstring.o src/ksw.o src/bntseq.o src/bwamem.o src/profiling.o $(BSW_SRC)/bandedSWA.o \
+			src/kstring.o src/ksw.o src/bntseq.o src/bwamem.o src/profiling.o src/bandedSWA.o \
 			src/FMI_search.o src/read_index_ele.o src/bwamem_pair.o src/kswv.o src/bwa.o \
-			src/bwamem_extra.o src/kopen.o
+			src/bwamem_extra.o src/kopen.o src/perf.o
 BWA_LIB=    libbwa.a
-SAFE_STR_LIB=    ext/safestringlib/libsafestring.a
+SAFE_STR_LIB=    ../ext/safestringlib/libsafestring.a
 
 ifeq ($(arch),sse41)
 	ifeq ($(CXX), icpc)
@@ -97,11 +85,9 @@ else ifeq ($(arch),native)
 else ifneq ($(arch),)
 # To provide a different architecture flag like -march=core-avx2.
 	ARCH_FLAGS=$(arch)
-else
-myall:multi
 endif
 
-CXXFLAGS+=-g -O3 -fpermissive -fopenmp $(ARCH_FLAGS) #-Wall ##-xSSE2
+CXXFLAGS+=	-g -O3 -fpermissive $(ARCH_FLAGS) #-Wall ##-xSSE2
 
 .PHONY:all clean depend multi
 .SUFFIXES:.cpp .o
@@ -111,19 +97,6 @@ CXXFLAGS+=-g -O3 -fpermissive -fopenmp $(ARCH_FLAGS) #-Wall ##-xSSE2
 
 all:$(EXE)
 
-multi:
-	rm -f src/*.o $(BWA_LIB) $(BSW_SRC)/*.o; cd ext/safestringlib/ && $(MAKE) clean;
-	$(MAKE) arch=sse41    EXE=bwa-mem2.sse41    CXX=$(CXX) all
-	rm -f src/*.o $(BWA_LIB) $(BSW_SRC)/*.o; cd ext/safestringlib/ && $(MAKE) clean;
-	$(MAKE) arch=sse42    EXE=bwa-mem2.sse42    CXX=$(CXX) all
-	rm -f src/*.o $(BWA_LIB) $(BSW_SRC)/*.o; cd ext/safestringlib/ && $(MAKE) clean;
-	$(MAKE) arch=avx    EXE=bwa-mem2.avx    CXX=$(CXX) all
-	rm -f src/*.o $(BWA_LIB) $(BSW_SRC)/*.o; cd ext/safestringlib/ && $(MAKE) clean;
-	$(MAKE) arch=avx2   EXE=bwa-mem2.avx2     CXX=$(CXX) all
-	rm -f src/*.o $(BWA_LIB) $(BSW_SRC)/*.o; cd ext/safestringlib/ && $(MAKE) clean;
-	$(MAKE) arch=avx512 EXE=bwa-mem2.avx512bw CXX=$(CXX) all
-	$(CXX) -Wall -O3 src/runsimd.cpp -Iext/safestringlib/include -Lext/safestringlib/ -lsafestring $(STATIC_GCC) -o bwa-mem2
-
 
 $(EXE):$(BWA_LIB) $(SAFE_STR_LIB) src/main.o
 	$(CXX) $(CXXFLAGS) $(LDFLAGS) src/main.o $(BWA_LIB) $(LIBS) -o $@
@@ -132,11 +105,11 @@ $(BWA_LIB):$(OBJS)
 	ar rcs $(BWA_LIB) $(OBJS)
 
 $(SAFE_STR_LIB):
-	cd ext/safestringlib/ && $(MAKE) clean && $(MAKE) CC=$(CC) directories libsafestring.a
+	cd ../ext/safestringlib/ && $(MAKE) clean && $(MAKE) CC=$(CC) directories libsafestring.a
 
 clean:
-	rm -fr src/*.o $(BWA_LIB) $(EXE) bwa-mem2.sse41 bwa-mem2.sse42 bwa-mem2.avx bwa-mem2.avx2 bwa-mem2.avx512bw
-	cd ext/safestringlib/ && $(MAKE) clean
+	rm -fr src/*.o $(BWA_LIB) $(EXE)
+	cd ../ext/safestringlib/ && $(MAKE) clean
 
 depend:
 	(LC_ALL=C; export LC_ALL; makedepend -Y -- $(CXXFLAGS) $(CPPFLAGS) -I. -- src/*.cpp)
@@ -144,41 +117,41 @@ depend:
 # DO NOT DELETE
 
 src/FMI_search.o: src/FMI_search.h src/bntseq.h src/read_index_ele.h
-src/FMI_search.o: src/utils.h $(BSW_SRC)/macro.h src/bwa.h src/bwt.h src/sais.h
-src/bandedSWA.o: $(BSW_SRC)/bandedSWA.h $(BSW_SRC)/macro.h $(BSW_SRC)/sse2sve.h
-src/bntseq.o: src/bntseq.h src/utils.h $(BSW_SRC)/macro.h src/kseq.h src/khash.h
-src/bwa.o: src/bntseq.h src/bwa.h src/bwt.h $(BSW_SRC)/macro.h src/ksw.h src/utils.h
+src/FMI_search.o: src/utils.h src/macro.h src/bwa.h src/bwt.h src/sais.h
+src/bandedSWA.o: src/bandedSWA.h src/macro.h
+src/bntseq.o: src/bntseq.h src/utils.h src/macro.h src/kseq.h src/khash.h
+src/bwa.o: src/bntseq.h src/bwa.h src/bwt.h src/macro.h src/ksw.h src/utils.h
 src/bwa.o: src/kstring.h src/kvec.h src/kseq.h
-src/bwamem.o: src/bwamem.h src/bwt.h src/bntseq.h src/bwa.h $(BSW_SRC)/macro.h
-src/bwamem.o: src/kthread.h $(BSW_SRC)/bandedSWA.h src/kstring.h src/ksw.h
+src/bwamem.o: src/bwamem.h src/bwt.h src/bntseq.h src/bwa.h src/macro.h
+src/bwamem.o: src/kthread.h src/bandedSWA.h src/kstring.h src/ksw.h
 src/bwamem.o: src/kvec.h src/ksort.h src/utils.h src/profiling.h
 src/bwamem.o: src/FMI_search.h src/read_index_ele.h src/kbtree.h
-src/bwamem_extra.o: src/bwa.h src/bntseq.h src/bwt.h $(BSW_SRC)/macro.h src/bwamem.h
-src/bwamem_extra.o: src/kthread.h $(BSW_SRC)/bandedSWA.h src/kstring.h src/ksw.h
+src/bwamem_extra.o: src/bwa.h src/bntseq.h src/bwt.h src/macro.h src/bwamem.h
+src/bwamem_extra.o: src/kthread.h src/bandedSWA.h src/kstring.h src/ksw.h
 src/bwamem_extra.o: src/kvec.h src/ksort.h src/utils.h src/profiling.h
 src/bwamem_extra.o: src/FMI_search.h src/read_index_ele.h
 src/bwamem_pair.o: src/kstring.h src/bwamem.h src/bwt.h src/bntseq.h
-src/bwamem_pair.o: src/bwa.h $(BSW_SRC)/macro.h src/kthread.h $(BSW_SRC)/bandedSWA.h
+src/bwamem_pair.o: src/bwa.h src/macro.h src/kthread.h src/bandedSWA.h
 src/bwamem_pair.o: src/ksw.h src/kvec.h src/ksort.h src/utils.h
 src/bwamem_pair.o: src/profiling.h src/FMI_search.h src/read_index_ele.h
 src/bwamem_pair.o: src/kswv.h
-src/bwtindex.o: src/bntseq.h src/bwa.h src/bwt.h $(BSW_SRC)/macro.h src/utils.h
+src/bwtindex.o: src/bntseq.h src/bwa.h src/bwt.h src/macro.h src/utils.h
 src/bwtindex.o: src/FMI_search.h src/read_index_ele.h
-src/fastmap.o: src/fastmap.h src/bwa.h src/bntseq.h src/bwt.h $(BSW_SRC)/macro.h
-src/fastmap.o: src/bwamem.h src/kthread.h $(BSW_SRC)/bandedSWA.h src/kstring.h
+src/fastmap.o: src/fastmap.h src/bwa.h src/bntseq.h src/bwt.h src/macro.h
+src/fastmap.o: src/bwamem.h src/kthread.h src/bandedSWA.h src/kstring.h
 src/fastmap.o: src/ksw.h src/kvec.h src/ksort.h src/utils.h src/profiling.h
 src/fastmap.o: src/FMI_search.h src/read_index_ele.h src/kseq.h
 src/kstring.o: src/kstring.h
-src/ksw.o: src/ksw.h $(BSW_SRC)/macro.h
-src/kswv.o: src/kswv.h $(BSW_SRC)/macro.h src/ksw.h $(BSW_SRC)/bandedSWA.h
-src/kthread.o: src/kthread.h $(BSW_SRC)/macro.h src/bwamem.h src/bwt.h src/bntseq.h
-src/kthread.o: src/bwa.h $(BSW_SRC)/bandedSWA.h src/kstring.h src/ksw.h src/kvec.h
+src/ksw.o: src/ksw.h src/macro.h
+src/kswv.o: src/kswv.h src/macro.h src/ksw.h src/bandedSWA.h
+src/kthread.o: src/kthread.h src/macro.h src/bwamem.h src/bwt.h src/bntseq.h
+src/kthread.o: src/bwa.h src/bandedSWA.h src/kstring.h src/ksw.h src/kvec.h
 src/kthread.o: src/ksort.h src/utils.h src/profiling.h src/FMI_search.h
 src/kthread.o: src/read_index_ele.h
-src/main.o: src/main.h src/kstring.h src/utils.h $(BSW_SRC)/macro.h $(BSW_SRC)/bandedSWA.h
+src/main.o: src/main.h src/kstring.h src/utils.h src/macro.h src/bandedSWA.h
 src/main.o: src/profiling.h
-src/profiling.o: $(BSW_SRC)/macro.h
+src/profiling.o: src/macro.h
 src/read_index_ele.o: src/read_index_ele.h src/utils.h src/bntseq.h
-src/read_index_ele.o: $(BSW_SRC)/macro.h
+src/read_index_ele.o: src/macro.h
 src/utils.o: src/utils.h src/ksort.h src/kseq.h
 src/memcpy_bwamem.o: src/memcpy_bwamem.h

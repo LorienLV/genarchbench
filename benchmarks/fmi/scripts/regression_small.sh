@@ -36,8 +36,8 @@ job_options=(
 #    "command \$MPI_RANKS \$OMP_NUM_THREADS"
 #)
 commands=(
-    "$binaries_path/fmi_gcc"
-    # "$binaries_path/fmi_fcc"
+    "module load gcc/10.2.0; $binaries_path/fmi_gcc"
+    "module load fuji; $binaries_path/fmi_fcc"
 )
 
 # Additional arguments to pass to the commands.
@@ -46,13 +46,13 @@ command_opts="\"$inputs_path/broad\" \"$inputs_path/small/SRR7733443_1m_1.fastq\
 # Nodes, MPI ranks and OMP theads used to execute with each command.
 parallelism=(
     'nodes=1, mpi=1, omp=1'
-    # 'nodes=1, mpi=1, omp=2'
-    # 'nodes=1, mpi=1, omp=4'
-    # 'nodes=1, mpi=1, omp=8'
-    # 'nodes=1, mpi=1, omp=12'
-    # 'nodes=1, mpi=1, omp=24'
-    # 'nodes=1, mpi=1, omp=36'
-    # 'nodes=1, mpi=1, omp=48'
+    'nodes=1, mpi=1, omp=2'
+    'nodes=1, mpi=1, omp=4'
+    'nodes=1, mpi=1, omp=8'
+    'nodes=1, mpi=1, omp=12'
+    'nodes=1, mpi=1, omp=24'
+    'nodes=1, mpi=1, omp=36'
+    'nodes=1, mpi=1, omp=48'
 )
 
 #

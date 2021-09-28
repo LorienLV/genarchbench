@@ -23,10 +23,14 @@ for compiler in "${compilers[@]}"; do
         gcc)
             module load gcc/10.2.0
             make CC=gcc CXX=g++ FMI=fmi_gcc arch=-march=armv8-a+sve TARGET_ARCH=aarch64
+
+            make TARGET_ARCH=aarch64 clean
             ;;
         fcc)
             module load fuji
-            make CC=fcc CXX=FCC FMI=fmi_fcc arch=-march=armv8-a+sve TARGET_ARCH=aarch64
+            make CC=fcc CXX='FCC -Nclang -lstdc++' FMI=fmi_fcc arch=-march=armv8-a+sve TARGET_ARCH=aarch64
+
+            make TARGET_ARCH=aarch64 clean
             ;;
         *)
             echo "ERROR: Compiler '$compiler' not supported."

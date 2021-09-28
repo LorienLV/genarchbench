@@ -37,9 +37,9 @@ CXX=		g++
 BWAMEM2_PATH=./bwa-mem2
 TARGET_ARCH:=$(shell arch)
 ifeq ($(TARGET_ARCH),x86_64)
-    BSW_SRC=src/x86_64
+    BWAMEM2_ARCH_PATH=$(BWAMEM2_PATH)/x86_64
 else ifeq ($(TARGET_ARCH),aarch64)
-    BSW_SRC=src/sve
+    BWAMEM2_ARCH_PATH=$(BWAMEM2_PATH)/sve
 else
     $(error Architecture $(TARGET_ARCH) not supported)
 endif
@@ -68,8 +68,8 @@ endif
 CXXFLAGS=	-std=c++11 -fopenmp $(ARCH_FLAGS) #-mtune=native -march=native
 #CPPFLAGS=	-DPRINT_OUTPUT -DENABLE_PREFETCH -DBWA_OTHER_ELE=0
 CPPFLAGS=	-DENABLE_PREFETCH -DBWA_OTHER_ELE=0
-INCLUDES=	-I$(BWAMEM2_PATH)/src -I$(BWAMEM2_PATH)/ext/safestringlib/include -I$(BWAMEM2_PATH)/$(BSW_SRC) # -DENABLE_PARSEC_HOOKS -I/romol/hooks/include
-LIBS=		-L$(BWAMEM2_PATH) -L$(BWAMEM2_PATH)/ext/safestringlib -lsafestring -fopenmp -lz -lbwa -ldl # -L/romol/hooks/lib -lhooks
+INCLUDES=	-I$(BWAMEM2_ARCH_PATH)/src -I$(BWAMEM2_PATH)/ext/safestringlib/include # -DENABLE_PARSEC_HOOKS -I/romol/hooks/include
+LIBS=		-L$(BWAMEM2_ARCH_PATH) -L$(BWAMEM2_PATH)/ext/safestringlib -lsafestring -fopenmp -lz -lbwa -ldl # -L/romol/hooks/lib -lhooks
 
 ifneq ($(VTUNE_HOME),)
 CPPFLAGS+=	-DVTUNE_ANALYSIS=1
@@ -85,18 +85,18 @@ endif
 
 all:$(FMI)
 
-$(FMI):fmi.o $(BWAMEM2_PATH)/libbwa.a
+$(FMI):fmi.o $(BWAMEM2_ARCH_PATH)/libbwa.a
 	$(CXX) $(CXXFLAGS) $(INCLUDES) -o $@ $^ $(LIBS)
 
-$(BWAMEM2_PATH)/libbwa.a:
-	cd $(BWAMEM2_PATH) && \
-	make CXX=$(CXX) CC=$(CC) BSW_SRC=$(BSW_SRC) arch=$(arch) all
+$(BWAMEM2_ARCH_PATH)/libbwa.a:
+	cd $(BWAMEM2_ARCH_PATH) && \
+	$(MAKE) CC="$(CC)" CXX="$(CXX)" arch="$(arch)" portable="$(portable)" all
 
 clean:
 	rm -fr *.o $(FMI)
-	cd $(BWAMEM2_PATH) && $(MAKE) clean
+	cd $(BWAMEM2_ARCH_PATH) && $(MAKE) clean
 
 # DO NOT DELETE
 
-fmi.o: $(BWAMEM2_PATH)/src/FMI_search.h $(BWAMEM2_PATH)/src/bntseq.h $(BWAMEM2_PATH)/src/read_index_ele.h
-fmi.o: $(BWAMEM2_PATH)/src/bwa.h $(BWAMEM2_PATH)/src/bwt.h $(BWAMEM2_PATH)/src/utils.h $(BWAMEM2_PATH)/$(BSW_SRC)/macro.h
+fmi.o: $(BWAMEM2_ARCH_PATH)/src/FMI_search.h $(BWAMEM2_ARCH_PATH)/src/bntseq.h $(BWAMEM2_ARCH_PATH)/src/read_index_ele.h
+fmi.o: $(BWAMEM2_ARCH_PATH)/src/bwa.h $(BWAMEM2_ARCH_PATH)/src/bwt.h $(BWAMEM2_ARCH_PATH)/src/utils.h $(BWAMEM2_ARCH_PATH)/src/macro.h
