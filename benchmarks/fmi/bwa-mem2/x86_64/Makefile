@@ -77,7 +77,7 @@ else ifneq ($(arch),)
 	ARCH_FLAGS=$(arch)
 endif
 
-CXXFLAGS+=	-g -O3 -fpermissive -fopenmp $(ARCH_FLAGS) #-Wall ##-xSSE2
+CXXFLAGS+=-O3 -fpermissive -fopenmp $(ARCH_FLAGS) #-Wall ##-xSSE2 # -g
 
 .PHONY:all clean depend multi
 .SUFFIXES:.cpp .o
