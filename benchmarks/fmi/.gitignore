@@ -1,1 +1,4 @@
 /fmi*
+
+# Ignore regression test stage folders.
+FMI-REGRESSION-*
