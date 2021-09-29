@@ -1924,15 +1924,15 @@ void BandedPairWiseSW::smithWaterman256_16(uint16_t seq1SoA[],
 
 
 inline void sortPairsLen(SeqPair *pairArray, int32_t count,
-                         SeqPair *tempArray, int16_t *hist,
-                         int16_t *histb)
+                         SeqPair *tempArray, int16_t *hist)
+                         /* int16_t *histb) */
 {
     int32_t i;
     __m512i zero512 = _mm512_setzero_si512();
     for(i = 0; i <= MAX_SEQ_LEN8; i+=32)
     {
         _mm512_store_si512((__m512i *)(hist + i), zero512);
-        _mm512_store_si512((__m512i *)(histb + i), zero512);
+        // _mm512_store_si512((__m512i *)(histb + i), zero512);
     }
     
     for(i = 0; i < count; i++)
@@ -2044,14 +2044,14 @@ void BandedPairWiseSW::smithWatermanBatchWrapper8(SeqPair *pairArray,
                                                sizeof(SeqPair), 64);
     int16_t *hist = (int16_t *)_mm_malloc((MAX_SEQ_LEN8 + 32) * numThreads *
                                           sizeof(int16_t), 64);
-    int16_t *histb = (int16_t *)_mm_malloc((MAX_SEQ_LEN8 + 32) * numThreads *
-                                           sizeof(int16_t), 64);
+    // int16_t *histb = (int16_t *)_mm_malloc((MAX_SEQ_LEN8 + 32) * numThreads *
+    //                                        sizeof(int16_t), 64);
 #pragma omp parallel num_threads(numThreads)
     {
         int32_t tid = omp_get_thread_num();
         SeqPair *myTempArray = tempArray + tid * SORT_BLOCK_SIZE;
         int16_t *myHist = hist + tid * (MAX_SEQ_LEN8 + 32);
-        int16_t *myHistb = histb + tid * (MAX_SEQ_LEN8 + 32);
+        // int16_t *myHistb = histb + tid * (MAX_SEQ_LEN8 + 32);
 
 #pragma omp for
         for(ii = 0; ii < roundNumPairs; ii+=SORT_BLOCK_SIZE)
@@ -2060,7 +2060,8 @@ void BandedPairWiseSW::smithWatermanBatchWrapper8(SeqPair *pairArray,
             first = ii;
             last  = ii + SORT_BLOCK_SIZE;
             if(last > roundNumPairs) last = roundNumPairs;
-            sortPairsLen(pairArray + first, last - first, myTempArray, myHist, myHistb);
+            // sortPairsLen(pairArray + first, last - first, myTempArray, myHist, myHistb);
+            sortPairsLen(pairArray + first, last - first, myTempArray, myHist);
         }
     }
     _mm_free(hist);
