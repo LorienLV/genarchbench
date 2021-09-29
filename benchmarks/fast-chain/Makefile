@@ -45,7 +45,7 @@ endif
 
 # flags #
 #COMPILE_FLAGS = -std=c++11 -Wall -Wextra -g -O3 -fopenmp -xAVX2 -axAVX2
-COMPILE_FLAGS = -std=c++11 -Wall -Wextra -g -O3 -fopenmp $(ARCH_FLAGS) -fopt-info-vec-all
+COMPILE_FLAGS = -std=c++11 -Wall -Wextra -O3 -fopenmp $(ARCH_FLAGS) -fopt-info-vec-all # -g
 # INCLUDES = -I$(BUILD_PATH)/minimap2
 # Space-separated pkg-config libraries used by this project
 # LIBS = -L$(BUILD_PATH)/minimap2 -lminimap2 -ldl
