@@ -18,13 +18,6 @@ clean=1
 # The name of the job.
 job="KMERCNT-REGRESSION-SMALL"
 
-# job additional parameters.
-job_options=(
-    # '--exclusive'
-    # '--time=00:00:01'
-    # '--qos=debug'
-)
-
 # Commands to run.
 # You can access the number of mpi-ranks using the environment variable
 # MPI_RANKS and the number of omp-threads using the environment variable
@@ -36,26 +29,81 @@ job_options=(
 # commands=(
 #    "command \$MPI_RANKS \$OMP_NUM_THREADS"
 #)
-commands=(
-    "module load gcc/10.2.0; $binaries_path/kmer-cnt_gcc"
-    "$binaries_path/kmer-cnt_fcc"
-)
+
+# Nodes, MPI ranks and OMP theads used to execute with each command.
+# parallelism=(
+#     'nodes=1, mpi=1, omp=1'
+#     'nodes=1, mpi=1, omp=2'
+#     'nodes=1, mpi=1, omp=4'
+#     'nodes=1, mpi=1, omp=8'
+#     'nodes=1, mpi=1, omp=12'
+#     'nodes=1, mpi=1, omp=24'
+#     'nodes=1, mpi=1, omp=36'
+#     'nodes=1, mpi=1, omp=48'
+# )
+
+# job additional parameters.
+# job_options=(
+#     # '--exclusive'
+#     # '--time=00:00:01'
+#     # '--qos=debug'
+# )
+
+case "$GENARCH_BENCH_CLUSTER" in
+    MN4)
+        commands=(
+            "module load gcc/10.1.0; $binaries_path/kmer-cnt_gcc"
+        )
+
+        parallelism=(
+            'nodes=1, mpi=1, omp=1'
+            'nodes=1, mpi=1, omp=2'
+            'nodes=1, mpi=1, omp=4'
+            'nodes=1, mpi=1, omp=8'
+            'nodes=1, mpi=1, omp=12'
+            'nodes=1, mpi=1, omp=24'
+            'nodes=1, mpi=1, omp=36'
+            'nodes=1, mpi=1, omp=48'
+        )
+
+        job_options=(
+            '--exclusive'
+            '--time=00:03:00'
+            '--constraint=highmem'
+        )
+        ;;
+    CTEARM)
+        commands=(
+            "module load gcc/10.2.0; $binaries_path/kmer-cnt_gcc"
+            "$binaries_path/kmer-cnt_fcc"
+        )
+
+        parallelism=(
+            'nodes=1, mpi=1, omp=1'
+            'nodes=1, mpi=1, omp=2'
+            'nodes=1, mpi=1, omp=4'
+            'nodes=1, mpi=1, omp=8'
+            'nodes=1, mpi=1, omp=12'
+            'nodes=1, mpi=1, omp=24'
+            'nodes=1, mpi=1, omp=36'
+            'nodes=1, mpi=1, omp=48'
+        )
+        ;;
+    *)
+        commands=(
+            "$binaries_path/kmer-cnt_gcc"
+        )
+
+        parallelism=(
+            'nodes=1, mpi=1, omp=1'
+            'nodes=1, mpi=1, omp=2'
+            'nodes=1, mpi=1, omp=4'
+        )
+esac
 
 # Additional arguments to pass to the commands.
 command_opts="--reads \"$inputs_path/Loman_E.coli_MAP006-1_2D_50x_1000.fasta\" \
               --config \"$configfolder/asm_raw_reads.cfg\" --debug --threads \$OMP_NUM_THREADS"
-
-# Nodes, MPI ranks and OMP theads used to execute with each command.
-parallelism=(
-    'nodes=1, mpi=1, omp=1'
-    'nodes=1, mpi=1, omp=2'
-    'nodes=1, mpi=1, omp=4'
-    'nodes=1, mpi=1, omp=8'
-    'nodes=1, mpi=1, omp=12'
-    'nodes=1, mpi=1, omp=24'
-    'nodes=1, mpi=1, omp=36'
-    'nodes=1, mpi=1, omp=48'
-)
 
 #
 # Additional variables.

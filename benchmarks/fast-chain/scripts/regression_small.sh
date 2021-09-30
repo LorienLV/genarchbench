@@ -12,10 +12,11 @@ scriptfolder="$(dirname $(realpath $0))"
 binaries_path="$(dirname "$scriptfolder")"
 
 # Clean the stage folder of the jobs after finishing? 1 -> yes, 0 -> no.
-clean=0
+clean=1
 
 # The name of the job.
 job="CHAIN-REGRESSION-SMALL"
+
 
 # Commands to run.
 # You can access the number of mpi-ranks using the environment variable
@@ -28,20 +29,79 @@ job="CHAIN-REGRESSION-SMALL"
 # commands=(
 #    "command \$MPI_RANKS \$OMP_NUM_THREADS"
 #)
-commands=(
-    "$binaries_path/chain_gcc"
-    # "$binaries_path/chain_fcc"
-)
+
+# Nodes, MPI ranks and OMP theads used to execute with each command.
+# parallelism=(
+#     'nodes=1, mpi=1, omp=1'
+#     'nodes=1, mpi=1, omp=2'
+#     'nodes=1, mpi=1, omp=4'
+#     'nodes=1, mpi=1, omp=8'
+#     'nodes=1, mpi=1, omp=12'
+#     'nodes=1, mpi=1, omp=24'
+#     'nodes=1, mpi=1, omp=36'
+#     'nodes=1, mpi=1, omp=48'
+# )
+
+# job additional parameters.
+# job_options=(
+#     # '--exclusive'
+#     # '--time=00:00:01'
+#     # '--qos=debug'
+# )
+
+case "$GENARCH_BENCH_CLUSTER" in
+    MN4)
+        commands=(
+            "$binaries_path/chain_gcc"
+        )
+
+        parallelism=(
+            'nodes=1, mpi=1, omp=1'
+            'nodes=1, mpi=1, omp=2'
+            'nodes=1, mpi=1, omp=4'
+            'nodes=1, mpi=1, omp=8'
+            'nodes=1, mpi=1, omp=12'
+            'nodes=1, mpi=1, omp=24'
+            'nodes=1, mpi=1, omp=36'
+            'nodes=1, mpi=1, omp=48'
+        )
+
+        job_options=(
+            '--exclusive'
+            '--time=00:00:30'
+        )
+        ;;
+    CTEARM)
+        commands=(
+            "$binaries_path/chain_gcc"
+            "$binaries_path/chain_fcc"
+        )
+
+        parallelism=(
+            'nodes=1, mpi=1, omp=1'
+            'nodes=1, mpi=1, omp=2'
+            'nodes=1, mpi=1, omp=4'
+            'nodes=1, mpi=1, omp=8'
+            'nodes=1, mpi=1, omp=12'
+            'nodes=1, mpi=1, omp=24'
+            'nodes=1, mpi=1, omp=36'
+            'nodes=1, mpi=1, omp=48'
+        )
+        ;;
+    *)
+        commands=(
+            "$binaries_path/chain_gcc"
+        )
+
+        parallelism=(
+            'nodes=1, mpi=1, omp=1'
+            'nodes=1, mpi=1, omp=2'
+            'nodes=1, mpi=1, omp=4'
+        )
+esac
 
 # Additional arguments to pass to the commands.
 command_opts="-i \"$inputs_path/in-1k.txt\" -o out.txt -t \$OMP_NUM_THREADS"
-
-# Nodes, MPI ranks and OMP theads used to execute with each command.
-parallelism=(
-    'nodes=1, mpi=1, omp=1'
-    # 'nodes=1, mpi=1, omp=2'
-    # 'nodes=1, mpi=1, omp=4'
-)
 
 #
 # Additional variables.
@@ -70,7 +130,7 @@ after_run() (
     echo "Time in kernel: $wall_time s"
 
     # Check if the output file is identical to the reference
-    diff --brief "out.txt" "$inputs_path/out-reference-no-heuristics.txt" > /dev/null 2>&1
+    diff --brief "out.txt" "$inputs_path/out-reference.txt" > /dev/null 2>&1
     if [[ $? -ne 0 ]]; then
         echo "The output file is not identical to the reference file"
         return 1 # Failure

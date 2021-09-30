@@ -12,17 +12,10 @@ scriptfolder="$(dirname $(realpath $0))"
 binaries_path="$(dirname "$scriptfolder")"
 
 # Clean the stage folder of the jobs after finishing? 1 -> yes, 0 -> no.
-clean=0
+clean=1
 
 # The name of the job.
 job="CHAIN-REGRESSION-LARGE"
-
-# job additional parameters.
-job_options=(
-    # '--exclusive'
-    # '--time=00:00:01'
-    # '--qos=debug'
-)
 
 # Commands to run.
 # You can access the number of mpi-ranks using the environment variable
@@ -35,20 +28,84 @@ job_options=(
 # commands=(
 #    "command \$MPI_RANKS \$OMP_NUM_THREADS"
 #)
-commands=(
-    "$binaries_path/chain_gcc"
-    # "$binaries_path/chain_fcc"
-)
+
+# Nodes, MPI ranks and OMP theads used to execute with each command.
+# parallelism=(
+#     'nodes=1, mpi=1, omp=1'
+#     'nodes=1, mpi=1, omp=2'
+#     'nodes=1, mpi=1, omp=4'
+#     'nodes=1, mpi=1, omp=8'
+#     'nodes=1, mpi=1, omp=12'
+#     'nodes=1, mpi=1, omp=24'
+#     'nodes=1, mpi=1, omp=36'
+#     'nodes=1, mpi=1, omp=48'
+# )
+
+# # job additional parameters.
+# job_options=(
+#     # '--exclusive'
+#     # '--time=00:00:01'
+#     # '--qos=debug'
+# )
+
+case "$GENARCH_BENCH_CLUSTER" in
+    MN4)
+        commands=(
+            "$binaries_path/chain_gcc"
+        )
+
+        parallelism=(
+            'nodes=1, mpi=1, omp=1'
+            'nodes=1, mpi=1, omp=2'
+            'nodes=1, mpi=1, omp=4'
+            'nodes=1, mpi=1, omp=8'
+            'nodes=1, mpi=1, omp=12'
+            'nodes=1, mpi=1, omp=24'
+            'nodes=1, mpi=1, omp=36'
+            'nodes=1, mpi=1, omp=48'
+        )
+
+        job_options=(
+            '--exclusive'
+            '--time=00:05:00'
+            '--constraint=highmem'
+        )
+        ;;
+    CTEARM)
+        commands=(
+            "$binaries_path/chain_gcc"
+            "$binaries_path/chain_fcc"
+        )
+
+        parallelism=(
+            'nodes=1, mpi=1, omp=1'
+            'nodes=1, mpi=1, omp=2'
+            'nodes=1, mpi=1, omp=4'
+            'nodes=1, mpi=1, omp=8'
+            'nodes=1, mpi=1, omp=12'
+            'nodes=1, mpi=1, omp=24'
+            'nodes=1, mpi=1, omp=36'
+            'nodes=1, mpi=1, omp=48'
+        )
+        ;;
+    *)
+        commands=(
+            "$binaries_path/chain_gcc"
+        )
+
+        parallelism=(
+            'nodes=1, mpi=1, omp=1'
+            'nodes=1, mpi=1, omp=2'
+            'nodes=1, mpi=1, omp=4'
+        )
+esac
 
 # Additional arguments to pass to the commands.
 command_opts="-i \"$inputs_path/c_elegans_40x.10k.in\" -o out.txt -t \$OMP_NUM_THREADS"
 
-# Nodes, MPI ranks and OMP theads used to execute with each command.
-parallelism=(
-    'nodes=1, mpi=1, omp=1'
-    # 'nodes=1, mpi=1, omp=2'
-    # 'nodes=1, mpi=1, omp=4'
-)
+#
+# Additional variables.
+#
 
 #
 # This function is executed before launching a job. You can use this function to

@@ -28,13 +28,33 @@ job="ABEA-REGRESSION-LARGE"
 # commands=(
 #    "command \$MPI_RANKS \$OMP_NUM_THREADS"
 #)
-commands=(
-    "$binaries_path/f5c_gcc"
-    "$binaries_path/f5c_fcc"
-)
+
+case "$GENARCH_BENCH_CLUSTER" in
+    MN4)
+        commands=(
+            "$binaries_path/f5c_gcc"
+        )
+
+        job_options=(
+            '--exclusive'
+            '--time=00:30:00'
+        )
+        ;;
+    CTEARM)
+        commands=(
+            "$binaries_path/f5c_gcc"
+            "$binaries_path/f5c_fcc"
+        )
+        ;;
+    *)
+        commands=(
+            "$binaries_path/f5c_gcc"
+        )
+esac
 
 # Additional arguments to pass to the commands.
-command_opts="eventalign -b "$inputs_path"/large/10000reads.bam -g "$inputs_path"/humangenome.fa -r "$inputs_path"/10000reads.fastq -B 3.7M > events.tsv"
+command_opts="eventalign -b "$inputs_path"/large/10000reads.bam -g \
+"$inputs_path"/humangenome.fa -r "$inputs_path"/10000reads.fastq -B 3.7M > events.tsv"
 
 # Nodes, MPI ranks and OMP theads used to execute with each command.
 parallelism=(

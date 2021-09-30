@@ -23,11 +23,3 @@ echo "Creating the index files..."
 
 "$binary" index -d "$inputs_path"/fast5_files "$inputs_path"/1000reads.fastq
 "$binary" index -d "$inputs_path"/fast5_files "$inputs_path"/10000reads.fastq
-
-if [ $? -eq 0 ]; then
-    echo "SUCCESS"
-    exit 0
-else
-    echo "ERROR"
-    exit 1
-fi

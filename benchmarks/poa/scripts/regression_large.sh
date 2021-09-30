@@ -17,12 +17,6 @@ clean=0
 # The name of the job.
 job="POA-REGRESSION-LARGE"
 
-# job additional parameters.
-job_options=(
-    # '--exclusive'
-    # '--time=00:00:01'
-    # '--qos=debug'
-)
 
 # Commands to run.
 # You can access the number of mpi-ranks using the environment variable
@@ -35,25 +29,79 @@ job_options=(
 # commands=(
 #    "command \$MPI_RANKS \$OMP_NUM_THREADS"
 #)
-commands=(
-    "$binaries_path/msa_spoa_omp_gcc"
-    "$binaries_path/msa_spoa_omp_fcc"
-)
+
+# Nodes, MPI ranks and OMP theads used to execute with each command.
+# parallelism=(
+#     'nodes=1, mpi=1, omp=1'
+#     # 'nodes=1, mpi=1, omp=2'
+#     # 'nodes=1, mpi=1, omp=4'
+#     # 'nodes=1, mpi=1, omp=8'
+#     # 'nodes=1, mpi=1, omp=12'
+#     # 'nodes=1, mpi=1, omp=24'
+#     # 'nodes=1, mpi=1, omp=36'
+#     # 'nodes=1, mpi=1, omp=48'
+# )
+
+# job additional parameters.
+# job_options=(
+#     # '--exclusive'
+#     # '--time=00:00:01'
+#     # '--qos=debug'
+# )
+
+case "$GENARCH_BENCH_CLUSTER" in
+    MN4)
+        commands=(
+            "$binaries_path/msa_spoa_omp_gcc"
+        )
+
+        parallelism=(
+            'nodes=1, mpi=1, omp=1'
+            'nodes=1, mpi=1, omp=2'
+            'nodes=1, mpi=1, omp=4'
+            'nodes=1, mpi=1, omp=8'
+            'nodes=1, mpi=1, omp=12'
+            'nodes=1, mpi=1, omp=24'
+            'nodes=1, mpi=1, omp=36'
+            'nodes=1, mpi=1, omp=48'
+        )
+
+        job_options=(
+            '--exclusive'
+            # '--time=00:03:00'
+        )
+        ;;
+    CTEARM)
+        commands=(
+            "$binaries_path/msa_spoa_omp_gcc"
+            "$binaries_path/msa_spoa_omp_fcc"
+        )
+
+        parallelism=(
+            'nodes=1, mpi=1, omp=1'
+            'nodes=1, mpi=1, omp=2'
+            'nodes=1, mpi=1, omp=4'
+            'nodes=1, mpi=1, omp=8'
+            'nodes=1, mpi=1, omp=12'
+            'nodes=1, mpi=1, omp=24'
+            'nodes=1, mpi=1, omp=36'
+            'nodes=1, mpi=1, omp=48'
+        )
+        ;;
+    *)
+        commands=(
+            "$binaries_path/msa_spoa_omp_gcc"
+        )
+
+        parallelism=(
+            'nodes=1, mpi=1, omp=1'
+            'nodes=1, mpi=1, omp=2'
+            'nodes=1, mpi=1, omp=4'
+        )
+esac
 
 # Additional arguments to pass to the commands.
 command_opts="-s \"$inputs_path/input.fasta\" -t \$OMP_NUM_THREADS > out.fasta"
-
-# Nodes, MPI ranks and OMP theads used to execute with each command.
-parallelism=(
-    'nodes=1, mpi=1, omp=1'
-    # 'nodes=1, mpi=1, omp=2'
-    # 'nodes=1, mpi=1, omp=4'
-    # 'nodes=1, mpi=1, omp=8'
-    # 'nodes=1, mpi=1, omp=12'
-    # 'nodes=1, mpi=1, omp=24'
-    # 'nodes=1, mpi=1, omp=36'
-    # 'nodes=1, mpi=1, omp=48'
-)
 
 #
 # This function is executed before launching a job. You can use this function to
