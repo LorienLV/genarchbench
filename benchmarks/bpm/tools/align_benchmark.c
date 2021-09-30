@@ -99,6 +99,7 @@ void align_benchmark(const alg_algorithm_type alg_algorithm) {
     output_file = fopen(parameters.output,"w");
   }
 
+  char more_seqs = 1;
   int seqs_read = 0;
   int seqs_processed = 0;
   #pragma omp parallel num_threads(parameters.threads)
@@ -116,11 +117,10 @@ void align_benchmark(const alg_algorithm_type alg_algorithm) {
 
     // Read and assign the same number of sequences to each thread.
     seq_pair_t *it = head;
-    char more_seqs = 1;
     while(more_seqs) {
-      #pragma omp for schedule(static, 1) ordered
+      #pragma omp for schedule(static, 1)
       for (size_t i = 0; i < omp_get_num_threads(); ++i) {
-        #pragma omp ordered
+        #pragma omp critical
         {
           it->seq1.data = NULL;
           it->seq2.data = NULL;
