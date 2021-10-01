@@ -4,7 +4,7 @@
 CC=gcc
 CPP=g++
 LD_FLAGS=-lm -lrt
-CC_FLAGS=-Wall -g
+CC_FLAGS=-Wall # -g
 
 FOLDER_BIN=bin
 FOLDER_BUILD=build
