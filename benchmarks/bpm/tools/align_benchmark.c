@@ -113,6 +113,9 @@ void align_benchmark(const alg_algorithm_type alg_algorithm) {
 
     // Linked list of read sequences.
     seq_pair_t *head = malloc(sizeof(*head));
+
+    head->seq1.length = -1;
+    head->seq2.length = -1;
     head->next = NULL;
 
     // Read and assign the same number of sequences to each thread.
@@ -137,6 +140,10 @@ void align_benchmark(const alg_algorithm_type alg_algorithm) {
 
             it->next = malloc(sizeof(*it));
             it = it->next;
+
+            it->seq1.length = -1;
+            it->seq2.length = -1;
+            it->next = NULL;
           }
         }
       }
@@ -152,7 +159,7 @@ void align_benchmark(const alg_algorithm_type alg_algorithm) {
 
     it = head;
     while(it != NULL) {
-      if (it->seq1.length >= 0 && it->seq2.length >= 0) {
+      if (it->seq1.length > 0 && it->seq2.length > 0) {
 
         align_input.pattern = it->seq1.data + 1;
         align_input.pattern_length = it->seq1.length - 2;
