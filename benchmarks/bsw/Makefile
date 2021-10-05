@@ -65,7 +65,7 @@ else ifneq ($(arch),)
 		ARCH_FLAGS=$(arch)
 endif
 
-CXXFLAGS=-DSORT_PAIRS -DENABLE_PREFETCH -DBWA_OTHER_ELE=0 -O3 -std=c++11 -fopenmp $(ARCH_FLAGS)
+CXXFLAGS=-DENABLE_PREFETCH -DBWA_OTHER_ELE=0 -O3 -std=c++11 -fopenmp $(ARCH_FLAGS)
 # VTUNE_HOME= /opt/intel/oneapi/vtune/2021.1.1
 INCLUDES=
 LIBS=-fopenmp -lz -ldl

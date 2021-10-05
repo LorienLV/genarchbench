@@ -67,7 +67,7 @@ case "$GENARCH_BENCH_CLUSTER" in
 
         job_options=(
             '--exclusive'
-            '--time=00:00:30'
+            '--time=00:04:00'
         )
         ;;
     CTEARM)

@@ -17,7 +17,7 @@ for compiler in "${compilers[@]}"; do
     case "$compiler" in
         gcc)
             module load gcc/10.1.0
-            make CC=gcc CXX=g++ arch=-march=native TARGET_ARCH=x86_64 BUILDDIR=build_gcc
+            make CC=gcc CXX=g++ arch='-march=skylake-avx512' TARGET_ARCH=x86_64 BUILDDIR=build_gcc
             ;;
         *)
             echo "ERROR: Compiler '$compiler' not supported."
