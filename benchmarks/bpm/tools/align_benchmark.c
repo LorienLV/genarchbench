@@ -116,6 +116,8 @@ void align_benchmark(const alg_algorithm_type alg_algorithm) {
 
     head->seq1.length = -1;
     head->seq2.length = -1;
+    head->seq1.data = NULL;
+    head->seq2.data = NULL;
     head->next = NULL;
 
     // Read and assign the same number of sequences to each thread.
@@ -125,9 +127,6 @@ void align_benchmark(const alg_algorithm_type alg_algorithm) {
       for (size_t i = 0; i < omp_get_num_threads(); ++i) {
         #pragma omp critical
         {
-          it->seq1.data = NULL;
-          it->seq2.data = NULL;
-
           it->seq1.length = getline(&it->seq1.data, &it->seq1.allocated, input_file);
           it->seq2.length = getline(&it->seq2.data, &it->seq2.allocated, input_file);
 
@@ -143,6 +142,8 @@ void align_benchmark(const alg_algorithm_type alg_algorithm) {
 
             it->seq1.length = -1;
             it->seq2.length = -1;
+            it->seq1.data = NULL;
+            it->seq2.data = NULL;
             it->next = NULL;
           }
         }
@@ -220,7 +221,7 @@ void align_benchmark(const alg_algorithm_type alg_algorithm) {
     // Print scores and free private data.
     it = head;
     while(it != NULL) {
-      if (it->seq1.length >= 0 && it->seq2.length >= 0 && output_file != NULL) {
+      if (it->seq1.length > 0 && it->seq2.length > 0 && output_file != NULL) {
         fprintf(output_file,"[%d] score=%d\n", it->id, it->score);
       }
 
