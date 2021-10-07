@@ -90,7 +90,7 @@ void align_benchmark(const alg_algorithm_type alg_algorithm) {
 
   FILE *input_file = fopen(parameters.input, "r");
   if (input_file == NULL) {
-    fprintf(stderr,"Input file '%s' couldn't be opened\n",parameters.input);
+    fprintf(stderr,"Input file '%s' couldn't be opened\n", parameters.input);
     exit(1);
   }
 
@@ -131,9 +131,11 @@ void align_benchmark(const alg_algorithm_type alg_algorithm) {
           it->seq2.length = getline(&it->seq2.data, &it->seq2.allocated, input_file);
 
           if (it->seq1.length == -1 || it->seq2.length == -1) {
+            // OMP: Implicit flush of more_seqs at the end of the for loop.
             more_seqs = 0;
           }
           else {
+            // OMP: Implicit flush of seqs_reads on entry and exit of the critical section.
             it->id = seqs_read;
             ++seqs_read;
 
