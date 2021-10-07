@@ -4,8 +4,8 @@
 inputs_path="$GENARCH_BENCH_INPUTS_ROOT/abea"
 
 if [[ -z "$inputs_path" || ! -d "$inputs_path" ]]; then
-  echo "ERROR: You have not set a valid input folder $inputs_path"
-  exit 1
+    echo "ERROR: You have not set a valid input folder $inputs_path"
+    exit 1
 fi
 
 scriptfolder="$(dirname $(realpath $0))"
@@ -36,26 +36,27 @@ job="ABEA-REGRESSION-SMALL"
 # )
 
 case "$GENARCH_BENCH_CLUSTER" in
-    MN4)
-        commands=(
-            "$binaries_path/f5c_gcc"
-        )
+MN4)
+    commands=(
+        "$binaries_path/f5c_gcc"
+    )
 
-        job_options=(
-            '--exclusive'
-            '--time=00:04:00'
-        )
-        ;;
-    CTEARM)
-        commands=(
-            "$binaries_path/f5c_gcc"
-            "$binaries_path/f5c_fcc"
-        )
-        ;;
-    *)
-        commands=(
-            "$binaries_path/f5c_gcc"
-        )
+    job_options=(
+        '--exclusive'
+        '--time=00:04:00'
+    )
+    ;;
+CTEARM)
+    commands=(
+        "$binaries_path/f5c_gcc"
+        "$binaries_path/f5c_fcc"
+    )
+    ;;
+*)
+    commands=(
+        "$binaries_path/f5c_gcc"
+    )
+    ;;
 esac
 
 # Additional arguments to pass to the commands.
@@ -89,7 +90,7 @@ after_run() (
 
     echo "Data processing time: $wall_time s"
 
-    # Check that columns "reference_kmer" and "model_kmer" are identical in the 
+    # Check that columns "reference_kmer" and "model_kmer" are identical in the
     # reference and the output files.
     awk -F $'\t' 'NR==FNR{a[$3$10]++;next} a[$3$10] == 0 {exit 1}' "events.tsv" "$inputs_path/small-reference.tsv"
     if [[ $? -ne 0 ]]; then
@@ -100,4 +101,4 @@ after_run() (
     return 0 # OK
 )
 
-source "$scriptfolder/../../regression.sh"
+source "$scriptfolder/../../run_wrapper.sh"

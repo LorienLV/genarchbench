@@ -30,4 +30,3 @@ for compiler in "${compilers[@]}"; do
             exit 1
     esac
 done
-

@@ -15,8 +15,8 @@ binaries_path="$(dirname "$(dirname "$(realpath $0)")")"
 binary="$binaries_path/f5c_gcc" # The ABEA binary to use.
 
 if [[ -z "$inputs_path" || ! -d "$inputs_path" ]]; then
-  echo "ERROR: You have not set a valid input folder $inputs_path"
-  exit 1
+    echo "ERROR: You have not set a valid input folder $inputs_path"
+    exit 1
 fi
 
 echo "Creating the index files..."

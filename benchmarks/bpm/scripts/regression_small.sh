@@ -4,8 +4,8 @@
 inputs_path="$GENARCH_BENCH_INPUTS_ROOT/bpm/small"
 
 if [[ -z "$inputs_path" || ! -d "$inputs_path" ]]; then
-  echo "ERROR: You have not set a valid input folder $inputs_path"
-  exit 1
+    echo "ERROR: You have not set a valid input folder $inputs_path"
+    exit 1
 fi
 
 scriptfolder="$(dirname $(realpath $0))"
@@ -49,54 +49,55 @@ job="BPM-REGRESSION-SMALL"
 # )
 
 case "$GENARCH_BENCH_CLUSTER" in
-    MN4)
-        commands=(
-            "$binaries_path/bin_gcc/align_benchmark"
-        )
+MN4)
+    commands=(
+        "$binaries_path/bin_gcc/align_benchmark"
+    )
 
-        parallelism=(
-            'nodes=1, mpi=1, omp=1'
-            'nodes=1, mpi=1, omp=2'
-            'nodes=1, mpi=1, omp=4'
-            'nodes=1, mpi=1, omp=8'
-            'nodes=1, mpi=1, omp=12'
-            'nodes=1, mpi=1, omp=24'
-            'nodes=1, mpi=1, omp=36'
-            'nodes=1, mpi=1, omp=48'
-        )
+    parallelism=(
+        'nodes=1, mpi=1, omp=1'
+        'nodes=1, mpi=1, omp=2'
+        'nodes=1, mpi=1, omp=4'
+        'nodes=1, mpi=1, omp=8'
+        'nodes=1, mpi=1, omp=12'
+        'nodes=1, mpi=1, omp=24'
+        'nodes=1, mpi=1, omp=36'
+        'nodes=1, mpi=1, omp=48'
+    )
 
-        job_options=(
-            '--exclusive'
-            '--time=00:00:30'
-        )
-        ;;
-    CTEARM)
-        commands=(
-            "$binaries_path/bin_gcc/align_benchmark"
-            "$binaries_path/bin_fcc/align_benchmark"
-        )
+    job_options=(
+        '--exclusive'
+        '--time=00:00:30'
+    )
+    ;;
+CTEARM)
+    commands=(
+        "$binaries_path/bin_gcc/align_benchmark"
+        "$binaries_path/bin_fcc/align_benchmark"
+    )
 
-        parallelism=(
-            'nodes=1, mpi=1, omp=1'
-            'nodes=1, mpi=1, omp=2'
-            'nodes=1, mpi=1, omp=4'
-            'nodes=1, mpi=1, omp=8'
-            'nodes=1, mpi=1, omp=12'
-            'nodes=1, mpi=1, omp=24'
-            'nodes=1, mpi=1, omp=36'
-            'nodes=1, mpi=1, omp=48'
-        )
-        ;;
-    *)
-        commands=(
-            "$binaries_path/bin_gcc/align_benchmark"
-        )
+    parallelism=(
+        'nodes=1, mpi=1, omp=1'
+        'nodes=1, mpi=1, omp=2'
+        'nodes=1, mpi=1, omp=4'
+        'nodes=1, mpi=1, omp=8'
+        'nodes=1, mpi=1, omp=12'
+        'nodes=1, mpi=1, omp=24'
+        'nodes=1, mpi=1, omp=36'
+        'nodes=1, mpi=1, omp=48'
+    )
+    ;;
+*)
+    commands=(
+        "$binaries_path/bin_gcc/align_benchmark"
+    )
 
-        parallelism=(
-            'nodes=1, mpi=1, omp=1'
-            'nodes=1, mpi=1, omp=2'
-            'nodes=1, mpi=1, omp=4'
-        )
+    parallelism=(
+        'nodes=1, mpi=1, omp=1'
+        'nodes=1, mpi=1, omp=2'
+        'nodes=1, mpi=1, omp=4'
+    )
+    ;;
 esac
 
 # Additional arguments to pass to the commands.
@@ -129,7 +130,7 @@ after_run() (
     echo "Time.Benchmark: $benchmark_time"
 
     # Check if the output file is identical to the reference
-    sort -n -t '[' -k 2,2 "checksum.file" | diff --brief - "$inputs_path/output-reference.file" > /dev/null 2>&1
+    sort -n -t '[' -k 2,2 "checksum.file" | diff --brief - "$inputs_path/output-reference.file" >/dev/null 2>&1
     if [[ $? -ne 0 ]]; then
         echo "The output file is not identical to the reference file"
         return 1 # Failure
@@ -138,4 +139,4 @@ after_run() (
     return 0 # OK
 )
 
-source "$scriptfolder/../../regression.sh"
+source "$scriptfolder/../../run_wrapper.sh"

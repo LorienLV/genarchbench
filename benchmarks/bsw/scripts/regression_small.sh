@@ -4,8 +4,8 @@
 inputs_path="$GENARCH_BENCH_INPUTS_ROOT/bsw/small"
 
 if [[ -z "$inputs_path" || ! -d "$inputs_path" ]]; then
-  echo "ERROR: You have not set a valid input folder $inputs_path"
-  exit 1
+    echo "ERROR: You have not set a valid input folder $inputs_path"
+    exit 1
 fi
 
 scriptfolder="$(dirname $(realpath $0))"
@@ -49,54 +49,55 @@ job="BSW-REGRESSION-SMALL"
 # )
 
 case "$GENARCH_BENCH_CLUSTER" in
-    MN4)
-        commands=(
-            "module load gcc/10.1.0; $binaries_path/build_gcc/main_bsw"
-        )
+MN4)
+    commands=(
+        "module load gcc/10.1.0; $binaries_path/build_gcc/main_bsw"
+    )
 
-        parallelism=(
-            'nodes=1, mpi=1, omp=1'
-            'nodes=1, mpi=1, omp=2'
-            'nodes=1, mpi=1, omp=4'
-            'nodes=1, mpi=1, omp=8'
-            'nodes=1, mpi=1, omp=12'
-            'nodes=1, mpi=1, omp=24'
-            'nodes=1, mpi=1, omp=36'
-            'nodes=1, mpi=1, omp=48'
-        )
+    parallelism=(
+        'nodes=1, mpi=1, omp=1'
+        'nodes=1, mpi=1, omp=2'
+        'nodes=1, mpi=1, omp=4'
+        'nodes=1, mpi=1, omp=8'
+        'nodes=1, mpi=1, omp=12'
+        'nodes=1, mpi=1, omp=24'
+        'nodes=1, mpi=1, omp=36'
+        'nodes=1, mpi=1, omp=48'
+    )
 
-        job_options=(
-            '--exclusive'
-            '--time=00:00:30'
-        )
-        ;;
-    CTEARM)
-        commands=(
-            "module load gcc/10.2.0; $binaries_path/build_gcc/main_bsw"
-            "module load fuji; $binaries_path/build_fcc/main_bsw"
-        )
+    job_options=(
+        '--exclusive'
+        '--time=00:00:30'
+    )
+    ;;
+CTEARM)
+    commands=(
+        "module load gcc/10.2.0; $binaries_path/build_gcc/main_bsw"
+        "module load fuji; $binaries_path/build_fcc/main_bsw"
+    )
 
-        parallelism=(
-            'nodes=1, mpi=1, omp=1'
-            'nodes=1, mpi=1, omp=2'
-            'nodes=1, mpi=1, omp=4'
-            'nodes=1, mpi=1, omp=8'
-            'nodes=1, mpi=1, omp=12'
-            'nodes=1, mpi=1, omp=24'
-            'nodes=1, mpi=1, omp=36'
-            'nodes=1, mpi=1, omp=48'
-        )
-        ;;
-    *)
-        commands=(
-            "$binaries_path/build_gcc/main_bsw"
-        )
+    parallelism=(
+        'nodes=1, mpi=1, omp=1'
+        'nodes=1, mpi=1, omp=2'
+        'nodes=1, mpi=1, omp=4'
+        'nodes=1, mpi=1, omp=8'
+        'nodes=1, mpi=1, omp=12'
+        'nodes=1, mpi=1, omp=24'
+        'nodes=1, mpi=1, omp=36'
+        'nodes=1, mpi=1, omp=48'
+    )
+    ;;
+*)
+    commands=(
+        "$binaries_path/build_gcc/main_bsw"
+    )
 
-        parallelism=(
-            'nodes=1, mpi=1, omp=1'
-            'nodes=1, mpi=1, omp=2'
-            'nodes=1, mpi=1, omp=4'
-        )
+    parallelism=(
+        'nodes=1, mpi=1, omp=1'
+        'nodes=1, mpi=1, omp=2'
+        'nodes=1, mpi=1, omp=4'
+    )
+    ;;
 esac
 
 # Additional arguments to pass to the commands.
@@ -127,7 +128,7 @@ after_run() (
     kernel_time="$(cat "$job_name.out" | grep "Overall SW cycles" | cut -d ' ' -f 6)"
 
     # Check if the output file is identical to the reference
-    cat "$job_name.err" | grep "score=" | diff --brief - "$inputs_path/output-reference.file" > /dev/null 2>&1
+    cat "$job_name.err" | grep "score=" | diff --brief - "$inputs_path/output-reference.file" >/dev/null 2>&1
     if [[ $? -ne 0 ]]; then
         echo "The output file is not identical to the reference file"
         return 1 # Failure
@@ -138,4 +139,4 @@ after_run() (
     return 0 # OK
 )
 
-source "$scriptfolder/../../regression.sh"
+source "$scriptfolder/../../run_wrapper.sh"

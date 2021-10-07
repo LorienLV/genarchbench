@@ -4,8 +4,8 @@
 inputs_path="$GENARCH_BENCH_INPUTS_ROOT/chain/large"
 
 if [[ -z "$inputs_path" || ! -d "$inputs_path" ]]; then
-  echo "ERROR: You have not set a valid input folder $inputs_path"
-  exit 1
+    echo "ERROR: You have not set a valid input folder $inputs_path"
+    exit 1
 fi
 
 scriptfolder="$(dirname $(realpath $0))"
@@ -49,55 +49,56 @@ job="CHAIN-REGRESSION-LARGE"
 # )
 
 case "$GENARCH_BENCH_CLUSTER" in
-    MN4)
-        commands=(
-            "$binaries_path/chain_gcc"
-        )
+MN4)
+    commands=(
+        "$binaries_path/chain_gcc"
+    )
 
-        parallelism=(
-            'nodes=1, mpi=1, omp=1'
-            'nodes=1, mpi=1, omp=2'
-            'nodes=1, mpi=1, omp=4'
-            'nodes=1, mpi=1, omp=8'
-            'nodes=1, mpi=1, omp=12'
-            'nodes=1, mpi=1, omp=24'
-            'nodes=1, mpi=1, omp=36'
-            'nodes=1, mpi=1, omp=48'
-        )
+    parallelism=(
+        'nodes=1, mpi=1, omp=1'
+        'nodes=1, mpi=1, omp=2'
+        'nodes=1, mpi=1, omp=4'
+        'nodes=1, mpi=1, omp=8'
+        'nodes=1, mpi=1, omp=12'
+        'nodes=1, mpi=1, omp=24'
+        'nodes=1, mpi=1, omp=36'
+        'nodes=1, mpi=1, omp=48'
+    )
 
-        job_options=(
-            '--exclusive'
-            '--time=00:05:00'
-            '--constraint=highmem'
-        )
-        ;;
-    CTEARM)
-        commands=(
-            "$binaries_path/chain_gcc"
-            "$binaries_path/chain_fcc"
-        )
+    job_options=(
+        '--exclusive'
+        '--time=00:05:00'
+        '--constraint=highmem'
+    )
+    ;;
+CTEARM)
+    commands=(
+        "$binaries_path/chain_gcc"
+        "$binaries_path/chain_fcc"
+    )
 
-        parallelism=(
-            'nodes=1, mpi=1, omp=1'
-            'nodes=1, mpi=1, omp=2'
-            'nodes=1, mpi=1, omp=4'
-            'nodes=1, mpi=1, omp=8'
-            'nodes=1, mpi=1, omp=12'
-            'nodes=1, mpi=1, omp=24'
-            'nodes=1, mpi=1, omp=36'
-            'nodes=1, mpi=1, omp=48'
-        )
-        ;;
-    *)
-        commands=(
-            "$binaries_path/chain_gcc"
-        )
+    parallelism=(
+        'nodes=1, mpi=1, omp=1'
+        'nodes=1, mpi=1, omp=2'
+        'nodes=1, mpi=1, omp=4'
+        'nodes=1, mpi=1, omp=8'
+        'nodes=1, mpi=1, omp=12'
+        'nodes=1, mpi=1, omp=24'
+        'nodes=1, mpi=1, omp=36'
+        'nodes=1, mpi=1, omp=48'
+    )
+    ;;
+*)
+    commands=(
+        "$binaries_path/chain_gcc"
+    )
 
-        parallelism=(
-            'nodes=1, mpi=1, omp=1'
-            'nodes=1, mpi=1, omp=2'
-            'nodes=1, mpi=1, omp=4'
-        )
+    parallelism=(
+        'nodes=1, mpi=1, omp=1'
+        'nodes=1, mpi=1, omp=2'
+        'nodes=1, mpi=1, omp=4'
+    )
+    ;;
 esac
 
 # Additional arguments to pass to the commands.
@@ -130,7 +131,7 @@ after_run() (
     echo "Time in kernel: $wall_time s"
 
     # Check if the output file is identical to the reference
-    diff --brief "out.txt" "$inputs_path/out-reference.txt" > /dev/null 2>&1
+    diff --brief "out.txt" "$inputs_path/out-reference.txt" >/dev/null 2>&1
     if [[ $? -ne 0 ]]; then
         echo "The output file is not identical to the reference file"
         return 1 # Failure
@@ -139,4 +140,4 @@ after_run() (
     return 0 # OK
 )
 
-source "$scriptfolder/../../regression.sh"
+source "$scriptfolder/../../run_wrapper.sh"

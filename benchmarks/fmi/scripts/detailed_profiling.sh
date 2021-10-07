@@ -4,9 +4,12 @@
 inputs_path="$GENARCH_BENCH_INPUTS_ROOT/fmi"
 
 if [[ -z "$inputs_path" || ! -d "$inputs_path" ]]; then
-    echo "ERROR: You have not set a valid input folder $inputs_path"
-    exit 1
+  echo "ERROR: You have not set a valid input folder $inputs_path"
+  exit 1
 fi
+
+output_folder="$(pwd)/out"
+mkdir "$output_folder"
 
 scriptfolder="$(dirname $(realpath $0))"
 binaries_path="$(dirname "$scriptfolder")"
@@ -15,7 +18,7 @@ binaries_path="$(dirname "$scriptfolder")"
 clean=1
 
 # The name of the job.
-job="FMI-REGRESSION-LARGE"
+job="FMI-DETAILED-PROFILING"
 
 # Commands to run.
 # You can access the number of mpi-ranks using the environment variable
@@ -49,70 +52,41 @@ job="FMI-REGRESSION-LARGE"
 # )
 
 case "$GENARCH_BENCH_CLUSTER" in
-MN4)
-    commands=(
-        "module load gcc/10.1.0; $binaries_path/fmi_gcc"
-    )
-
-    parallelism=(
-        'nodes=1, mpi=1, omp=1'
-        'nodes=1, mpi=1, omp=2'
-        'nodes=1, mpi=1, omp=4'
-        'nodes=1, mpi=1, omp=8'
-        'nodes=1, mpi=1, omp=12'
-        'nodes=1, mpi=1, omp=24'
-        'nodes=1, mpi=1, omp=36'
-        'nodes=1, mpi=1, omp=48'
-    )
-
-    job_options=(
-        '--exclusive'
-        '--time=00:23:00'
-    )
-    ;;
 CTEARM)
-    commands=(
-        "module load gcc/10.2.0; $binaries_path/fmi_gcc"
-        "module load fuji; $binaries_path/fmi_fcc"
-    )
+  commands=(
+    "module load fuji; $scriptfolder/../../ctearm_fapp_profiling.sh -e pa1-pa17 $binaries_path/fmi_fcc"
+  )
 
-    parallelism=(
-        'nodes=1, mpi=1, omp=1'
-        'nodes=1, mpi=1, omp=2'
-        'nodes=1, mpi=1, omp=4'
-        'nodes=1, mpi=1, omp=8'
-        'nodes=1, mpi=1, omp=12'
-        'nodes=1, mpi=1, omp=24'
-        'nodes=1, mpi=1, omp=36'
-        'nodes=1, mpi=1, omp=48'
-    )
-    ;;
+  job_options=(
+    '-L rscgrp=large'
+  )
+
+  parallelism=(
+    'nodes=1, mpi=1, omp=1'
+    # 'nodes=1, mpi=1, omp=2'
+    # 'nodes=1, mpi=1, omp=4'
+    # 'nodes=1, mpi=1, omp=8'
+    # 'nodes=1, mpi=1, omp=12'
+    # 'nodes=1, mpi=1, omp=24'
+    # 'nodes=1, mpi=1, omp=36'
+    # 'nodes=1, mpi=1, omp=48'
+  )
+  ;;
 *)
-    commands=(
-        "$binaries_path/fmi_gcc"
-    )
-
-    parallelism=(
-        'nodes=1, mpi=1, omp=1'
-        'nodes=1, mpi=1, omp=2'
-        'nodes=1, mpi=1, omp=4'
-    )
-    ;;
+  echo "Cluster not supported"
+  exit 1
+  ;;
 esac
 
 # Additional arguments to pass to the commands.
 command_opts="\"$inputs_path/broad\" \"$inputs_path/large/SRR7733443_10m_1.fastq\" 512 19 \$OMP_NUM_THREADS"
 
 #
-# Additional variables.
-#
-
-#
 # This function is executed before launching a job. You can use this function to
 # prepare the stage folder of the job.
 #
 before_run() (
-    job_name="$1"
+  job_name="$1"
 )
 
 #
@@ -123,19 +97,22 @@ before_run() (
 # return: 0 if the run is correct, 1 otherwise.
 #
 after_run() (
-    job_name="$1"
+  job_name="$1"
 
-    # Check if the output file is identical to the reference
-    diff --brief <(sed -n 7~1p "$job_name.out") <(sed -n 7~1p "$inputs_path/large/out-reference.txt") >/dev/null 2>&1
-    if [[ $? -ne 0 ]]; then
-        echo "The output file is not identical to the reference file"
-        return 1 # Failure
-    fi
+  # We assume that the result is correct.
 
-    sed -n 5p "$job_name.out"
-    sed -n 6p "$job_name.out"
+  job_output_folder="$output_folder/$job_name"
+  mkdir "$job_output_folder"
 
-    return 0 # OK
+  cp *.csv "$job_output_folder"
+  if [[ $? -ne 0 ]]; then
+    echo "There has been a problem during the execution of the profiling, check the job stage folder: \"$job_name\""
+    return 1 # Failure
+  fi
+
+  echo "The .csv files can be found in $job_output_folder"
+
+  return 0 # OK
 )
 
 source "$scriptfolder/../../run_wrapper.sh"

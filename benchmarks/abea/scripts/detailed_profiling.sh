@@ -1,22 +1,24 @@
 #!/bin/bash
 
 # The folder that contains the inputs for this app.
-inputs_path="$GENARCH_BENCH_INPUTS_ROOT/kmer-cnt/large"
+inputs_path="$GENARCH_BENCH_INPUTS_ROOT/abea"
 
 if [[ -z "$inputs_path" || ! -d "$inputs_path" ]]; then
     echo "ERROR: You have not set a valid input folder $inputs_path"
     exit 1
 fi
 
+output_folder="$(pwd)/out"
+mkdir "$output_folder"
+
 scriptfolder="$(dirname $(realpath $0))"
-configfolder="$(dirname "$scriptfolder")/config"
 binaries_path="$(dirname "$scriptfolder")"
 
 # Clean the stage folder of the jobs after finishing? 1 -> yes, 0 -> no.
 clean=1
 
 # The name of the job.
-job="KMERCNT-REGRESSION-LARGE"
+job="ABEA-DETAILED-PROFILING"
 
 # Commands to run.
 # You can access the number of mpi-ranks using the environment variable
@@ -50,65 +52,38 @@ job="KMERCNT-REGRESSION-LARGE"
 # )
 
 case "$GENARCH_BENCH_CLUSTER" in
-MN4)
-    commands=(
-        "module load gcc/10.1.0; $binaries_path/kmer-cnt_gcc"
-    )
+CTEARM)
+    # Prepend the FAPP script to the commands.
+    before_command="$scriptfolder/../../ctearm_fapp_profiling.sh -e pa1-pa17"
 
-    parallelism=(
-        'nodes=1, mpi=1, omp=1'
-        'nodes=1, mpi=1, omp=2'
-        'nodes=1, mpi=1, omp=4'
-        'nodes=1, mpi=1, omp=8'
-        'nodes=1, mpi=1, omp=12'
-        'nodes=1, mpi=1, omp=24'
-        'nodes=1, mpi=1, omp=36'
-        'nodes=1, mpi=1, omp=48'
+    commands=(
+        "$binaries_path/f5c_fcc"
     )
 
     job_options=(
-        '--exclusive'
-        '--time=00:07:00'
-        '--constraint=highmem'
-    )
-    ;;
-CTEARM)
-    commands=(
-        "module load gcc/10.2.0; $binaries_path/kmer-cnt_gcc"
-        "$binaries_path/kmer-cnt_fcc"
+        '-L rscgrp=large'
     )
 
     parallelism=(
         'nodes=1, mpi=1, omp=1'
-        'nodes=1, mpi=1, omp=2'
-        'nodes=1, mpi=1, omp=4'
-        'nodes=1, mpi=1, omp=8'
-        'nodes=1, mpi=1, omp=12'
-        'nodes=1, mpi=1, omp=24'
-        'nodes=1, mpi=1, omp=36'
-        'nodes=1, mpi=1, omp=48'
+        # 'nodes=1, mpi=1, omp=2'
+        # 'nodes=1, mpi=1, omp=4'
+        # 'nodes=1, mpi=1, omp=8'
+        # 'nodes=1, mpi=1, omp=12'
+        # 'nodes=1, mpi=1, omp=24'
+        # 'nodes=1, mpi=1, omp=36'
+        # 'nodes=1, mpi=1, omp=48'
     )
     ;;
 *)
-    commands=(
-        "$binaries_path/kmer-cnt_gcc"
-    )
-
-    parallelism=(
-        'nodes=1, mpi=1, omp=1'
-        'nodes=1, mpi=1, omp=2'
-        'nodes=1, mpi=1, omp=4'
-    )
+    echo "Cluster not supported"
+    exit 1
     ;;
 esac
 
 # Additional arguments to pass to the commands.
-command_opts="--reads \"$inputs_path/Loman_E.coli_MAP006-1_2D_50x.fasta\" \
-              --config \"$configfolder/asm_raw_reads.cfg\" --debug --threads \$OMP_NUM_THREADS"
-
-#
-# Additional variables.
-#
+command_opts="eventalign -b "$inputs_path"/small/1000reads.bam -g \
+"$inputs_path"/humangenome.fa -r "$inputs_path"/1000reads.fastq -B 3.7M > events.tsv"
 
 #
 # This function is executed before launching a job. You can use this function to
@@ -128,21 +103,18 @@ before_run() (
 after_run() (
     job_name="$1"
 
-    refkmers="$(cat "$inputs_path/output-reference.txt" | grep -m 1 -Eo "Total k-mers [0-9]+" | cut -d ' ' -f 3)"
-    outkmers="$(cat "$job_name.err" | grep -m 1 -Eo "Total k-mers [0-9]+" | cut -d ' ' -f 3)"
+    # We assume that the result is correct.
 
-    wall_time="$(cat "$job_name.err" | grep -m 1 "Kernel time:" | cut -d ' ' -f 3)"
+    job_output_folder="$output_folder/$job_name"
+    mkdir "$job_output_folder"
 
-    if [[ -z "$wall_time" ]]; then
-        echo "Error in the execution"
-        return 1 # Failure
-    fi
-    if [[ "$refkmers" != "$outkmers" ]]; then
-        echo "Reference number of k-mers != output number of k-mers"
+    cp *.csv "$job_output_folder"
+    if [[ $? -ne 0 ]]; then
+        echo "There has been a problem during the execution of the profiling, check the job stage folder: \"$job_name\""
         return 1 # Failure
     fi
 
-    echo "Kernel time: $wall_time s"
+    echo "The .csv files can be found in $job_output_folder"
 
     return 0 # OK
 )

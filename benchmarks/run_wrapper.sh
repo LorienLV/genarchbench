@@ -1,7 +1,7 @@
 #!/bin/bash
 
 #
-# A script to execute a set of regression tests under different job-schedulers.
+# A script to run a set of commands under different job-schedulers.
 #
 # Supported job-schedulers: Local, SLURM and PJM.
 #
@@ -95,7 +95,7 @@
 # WARNING: ALWAYS CALL THIS SCRIPT USING SOURCE AS YOU CAN NOT EXPORT ARRAYS
 # IN BASH.
 #
-#    source "regression.sh"
+#    source "run_wrapper.sh"
 #
 
 ################################################################################

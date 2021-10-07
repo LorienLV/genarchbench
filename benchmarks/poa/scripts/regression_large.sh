@@ -4,8 +4,8 @@
 inputs_path="$GENARCH_BENCH_INPUTS_ROOT/poa/large"
 
 if [[ -z "$inputs_path" || ! -d "$inputs_path" ]]; then
-  echo "ERROR: You have not set a valid input folder $inputs_path"
-  exit 1
+    echo "ERROR: You have not set a valid input folder $inputs_path"
+    exit 1
 fi
 
 scriptfolder="$(dirname $(realpath $0))"
@@ -16,7 +16,6 @@ clean=0
 
 # The name of the job.
 job="POA-REGRESSION-LARGE"
-
 
 # Commands to run.
 # You can access the number of mpi-ranks using the environment variable
@@ -50,54 +49,55 @@ job="POA-REGRESSION-LARGE"
 # )
 
 case "$GENARCH_BENCH_CLUSTER" in
-    MN4)
-        commands=(
-            "$binaries_path/msa_spoa_omp_gcc"
-        )
+MN4)
+    commands=(
+        "$binaries_path/msa_spoa_omp_gcc"
+    )
 
-        parallelism=(
-            'nodes=1, mpi=1, omp=1'
-            'nodes=1, mpi=1, omp=2'
-            'nodes=1, mpi=1, omp=4'
-            'nodes=1, mpi=1, omp=8'
-            'nodes=1, mpi=1, omp=12'
-            'nodes=1, mpi=1, omp=24'
-            'nodes=1, mpi=1, omp=36'
-            'nodes=1, mpi=1, omp=48'
-        )
+    parallelism=(
+        'nodes=1, mpi=1, omp=1'
+        'nodes=1, mpi=1, omp=2'
+        'nodes=1, mpi=1, omp=4'
+        'nodes=1, mpi=1, omp=8'
+        'nodes=1, mpi=1, omp=12'
+        'nodes=1, mpi=1, omp=24'
+        'nodes=1, mpi=1, omp=36'
+        'nodes=1, mpi=1, omp=48'
+    )
 
-        job_options=(
-            '--exclusive'
-            # '--time=00:03:00'
-        )
-        ;;
-    CTEARM)
-        commands=(
-            "$binaries_path/msa_spoa_omp_gcc"
-            "$binaries_path/msa_spoa_omp_fcc"
-        )
+    job_options=(
+        '--exclusive'
+        # '--time=00:03:00'
+    )
+    ;;
+CTEARM)
+    commands=(
+        "$binaries_path/msa_spoa_omp_gcc"
+        "$binaries_path/msa_spoa_omp_fcc"
+    )
 
-        parallelism=(
-            'nodes=1, mpi=1, omp=1'
-            'nodes=1, mpi=1, omp=2'
-            'nodes=1, mpi=1, omp=4'
-            'nodes=1, mpi=1, omp=8'
-            'nodes=1, mpi=1, omp=12'
-            'nodes=1, mpi=1, omp=24'
-            'nodes=1, mpi=1, omp=36'
-            'nodes=1, mpi=1, omp=48'
-        )
-        ;;
-    *)
-        commands=(
-            "$binaries_path/msa_spoa_omp_gcc"
-        )
+    parallelism=(
+        'nodes=1, mpi=1, omp=1'
+        'nodes=1, mpi=1, omp=2'
+        'nodes=1, mpi=1, omp=4'
+        'nodes=1, mpi=1, omp=8'
+        'nodes=1, mpi=1, omp=12'
+        'nodes=1, mpi=1, omp=24'
+        'nodes=1, mpi=1, omp=36'
+        'nodes=1, mpi=1, omp=48'
+    )
+    ;;
+*)
+    commands=(
+        "$binaries_path/msa_spoa_omp_gcc"
+    )
 
-        parallelism=(
-            'nodes=1, mpi=1, omp=1'
-            'nodes=1, mpi=1, omp=2'
-            'nodes=1, mpi=1, omp=4'
-        )
+    parallelism=(
+        'nodes=1, mpi=1, omp=1'
+        'nodes=1, mpi=1, omp=2'
+        'nodes=1, mpi=1, omp=4'
+    )
+    ;;
 esac
 
 # Additional arguments to pass to the commands.
@@ -136,4 +136,4 @@ after_run() (
     return 0 # OK
 )
 
-source "$scriptfolder/../../regression.sh"
+source "$scriptfolder/../../run_wrapper.sh"
