@@ -94,14 +94,14 @@ CTEARM)
 
     parallelism=(
         'nodes=1, mpi=1, omp=1'
-        # 'nodes=1, mpi=1, omp=2'
-        # 'nodes=1, mpi=1, omp=4'
+        'nodes=1, mpi=1, omp=2'
+        'nodes=1, mpi=1, omp=4'
     )
     ;;
 esac
 
 # Additional arguments to pass to the commands.
-command_opts="-i \"$inputs_path/input.n1M.l100.seq\" -o checksum.file"
+command_opts="-i \"$inputs_path/input.n1M.l100.seq\" -o checksum.file -t \$OMP_NUM_THREADS"
 
 #
 # Additional variables.
@@ -125,12 +125,12 @@ before_run() (
 after_run() (
     job_name="$1"
 
-    benchmark_time="$(tac "$job_name.err" | grep -m 1 "Time.Benchmark" | tr -s ' ' | cut -d ' ' -f 3,4)"
+    benchmark_time="$(tac "$job_name.out" | grep -m 1 "Time.Alignment:" | tr -s ' ' | cut -d ' ' -f 2,3)"
 
-    echo "Time.Benchmark: $benchmark_time"
+    echo "Time.Alignment: $benchmark_time"
 
     # Check if the output file is identical to the reference
-    diff --brief checksum.file "$inputs_path/output-reference.file" >/dev/null 2>&1
+    sort -n -t '=' -k 2,2 "checksum.file" | diff --brief - "$inputs_path/output-reference.file" >/dev/null 2>&1
     if [[ $? -ne 0 ]]; then
         echo "The output file is not identical to the reference file"
         return 1 # Failure

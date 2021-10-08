@@ -90,7 +90,7 @@ input_pair_sequences_t** parse_input_sequences(
     FILE* const input_file,
     int** const total_sequences) {
 
-  *total_sequences = malloc(parameters.nthreads * sizeof(total_sequences[0]));
+  *total_sequences = malloc(parameters.nthreads * sizeof((*total_sequences)[0]));
   input_pair_sequences_t **input_buffers = malloc(parameters.nthreads * sizeof(input_pair_sequences_t*));
 
   char more_seqs = 1;
@@ -120,6 +120,9 @@ input_pair_sequences_t** parse_input_sequences(
           int line2_length = getline(&line2, &line2_allocated, input_file);
     
           if (line1_length == -1 || line2_length == -1) {
+            free(line1);
+            free(line2);
+
             // OMP: Implicit flush of more_seqs at the end of the for loop.
             more_seqs = 0;
           }
@@ -160,7 +163,7 @@ input_pair_sequences_t** parse_input_sequences(
       }
     }
     input_buffers[thread_id] = input_buffer;
-    *total_sequences[thread_id] = total_parsed;
+    (*total_sequences)[thread_id] = total_parsed;
   }
 
   return input_buffers;
@@ -208,7 +211,7 @@ void parse_arguments(int argc,char** argv) {
     exit(0);
   }
   while (1) {
-    c=getopt_long(argc,argv,"i:o:p:P:h",long_options,&option_index);
+    c=getopt_long(argc,argv,"i:o:p:t:P:vh",long_options,&option_index);
     if (c==-1) break;
     switch (c) {
     /*
@@ -290,10 +293,16 @@ int main(int argc,char* argv[]) {
     }
   }
 
+  struct timeval benchmark_start;
+  gettimeofday(&benchmark_start, NULL);
+
   // Parse input file
   int *total_sequences;
   input_pair_sequences_t** const input_buffers =
       parse_input_sequences(input_file, &total_sequences);
+
+  struct timeval alignment_start;
+  struct timeval alignment_end;
 
   int progress_mod = 0;
   #pragma omp parallel num_threads(parameters.nthreads)
@@ -312,6 +321,12 @@ int main(int argc,char* argv[]) {
           MAX_SEQUENCE_LENGTH,MAX_SEQUENCE_LENGTH,
           &parameters.affine_penalties,parameters.min_wavefront_length,
           parameters.max_distance_threshold,mm_allocator);
+    }
+
+    #pragma omp barrier
+    #pragma omp master
+    {
+      gettimeofday(&alignment_start, NULL);
     }
 
     // Pointer to thread private data.
@@ -348,9 +363,18 @@ int main(int argc,char* argv[]) {
       }
     }
 
+    #pragma omp barrier
+    #pragma omp master
+    {
+      gettimeofday(&alignment_end, NULL);
+    }
+
     // Print the output.
     #pragma omp critical
     {
+      if (!parameters.verbose) {
+        progress_mod += thread_total_sequences;
+      }
       if (output_file != NULL) {
         for (int i = 0; i < thread_total_sequences; ++i) {
           fprintf(output_file, "id=%d ", input_buffer[i].id);
@@ -362,7 +386,7 @@ int main(int argc,char* argv[]) {
 
     // Free
     for (int i = 0; i < thread_total_sequences; ++i) {
-      free(edit_cigars[i].operations);
+      mm_allocator_free(mm_allocator, edit_cigars[i].operations);
       free(input_buffer[i].pattern);
       free(input_buffer[i].text);
     }
@@ -373,7 +397,17 @@ int main(int argc,char* argv[]) {
     affine_wavefronts_delete(affine_wavefronts);
     mm_allocator_delete(mm_allocator);
   }
+  free(total_sequences);
   free(input_buffers);
   fclose(input_file);
   if (output_file != NULL) fclose(output_file);
+
+  struct timeval benchmark_end;
+  gettimeofday(&benchmark_end, NULL);
+
+  printf("Total.reads: %d\n", progress_mod);
+  printf("Time.Benchmark: %f s\n", (benchmark_end.tv_sec - benchmark_start.tv_sec) + 
+      (benchmark_end.tv_usec - benchmark_start.tv_usec) * 1E-6);
+  printf("Time.Alignment: %f s\n", (alignment_end.tv_sec - alignment_start.tv_sec) + 
+      (alignment_end.tv_usec - alignment_start.tv_usec) * 1E-6);
 }
