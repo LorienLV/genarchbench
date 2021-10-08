@@ -345,19 +345,29 @@ int main(int argc,char* argv[]) {
           input_buffer[i].text, input_buffer[i].text_length);
 
       // Store output
-      edit_cigars[i] = affine_wavefronts->edit_cigar;
-
-      // Alloc new operations array
-      affine_wavefronts->edit_cigar.operations = 
-        mm_allocator_malloc(mm_allocator, affine_wavefronts->edit_cigar.max_operations);
+      // Alloc new operations array.
+      int noperations = 
+        affine_wavefronts->edit_cigar.end_offset - 
+        affine_wavefronts->edit_cigar.begin_offset;
+      edit_cigars[i].operations = mm_allocator_malloc(mm_allocator, noperations);
+      // Copy operations.
+      memcpy(edit_cigars[i].operations, 
+          &affine_wavefronts->edit_cigar.operations[affine_wavefronts->edit_cigar.begin_offset], 
+          noperations * sizeof(edit_cigars->operations[0]));
+      
+      // Copy the rest of the fields.
+      edit_cigars[i].max_operations = affine_wavefronts->edit_cigar.max_operations;
+      edit_cigars[i].score = affine_wavefronts->edit_cigar.score;
+      edit_cigars[i].begin_offset = 0;
+      edit_cigars[i].end_offset = noperations;
 
       // Update progress
       if (parameters.verbose) {
         #pragma omp critical
         {
-          if (++progress_mod == parameters.progress) {
-            progress_mod = 0;
-            fprintf(stderr,"...processed %d reads \n",i+1);
+          ++progress_mod;
+          if (progress_mod % parameters.progress == 0) {
+            fprintf(stderr,"...processed %d reads \n", progress_mod);
           }
         }
       }
