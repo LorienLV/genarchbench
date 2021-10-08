@@ -49,6 +49,9 @@ job="KMERCNT-REGRESSION-SMALL"
 #     # '--qos=debug'
 # )
 
+# Everything you want to do before executing the commands.
+before_command="export OMP_PROC_BIND=true;"
+
 case "$GENARCH_BENCH_CLUSTER" in
 MN4)
     commands=(
@@ -87,6 +90,10 @@ CTEARM)
         'nodes=1, mpi=1, omp=24'
         'nodes=1, mpi=1, omp=36'
         'nodes=1, mpi=1, omp=48'
+    )
+
+    job_options=(
+        '-L rscgrp=large'
     )
     ;;
 *)
