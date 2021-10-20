@@ -45,6 +45,10 @@ CTEARM)
         "$binaries_path/f5c_gcc"
         "$binaries_path/f5c_fcc"
     )
+
+    job_options=(
+        '-L rscgrp=large'
+    )
     ;;
 *)
     commands=(

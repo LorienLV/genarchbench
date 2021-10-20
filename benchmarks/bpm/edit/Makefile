@@ -19,5 +19,5 @@ all: $(OBJS)
 
 # General building rule
 ../$(FOLDER_BUILD)/%.o : %.c
-	$(CC) $(CC_FLAGS) -march=native -I$(FOLDER_ROOT) -c $< -o $@
+	$(CC) $(CC_FLAGS) $(ARCH_FLAGS) -I$(FOLDER_ROOT) -c $< -o $@
 	

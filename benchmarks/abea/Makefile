@@ -142,7 +142,7 @@ $(BUILD_DIR)/lib/libhts.a:
 	mv $(BUILD_DIR)/htslib-$(HTS_VERSION) $(BUILD_DIR)/htslib
 	rm -f $(BUILD_DIR)/htslib.tar.bz2
 	cd $(BUILD_DIR)/htslib && \
-	CC=$(CC) CXX=$(CXX) ./configure --prefix=`pwd`/../ --enable-bz2=no --enable-lzma=no --with-libdeflate=no --enable-libcurl=no  --enable-gcs=no --enable-s3=no && \
+	CC='$(CC)' CXX='$(CXX)' ./configure --prefix=`pwd`/../ --enable-bz2=no --enable-lzma=no --with-libdeflate=no --enable-libcurl=no  --enable-gcs=no --enable-s3=no && \
 	$(MAKE) -j8 && \
 	$(MAKE) install
 
@@ -152,7 +152,7 @@ $(BUILD_DIR)/lib/libhdf5.a:
 	mv $(BUILD_DIR)/hdf5-$(HDF5_VERSION) $(BUILD_DIR)/hdf5
 	rm -f $(BUILD_DIR)/hdf5.tar.bz2
 	cd $(BUILD_DIR)/hdf5 && \
-	CC=$(CC) CXX=$(CXX) ./configure --prefix=`pwd`/../ && \
+	CC='$(CC)' CXX='$(CXX)' ./configure --prefix=`pwd`/../ && \
 	$(MAKE) -j8 && \
 	$(MAKE) install
 

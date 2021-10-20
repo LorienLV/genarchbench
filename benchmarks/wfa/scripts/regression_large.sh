@@ -76,7 +76,7 @@ MN4)
 CTEARM)
     commands=(
         "$binaries_path/bin_gcc/align_benchmark"
-        "$binaries_path/bin_fcc/align_benchmark"
+        "module load fuji; $binaries_path/bin_fcc/align_benchmark"
     )
 
     parallelism=(

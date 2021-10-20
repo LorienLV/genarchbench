@@ -15,6 +15,27 @@ CC_FLAGS=-Wall -fopenmp -g
 #   LD_FLAGS+=-lrt 
 # endif
 
+ifeq ($(arch),sse41)
+	ARCH_FLAGS=-msse4.1
+else ifeq ($(arch),avx2)
+	ifeq ($(CXX), icpc)
+		ARCH_FLAGS=-march=core-avx2 #-xCORE-AVX2
+	else	
+		ARCH_FLAGS=-mavx2
+	endif
+else ifeq ($(arch),avx512)
+	ifeq ($(CXX), icpc)
+		ARCH_FLAGS=-xCORE-AVX512
+	else	
+		ARCH_FLAGS=-mavx512bw
+	endif
+else ifeq ($(arch),native)
+		ARCH_FLAGS=-march=native
+else ifneq ($(arch),)
+	## To provide a different architecture flag like -march=core-avx2.
+		ARCH_FLAGS=$(arch)
+endif
+
 AR=ar
 AR_FLAGS=-rsc
 

@@ -2,7 +2,7 @@
 # Definitions
 ###############################################################################
 
-CC_FLAGS=-Wall -O3 -march=native -Wno-unused-variable -Wno-unused-but-set-variable -Wno-char-subscripts
+CC_FLAGS=-Wall -O3 -Wno-unused-variable -Wno-unused-but-set-variable -Wno-char-subscripts $(ARCH_FLAGS)
 
 ###############################################################################
 # Modules

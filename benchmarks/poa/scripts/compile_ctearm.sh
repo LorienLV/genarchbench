@@ -25,7 +25,7 @@ for compiler in "${compilers[@]}"; do
             ;;
         fcc)
             module load fuji
-            make CC=fcc CXX=FCC BUILD_DIR=build_fcc MSA_SPOA_OMP=msa_spoa_omp_fcc
+            make CC='fcc -Nclang' CXX='FCC -Nclang' BUILD_DIR=build_fcc MSA_SPOA_OMP=msa_spoa_omp_fcc
             ;;
         *)
             echo "ERROR: Compiler '$compiler' not supported."

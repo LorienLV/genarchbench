@@ -23,7 +23,7 @@ for compiler in "${compilers[@]}"; do
             ;;
         fcc)
             module load fuji
-            make CC=fcc CXX=FCC EXE=kmer-cnt_fcc
+            make CC='fcc -Nclang' CXX='FCC -Nclang' EXE=kmer-cnt_fcc
             ;;
         *)
             echo "ERROR: Compiler '$compiler' not supported."

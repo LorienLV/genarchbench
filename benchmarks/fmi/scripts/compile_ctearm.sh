@@ -28,7 +28,7 @@ for compiler in "${compilers[@]}"; do
             ;;
         fcc)
             module load fuji
-            make CC=fcc CXX='FCC -Nclang -lstdc++' FMI=fmi_fcc arch=-march=armv8-a+sve TARGET_ARCH=aarch64
+            make CC="fcc -Nclang" CXX='FCC -Nclang -lstdc++' FMI=fmi_fcc arch=-march=armv8-a+sve TARGET_ARCH=aarch64
 
             make TARGET_ARCH=aarch64 clean
             ;;

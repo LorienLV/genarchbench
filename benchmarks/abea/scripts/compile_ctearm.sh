@@ -27,7 +27,7 @@ for compiler in "${compilers[@]}"; do
             # allow processing of multibyte characters
             export LANG=en_US.utf8
             export LC_ALL=en_US.utf8
-            make CC=fcc CXX=FCC BINARY=f5c_fcc BUILD_DIR=build_fcc
+            make CC='fcc -Nclang' CXX='FCC -Nclang' BINARY=f5c_fcc BUILD_DIR=build_fcc
             ;;
         *)
             echo "ERROR: Compiler '$compiler' not supported."

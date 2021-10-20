@@ -105,7 +105,7 @@ $(BWA_LIB):$(OBJS)
 	ar rcs $(BWA_LIB) $(OBJS)
 
 $(SAFE_STR_LIB):
-	cd ../ext/safestringlib/ && $(MAKE) clean && $(MAKE) CC=$(CC) directories libsafestring.a
+	cd ../ext/safestringlib/ && $(MAKE) clean && $(MAKE) CC="$(CC)" directories libsafestring.a
 
 clean:
 	rm -fr src/*.o $(BWA_LIB) $(EXE)

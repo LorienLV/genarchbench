@@ -77,7 +77,7 @@ MN4)
 CTEARM)
     commands=(
         "$binaries_path/chain_gcc"
-        "$binaries_path/chain_fcc"
+        "module load fuji; $binaries_path/chain_fcc"
     )
 
     parallelism=(
