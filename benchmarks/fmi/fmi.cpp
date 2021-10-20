@@ -33,6 +33,7 @@ Authors: Vasimuddin Md <vasimuddin.md@intel.com>; Sanchit Misra <sanchit.misra@i
 #include <omp.h>
 #include <string.h>
 #include <chrono>
+#include <iostream>
 
 #include "bwa.h"
 #include "FMI_search.h"
@@ -330,12 +331,13 @@ int main(int argc, char **argv) {
     {
         totalSmem += numTotalSmem[batch_id];
     }
-    printf("totalSmems = %ld\n", totalSmem);
-
-    printf("Reading time: %ld s\n", 
-        std::chrono::duration_cast<std::chrono::seconds>(end_reading - begin_reading).count());
-    printf("Computing time: %ld s\n", 
-        std::chrono::duration_cast<std::chrono::seconds>(end_computing - begin_computing).count());
+    std::cout << "totalSmems = " << totalSmem << "\n";
+    std::cout << "Reading time: " <<
+        std::chrono::duration<double>(end_reading - begin_reading).count()
+        << " s\n";
+    std::cout << "Computing time: " <<
+        std::chrono::duration<double>(end_computing - begin_computing).count()
+        << " s\n";
 
 #ifdef PRINT_OUTPUT
     int32_t prevRid = -1;
