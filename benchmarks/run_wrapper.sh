@@ -100,6 +100,24 @@
 
 ################################################################################
 
+# Redirect stderr to null.
+exec 2>/dev/null
+
+# Define output colors.
+# Check if stdout is a terminal.
+if test -t 1; then
+    # See if it supports colors.
+    ncolors=$(tput colors)
+
+    if test -n "$ncolors" && test $ncolors -ge 8; then
+        RED='\033[01;31m'
+        GREEN='\033[01;32m'
+        YELLOW='\033[01;33m'
+        COLOR_RESTORE='\033[0m'
+    fi
+fi
+
+
 # Detect the job-scheduler
 job_scheduler="NONE"
 if [[ $(which sbatch) || $? -eq 0 ]]; then
@@ -160,15 +178,15 @@ for command in "${commands[@]}"; do
 
         if [[ -z "$nodes" || "$nodes" -lt 1 ]]; then
             nodes=1
-            echo "\033[33mWarning: The number of nodes is $nodes, which is invalid, using 1 instead\e[0m"
+            echo -e "${YELLOW}Warning: The number of nodes is $nodes, which is invalid, using 1 instead${COLOR_RESTORE}"
         fi
         if [[ -z "$mpi" || "$mpi" -lt 1 ]]; then
             mpi=1
-            echo "\033[33mWarning: The number of MPI ranks is $mpi, which is invalid, using 1 instead\e[0m"
+            echo -e "${YELLOW}Warning: The number of MPI ranks is $mpi, which is invalid, using 1 instead${COLOR_RESTORE}"
         fi
         if [[ -z "$omp" || "$omp" -lt 1 ]]; then
             omp=1
-            echo "\033[33mWarning: The number of OpenMP threads is $omp, which is invalid, using 1 instead\e[0m"
+            echo -e "${YELLOW}Warning: The number of OpenMP threads is $omp, which is invalid, using 1 instead${COLOR_RESTORE}"
         fi
 
         command_trilled="$(echo "$command" | tr -dc '[:alnum:]\n\r')"
@@ -246,7 +264,7 @@ for command in "${commands[@]}"; do
 
         if [ "$?" -ne 0 ]; then
             echo "[----------]"
-            echo -e "[ \033[31m FAILED \e[0m ] Could not start processing $job_name"
+            echo -e "[ ${RED} FAILED ${COLOR_RESTORE} ] Could not start processing $job_name"
             echo "[----------]"
             echo ""
             echo "$run_out"
@@ -261,7 +279,7 @@ for command in "${commands[@]}"; do
             fi
 
             echo "[----------]"
-            echo -e "[ \033[32m RUN \e[0m    ] Started processing $job_name"
+            echo -e "[ ${GREEN} RUN ${COLOR_RESTORE}    ] Started processing $job_name"
             echo "[----------]"
             echo ""
 
@@ -350,9 +368,9 @@ for i in "${!jobs_id[@]}"; do
 
     status_string=""
     if [[ "$status" == "OK" ]]; then
-        status_string="\033[32m${status}\e[0m"
+        status_string="${GREEN}${status}${COLOR_RESTORE}"
     else
-        status_string="\033[31m${status}\e[0m"
+        status_string="${RED}${status}${COLOR_RESTORE}"
     fi
 
     echo "------------------------------------------------------------------------------"
@@ -370,10 +388,10 @@ echo "[==========]"
 
 if [[ $nfailed_jobs -eq 0 ]]; then
     # All jobs passed
-    echo -e "[\033[32m  PASSED  \e[0m] $nfailed_jobs/$njobs jobs have failed"
+    echo -e "[${GREEN}  PASSED  ${COLOR_RESTORE}] $nfailed_jobs/$njobs jobs have failed"
 else
     # Some job has failed
-    echo -e "[\033[31m  FAILED  \e[0m] $nfailed_jobs/$njobs jobs have failed"
+    echo -e "[${RED}  FAILED  ${COLOR_RESTORE}] $nfailed_jobs/$njobs jobs have failed"
 fi
 
 echo "[==========] Finished on $(date)"
