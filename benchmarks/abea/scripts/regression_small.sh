@@ -41,6 +41,17 @@ MN4)
         "$binaries_path/f5c_gcc"
     )
 
+    parallelism=(
+        'nodes=1, mpi=1, omp=1'
+        'nodes=1, mpi=1, omp=2'
+        'nodes=1, mpi=1, omp=4'
+        'nodes=1, mpi=1, omp=8'
+        'nodes=1, mpi=1, omp=12'
+        'nodes=1, mpi=1, omp=24'
+        'nodes=1, mpi=1, omp=36'
+        'nodes=1, mpi=1, omp=48'
+    )
+
     job_options=(
         '--exclusive'
         '--time=00:04:00'
@@ -52,6 +63,17 @@ CTEARM)
         "$binaries_path/f5c_fcc"
     )
 
+    parallelism=(
+        'nodes=1, mpi=1, omp=1'
+        'nodes=1, mpi=1, omp=2'
+        'nodes=1, mpi=1, omp=4'
+        'nodes=1, mpi=1, omp=8'
+        'nodes=1, mpi=1, omp=12'
+        'nodes=1, mpi=1, omp=24'
+        'nodes=1, mpi=1, omp=36'
+        'nodes=1, mpi=1, omp=48'
+    )
+
     job_options=(
         '-L rscgrp=large'
     )
@@ -60,17 +82,19 @@ CTEARM)
     commands=(
         "$binaries_path/f5c_gcc"
     )
+
+    parallelism=(
+        'nodes=1, mpi=1, omp=1'
+        'nodes=1, mpi=1, omp=2'
+        'nodes=1, mpi=1, omp=4'
+    )
     ;;
 esac
 
 # Additional arguments to pass to the commands.
-command_opts="eventalign -b "$inputs_path"/small/1000reads.bam -g \
-"$inputs_path"/humangenome.fa -r "$inputs_path"/1000reads.fastq -B 3.7M > events.tsv"
-
-# Nodes, MPI ranks and OMP theads used to execute with each command.
-parallelism=(
-    'nodes=1, mpi=1, omp=1'
-)
+command_opts="eventalign -b "$inputs_path"/small/1000reads.bam 
+-g "$inputs_path"/humangenome.fa -r "$inputs_path"/1000reads.fastq -B 3.7M \
+-t \$OMP_NUM_THREADS > events.tsv"
 
 #
 # This function is executed before launching a job. You can use this function to
