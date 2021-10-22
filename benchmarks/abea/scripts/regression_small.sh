@@ -35,6 +35,9 @@ job="ABEA-REGRESSION-SMALL"
 #     '--time=00:03:00'
 # )
 
+# Everything you want to do before executing the commands.
+before_command="export OMP_PROC_BIND=true;"
+
 case "$GENARCH_BENCH_CLUSTER" in
 MN4)
     commands=(
@@ -92,7 +95,7 @@ CTEARM)
 esac
 
 # Additional arguments to pass to the commands.
-command_opts="eventalign -b "$inputs_path"/small/1000reads.bam 
+command_opts="eventalign -b "$inputs_path"/small/1000reads.bam \
 -g "$inputs_path"/humangenome.fa -r "$inputs_path"/1000reads.fastq -B 3.7M \
 -t \$OMP_NUM_THREADS > events.tsv"
 
@@ -121,7 +124,7 @@ after_run() (
     # Check that columns "reference_kmer" and "model_kmer" are identical in the
     # reference and the output files.
     awk -F $'\t' 'NR==FNR{a[$3$10]++;next} a[$3$10] == 0 {exit 1}' "events.tsv" "$inputs_path/small-reference.tsv"
-    if [[ $? -ne 0 ]]; then
+    if [[ $? -ne 0 || ! -s "events.tsv" ]]; then
         echo "The output file is not identical to the reference file"
         return 1 # Failure
     fi

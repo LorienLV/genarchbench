@@ -29,6 +29,9 @@ job="ABEA-REGRESSION-LARGE"
 #    "command \$MPI_RANKS \$OMP_NUM_THREADS"
 #)
 
+# Everything you want to do before executing the commands.
+before_command="export OMP_PROC_BIND=true;"
+
 case "$GENARCH_BENCH_CLUSTER" in
 MN4)
     commands=(
@@ -115,7 +118,7 @@ after_run() (
     # Check that columns "reference_kmer" and "model_kmer" are identical in the
     # reference and the output files.
     awk -F $'\t' 'NR==FNR{a[$3$10]++;next} a[$3$10] == 0 {exit 1}' "events.tsv" "$inputs_path/large-reference.tsv"
-    if [[ $? -ne 0 ]]; then
+    if [[ $? -ne 0 || ! -s "events.tsv" ]]; then
         echo "The output file is not identical to the reference file"
         return 1 # Failure
     fi
