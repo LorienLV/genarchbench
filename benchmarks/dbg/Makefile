@@ -27,6 +27,19 @@ INCLUDES+=-I$(HTS_LIB_BUILD_DIR)/include
 # an undefined reference error.
 LDFLAGS:=$(HTS_LIB) $(LDFLAGS)
 
+#
+# Htslib
+#
+$(HTS_LIB):
+	mkdir -p $(@D)
+	cp htslib.tar.bz2 $(HTS_LIB_BUILD_DIR)
+	tar -xf $(HTS_LIB_BUILD_DIR)/htslib.tar.bz2 -C $(HTS_LIB_BUILD_DIR)
+	rm -f $(HTS_LIB_BUILD_DIR)/htslib.tar.bz2
+	cd $(HTS_LIB_BUILD_DIR)/htslib && \
+	CC='$(CC)' CXX='$(CXX)' ./configure --prefix=`pwd`/../ --enable-bz2=no --enable-lzma=no --with-libdeflate=no --enable-libcurl=no  --enable-gcs=no --enable-s3=no && \
+	$(MAKE) && \
+	$(MAKE) install
+
 # Files.
 SRCS:=$(shell find $(SRC_DIR) -name "*.cpp")
 OBJS:=$(subst $(SRC_DIR),$(OBJ_DIR),$(SRCS:%.cpp=%.o))
@@ -52,22 +65,11 @@ $(OBJ_DIR)/%.o: $(SRC_DIR)/%.cpp
 	mkdir -p $(@D)
 	$(CXX) $(INCLUDES) $(DEPFLAGS) $(CPPFLAGS) $(CXXFLAGS) -c $< -o $@
 
-#
-# Htslib
-#
-$(HTS_LIB):
-	mkdir -p $(@D)
-	cp htslib.tar.bz2 $(HTS_LIB_BUILD_DIR)
-	tar -xf $(HTS_LIB_BUILD_DIR)/htslib.tar.bz2 -C $(HTS_LIB_BUILD_DIR)
-	rm -f $(HTS_LIB_BUILD_DIR)/htslib.tar.bz2
-	cd $(HTS_LIB_BUILD_DIR)/htslib && \
-	CC='$(CC)' CXX='$(CXX)' ./configure --prefix=`pwd`/../ --enable-bz2=no --enable-lzma=no --with-libdeflate=no --enable-libcurl=no  --enable-gcs=no --enable-s3=no && \
-	$(MAKE) && \
-	$(MAKE) install
-
 # Include dependencies.
 -include $(DEPS)
 
+# The default goal is the next goal.
+.DEFAULT_GOAL:=
 .PHONY: all
 all: dbg
 
