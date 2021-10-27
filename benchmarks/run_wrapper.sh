@@ -32,17 +32,17 @@
 #
 # Optional variables:
 #
-#    Everything you want to do before executing the commands. For example, you 
+#    Everything you want to do before executing the commands. For example, you
 #    may want to load some module or to prepend /usr/time to the commands.
 #    before_command="module load cmake; /usr/time"
 #
 #    Additional arguments to pass to the commands.
 #    command_opts="-s 1"
 #
-#    Everything you want to do after executing the commands. For example, you 
-#    may want to append something to the commands or to process the output of 
+#    Everything you want to do after executing the commands. For example, you
+#    may want to append something to the commands or to process the output of
 #    the commands inside the compute node.
-#    IMPORTANT: If you do not want to append anything to the command, the first 
+#    IMPORTANT: If you do not want to append anything to the command, the first
 #    character of this variable must be ';' or '\n'.
 #    after_command=""
 #
@@ -57,10 +57,10 @@
 #        'nodes=1, mpi=1, omp=36'
 #        'nodes=1, mpi=1, omp=48'
 #    )
-#    
+#
 #    Maximum allowed execution time of each command.
 #    time="hh:mm:ss"
-#    
+#
 #    Run the commands in exclusive mode.
 #    exclusive=1
 #
@@ -86,7 +86,7 @@
 #
 #    after_run() (
 #        job_name="$1"
-#    
+#
 #        echo "Message"
 #        return 1 # Failure
 #        return 0 # OK
@@ -99,9 +99,6 @@
 #
 
 ################################################################################
-
-# Redirect stderr to null.
-exec 2>/dev/null
 
 # Define output colors.
 # Check if stdout is a terminal.
@@ -117,12 +114,11 @@ if test -t 1; then
     fi
 fi
 
-
 # Detect the job-scheduler
 job_scheduler="NONE"
-if [[ $(which sbatch) || $? -eq 0 ]]; then
+if which sbatch &>/dev/null; then
     job_scheduler="SLURM"
-elif [[ $(which pjsub) || $? -eq 0 ]]; then
+elif which pjsub &>/dev/null; then
     job_scheduler="PJM"
 fi
 # else -> No job scheduler
@@ -130,11 +126,14 @@ fi
 # Trap ctrl_c -> Cancel the jobs.
 ctrl_c_trap() (
     for job_id in "${jobs_id[@]}"; do
-        if [[ "$job_scheduler" == "SLURM" ]]; then
-            scancel "$job_id" >/dev/null 2>&1
-        elif [[ "$job_scheduler" == "PJM" ]]; then
-            pjdel "$job_id" >/dev/null 2>&1
-        fi
+        case "$job_scheduler" in
+        SLURM)
+            scancel "$job_id" &>/dev/null
+            ;;
+        PJM)
+            pjdel "$job_id" &>/dev/null
+            ;;
+        esac
     done
 )
 
@@ -178,15 +177,15 @@ for command in "${commands[@]}"; do
 
         if [[ -z "$nodes" || "$nodes" -lt 1 ]]; then
             nodes=1
-            echo -e "${YELLOW}Warning: The number of nodes is $nodes, which is invalid, using 1 instead${COLOR_RESTORE}"
+            echo -e "${YELLOW}Warning: The number of nodes ($nodes) is invalid, using 1 instead${COLOR_RESTORE}"
         fi
         if [[ -z "$mpi" || "$mpi" -lt 1 ]]; then
             mpi=1
-            echo -e "${YELLOW}Warning: The number of MPI ranks is $mpi, which is invalid, using 1 instead${COLOR_RESTORE}"
+            echo -e "${YELLOW}Warning: The number of MPI ranks ($mpi) is invalid, using 1 instead${COLOR_RESTORE}"
         fi
         if [[ -z "$omp" || "$omp" -lt 1 ]]; then
             omp=1
-            echo -e "${YELLOW}Warning: The number of OpenMP threads is $omp, which is invalid, using 1 instead${COLOR_RESTORE}"
+            echo -e "${YELLOW}Warning: The number of OpenMP threads ($omp) is invalid, using 1 instead${COLOR_RESTORE}"
         fi
 
         command_trilled="$(echo "$command" | tr -dc '[:alnum:]\n\r')"
@@ -194,18 +193,19 @@ for command in "${commands[@]}"; do
         job_name="${job}_${command_trilled}_nodes_${nodes}_mpi_${mpi}_omp_${omp}_${date_compact}"
         job_id="-1"
 
-        mkdir "$job_name" >/dev/null 2>&1
+        mkdir "$job_name" &>/dev/null
 
         # Create the job script
         jobscript="#!/bin/bash\n"
 
-        if [[ "$job_scheduler" == "SLURM" ]]; then
-            jobscript+="#SBATCH --job-name=$job_name\n"
+        case "$job_scheduler" in
+        SLURM)
+            jobscript+="#SBATCH --job-name=\"$job_name\"\n"
             jobscript+="#SBATCH --nodes=$nodes\n"
             jobscript+="#SBATCH --ntasks=$mpi\n"
             jobscript+="#SBATCH --cpus-per-task=$omp\n"
-            jobscript+="#SBATCH --output=${job_name}.out\n"
-            jobscript+="#SBATCH --error=${job_name}.err\n"
+            jobscript+="#SBATCH --output=\"${job_name}.out\"\n"
+            jobscript+="#SBATCH --error=\"${job_name}.err\"\n"
 
             if [[ -n "$time" ]]; then
                 jobscript+="#SBATCH --time=${job_name}.err\n"
@@ -218,7 +218,8 @@ for command in "${commands[@]}"; do
             for job_option in "${job_options[@]}"; do
                 jobscript+="#SBATCH $job_option\n"
             done
-        elif [[ "$job_scheduler" == "PJM" ]]; then
+            ;;
+        PJM)
             # jobscript+="#PJM -N $job_name\n"
             jobscript+="#PJM -L node=$nodes\n"
             jobscript+="#PJM --mpi proc=$mpi\n"
@@ -236,7 +237,8 @@ for command in "${commands[@]}"; do
             for job_option in "${job_options[@]}"; do
                 jobscript+="#PJM $job_option\n"
             done
-        fi
+            ;;
+        esac
 
         jobscript+="export MPI_RANKS=$mpi\n"
         jobscript+="export OMP_NUM_THREADS=$omp\n"
@@ -244,25 +246,32 @@ for command in "${commands[@]}"; do
         jobscript+="$before_command $command $command_opts $after_command"
 
         # cd to the stage folder of the job.
-        current_folder="$(pwd)"
-        cd "$job_name"
+        pushd "$job_name" &>/dev/null
         echo -e "$jobscript" >"${job_name}.sh"
 
         # Call before run function
         before_run_out="$(before_run "$job_name")"
 
         # Run the job.
+        error=0
         run_out=""
-        if [[ "$job_scheduler" == "SLURM" ]]; then
+        case "$job_scheduler" in
+        SLURM)
             run_out=$(sbatch "${job_name}.sh" 2>&1)
-        elif [[ "$job_scheduler" == "PJM" ]]; then
+            error=$?
+            ;;
+        PJM)
             run_out="$(pjsub "${job_name}.sh" 2>&1)"
-        else
+            error=$?
+            ;;
+        *) # Local
             # Execute and wait until finished.
             run_out="$(bash "${job_name}.sh" 1>"$job_name.out" 2>"$job_name.err")"
-        fi
+            error=$?
+            ;;
+        esac
 
-        if [ "$?" -ne 0 ]; then
+        if [ $error -ne 0 ]; then
             echo "[----------]"
             echo -e "[ ${RED} FAILED ${COLOR_RESTORE} ] Could not start processing $job_name"
             echo "[----------]"
@@ -272,11 +281,14 @@ for command in "${commands[@]}"; do
             nfailed_jobs=$((nfailed_jobs + 1))
             jobs_status+=("F") # Failed
         else
-            if [[ "$job_scheduler" == "SLURM" ]]; then
+            case "$job_scheduler" in
+            SLURM)
                 job_id="$(echo "$run_out" | cut -d ' ' -f4)"
-            elif [[ "$job_scheduler" == "PJM" ]]; then
+                ;;
+            PJM)
                 job_id="$(echo "$run_out" | cut -d ' ' -f6)"
-            fi
+                ;;
+            esac
 
             echo "[----------]"
             echo -e "[ ${GREEN} RUN ${COLOR_RESTORE}    ] Started processing $job_name"
@@ -289,7 +301,8 @@ for command in "${commands[@]}"; do
         jobs_id+=("$job_id")
         jobs_name+=("$job_name")
 
-        cd "$current_folder"
+        # Return to the initial directory.
+        popd &>/dev/null
     done
 done
 
@@ -299,7 +312,8 @@ echo ""
 #
 # Wait for jobs to finish.
 #
-for i in "${!jobs_id[@]}"; do
+for i in ${!jobs_id[@]}; do
+
     status="${jobs_status[i]}"
 
     if [[ "$status" == "F" ]]; then
@@ -318,41 +332,46 @@ for i in "${!jobs_id[@]}"; do
     job_state=""
     while :; do
         sleep 1
-        if [[ "$job_scheduler" == "SLURM" ]]; then
-            job_state="$(sacct -p -n -j $job_id | grep "^$job_id|" | cut -d '|' -f 6)"
-            if [[ -n "$job_state" && "$job_state" != "PENDING" && "$job_state" != "RUNNING" && \
-                "$job_state" != "REQUEUED" && "$job_state" != "RESIZING" && \
+
+        case "$job_scheduler" in
+        SLURM)
+            job_state="$(sacct -p -n -j $job_id 2>/dev/null | grep "^$job_id|" | cut -d '|' -f 6)"
+            if [[ -n "$job_state" && "$job_state" != "PENDING" && "$job_state" != "RUNNING" &&
+                "$job_state" != "REQUEUED" && "$job_state" != "RESIZING" &&
                 "$job_state" != "SUSPENDED" && "$job_state" != "REVOKED" ]]; then
+
+                if [[ "$job_state" == "COMPLETED" ]]; then
+                    status="OK"
+                fi
                 break
             fi
-        elif [[ "$job_scheduler" == "PJM" ]]; then
-            job_state="$(pjstat -H -S $job_id | grep "^[ ]*STATE[ ]*:[ ]*" | tr -s ' ' | cut -d ' ' -f 4)"
+            ;;
+        PJM)
+            job_state="$(pjstat -H -S $job_id 2>/dev/null | grep "^[ ]*STATE[ ]*:[ ]*" | tr -s ' ' | cut -d ' ' -f 4)"
             if [[ -n "$job_state" ]]; then
-                # Has finished
+
+                if [[ "$job_state" == "EXT" ]]; then
+                    status="OK"
+                fi
                 break
             fi
-        else
+            ;;
+        *) # Local
             # No job scheduler
-            job_state="OK"
+            status="OK"
             break
-        fi
+            ;;
+        esac
     done
 
-    status="$job_state"
     after_run_out=""
-
-    if [[ ("$job_scheduler" == "SLURM" && "$job_state" == "COMPLETED") || \
-           ("$job_scheduler" == "PJM" && "$job_state" == "EXT") || \
-            "$job_state" == "OK" ]]; then
+    if [[ "$status" == "OK" ]]; then
         #
         # Sanity check
         #
-        current_folder="$(pwd)"
-        cd "$job_name"
+        pushd "$job_name" >/dev/null
         after_run_out="$(after_run "$job_name" 2>&1)"
         if [[ $? -eq 0 ]]; then
-            status="OK"
-
             jobs_status[$i]='V' # Valid
         else
             status="SANITY CHECK FAILED"
@@ -360,9 +379,9 @@ for i in "${!jobs_id[@]}"; do
             jobs_status[$i]='F' # Failed
             nfailed_jobs=$((nfailed_jobs + 1))
         fi
-        cd "$current_folder"
-
+        popd >/dev/null
     else
+        status="$job_state"
         nfailed_jobs=$((nfailed_jobs + 1))
     fi
 
