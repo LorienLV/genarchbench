@@ -52,6 +52,32 @@ job="CHAIN-DETAILED-PROFILING"
 # )
 
 case "$GENARCH_BENCH_CLUSTER" in
+MN4)
+    # Prepend the vtune script to the commands.
+    before_command="$scriptfolder/../../mn4_vtune_profiling.sh"
+
+    commands=(
+        "$binaries_path/chain_gcc"
+    )
+
+    parallelism=(
+        'nodes=1, mpi=1, omp=1'
+        # 'nodes=1, mpi=1, omp=2'
+        # 'nodes=1, mpi=1, omp=4'
+        # 'nodes=1, mpi=1, omp=8'
+        # 'nodes=1, mpi=1, omp=12'
+        # 'nodes=1, mpi=1, omp=24'
+        # 'nodes=1, mpi=1, omp=36'
+        # 'nodes=1, mpi=1, omp=48'
+    )
+
+    job_options=(
+        '--reservation=vtune'
+        '--constraint=perfparanoid'
+        '--exclusive'
+        '--time=00:10:00'
+    )
+    ;;
 CTEARM)
 	# Prepend the FAPP script to the commands.
 	before_command="$scriptfolder/../../ctearm_fapp_profiling.sh -e pa1-pa17"
@@ -100,22 +126,37 @@ before_run() (
 # return: 0 if the run is correct, 1 otherwise.
 #
 after_run() (
-	job_name="$1"
+    job_name="$1"
 
-	# We assume that the result is correct.
+    # We assume that the result is correct.
 
-	job_output_folder="$output_folder/$job_name"
-	mkdir "$job_output_folder"
+    job_output_folder="$output_folder/$job_name"
+    mkdir "$job_output_folder"
 
-	cp *.csv "$job_output_folder"
-	if [[ $? -ne 0 ]]; then
-		echo "There has been a problem during the execution of the profiling, check the job stage folder: \"$job_name\""
-		return 1 # Failure
-	fi
+    error=0
+    case "$GENARCH_BENCH_CLUSTER" in
+    MN4)
+        cp -r *.out *.err *runsa "$job_output_folder"
+        error=$?
+        ;;
+    CTEARM)
+        cp *.csv "$job_output_folder"
+        error=$?
+        ;;
+    *)
+        echo "Cluster not supported"
+        error=1
+        ;;
+    esac
 
-	echo "The .csv files can be found in $job_output_folder"
+    if [[ $error -ne 0 ]]; then
+        echo "There has been a problem during the execution of the profiling, check the job stage folder: \"$job_name\""
+        return 1 # Failure
+    fi
 
-	return 0 # OK
+    echo "The profiling files can be found in $job_output_folder"
+
+    return 0 # OK
 )
 
 source "$scriptfolder/../../run_wrapper.sh"

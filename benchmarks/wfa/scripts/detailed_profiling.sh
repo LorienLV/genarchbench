@@ -4,8 +4,8 @@
 inputs_path="$GENARCH_BENCH_INPUTS_ROOT/wfa/large"
 
 if [[ -z "$inputs_path" || ! -d "$inputs_path" ]]; then
-  echo "ERROR: You have not set a valid input folder $inputs_path"
-  exit 1
+    echo "ERROR: You have not set a valid input folder $inputs_path"
+    exit 1
 fi
 
 output_folder="$(pwd)/out"
@@ -52,30 +52,56 @@ job="WFA-DETAILED-PROFILING"
 # )
 
 case "$GENARCH_BENCH_CLUSTER" in
+MN4)
+    # Prepend the vtune script to the commands.
+    before_command="$scriptfolder/../../mn4_vtune_profiling.sh"
+
+    commands=(
+        "$binaries_path/bin_gcc/align_benchmark"
+    )
+
+    parallelism=(
+        'nodes=1, mpi=1, omp=1'
+        # 'nodes=1, mpi=1, omp=2'
+        # 'nodes=1, mpi=1, omp=4'
+        # 'nodes=1, mpi=1, omp=8'
+        # 'nodes=1, mpi=1, omp=12'
+        # 'nodes=1, mpi=1, omp=24'
+        # 'nodes=1, mpi=1, omp=36'
+        # 'nodes=1, mpi=1, omp=48'
+    )
+
+    job_options=(
+        '--reservation=vtune'
+        '--constraint=perfparanoid'
+        '--exclusive'
+        '--time=00:01:00'
+    )
+    ;;
 CTEARM)
-  commands=(
-    "module load fuji; $scriptfolder/../../ctearm_fapp_profiling.sh -e pa1-pa17 $binaries_path/bin_fcc/align_benchmark"
-  )
+    commands=(
+        "module load fuji; $scriptfolder/../../ctearm_fapp_profiling.sh -e pa1-pa17 $binaries_path/bin_fcc/align_benchmark"
+    )
 
-  job_options=(
-    '-L rscgrp=large'
-  )
+    job_options=(
+        '-L rscgrp=large'
+    )
 
-  parallelism=(
-    'nodes=1, mpi=1, omp=1'
-    # 'nodes=1, mpi=1, omp=2'
-    # 'nodes=1, mpi=1, omp=4'
-    # 'nodes=1, mpi=1, omp=8'
-    # 'nodes=1, mpi=1, omp=12'
-    # 'nodes=1, mpi=1, omp=24'
-    # 'nodes=1, mpi=1, omp=36'
-    # 'nodes=1, mpi=1, omp=48'
-  )
-  ;;
+    parallelism=(
+        'nodes=1, mpi=1, omp=1'
+        # 'nodes=1, mpi=1, omp=2'
+        # 'nodes=1, mpi=1, omp=4'
+        # 'nodes=1, mpi=1, omp=8'
+        # 'nodes=1, mpi=1, omp=12'
+        # 'nodes=1, mpi=1, omp=24'
+        # 'nodes=1, mpi=1, omp=36'
+        # 'nodes=1, mpi=1, omp=48'
+    )
+    ;;
 *)
-  echo "Cluster not supported"
-  exit 1
-  ;;
+    echo "Cluster not supported"
+    exit 1
+    ;;
 esac
 
 # Additional arguments to pass to the commands.
@@ -86,7 +112,7 @@ command_opts="-i \"$inputs_path/input.n100K.l1K.seq\" -o checksum.file -t \$OMP_
 # prepare the stage folder of the job.
 #
 before_run() (
-  job_name="$1"
+    job_name="$1"
 )
 
 #
@@ -97,22 +123,37 @@ before_run() (
 # return: 0 if the run is correct, 1 otherwise.
 #
 after_run() (
-  job_name="$1"
+    job_name="$1"
 
-  # We assume that the result is correct.
+    # We assume that the result is correct.
 
-  job_output_folder="$output_folder/$job_name"
-  mkdir "$job_output_folder"
+    job_output_folder="$output_folder/$job_name"
+    mkdir "$job_output_folder"
 
-  cp *.csv "$job_output_folder"
-  if [[ $? -ne 0 ]]; then
-    echo "There has been a problem during the execution of the profiling, check the job stage folder: \"$job_name\""
-    return 1 # Failure
-  fi
+    error=0
+    case "$GENARCH_BENCH_CLUSTER" in
+    MN4)
+        cp -r *.out *.err *runsa "$job_output_folder"
+        error=$?
+        ;;
+    CTEARM)
+        cp *.csv "$job_output_folder"
+        error=$?
+        ;;
+    *)
+        echo "Cluster not supported"
+        error=1
+        ;;
+    esac
 
-  echo "The .csv files can be found in $job_output_folder"
+    if [[ $error -ne 0 ]]; then
+        echo "There has been a problem during the execution of the profiling, check the job stage folder: \"$job_name\""
+        return 1 # Failure
+    fi
 
-  return 0 # OK
+    echo "The profiling files can be found in $job_output_folder"
+
+    return 0 # OK
 )
 
 source "$scriptfolder/../../run_wrapper.sh"

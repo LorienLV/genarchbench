@@ -52,6 +52,32 @@ job="ABEA-DETAILED-PROFILING"
 # )
 
 case "$GENARCH_BENCH_CLUSTER" in
+MN4)
+    # Prepend the vtune script to the commands.
+    before_command="$scriptfolder/../../mn4_vtune_profiling.sh"
+
+    commands=(
+        "$binaries_path/f5c_gcc"
+    )
+
+    parallelism=(
+        'nodes=1, mpi=1, omp=1'
+        # 'nodes=1, mpi=1, omp=2'
+        # 'nodes=1, mpi=1, omp=4'
+        # 'nodes=1, mpi=1, omp=8'
+        # 'nodes=1, mpi=1, omp=12'
+        # 'nodes=1, mpi=1, omp=24'
+        # 'nodes=1, mpi=1, omp=36'
+        # 'nodes=1, mpi=1, omp=48'
+    )
+
+    job_options=(
+        '--reservation=vtune'
+        '--constraint=perfparanoid'
+        '--exclusive'
+        '--time=00:08:00'
+    )
+    ;;
 CTEARM)
     # Prepend the FAPP script to the commands.
     before_command="$scriptfolder/../../ctearm_fapp_profiling.sh -e pa1-pa17"
@@ -108,13 +134,28 @@ after_run() (
     job_output_folder="$output_folder/$job_name"
     mkdir "$job_output_folder"
 
-    cp *.csv "$job_output_folder"
-    if [[ $? -ne 0 ]]; then
+    error=0
+    case "$GENARCH_BENCH_CLUSTER" in
+    MN4)
+        cp -r *.out *.err *runsa "$job_output_folder"
+        error=$?
+        ;;
+    CTEARM)
+        cp *.csv "$job_output_folder"
+        error=$?
+        ;;
+    *)
+        echo "Cluster not supported"
+        error=1
+        ;;
+    esac
+
+    if [[ $error -ne 0 ]]; then
         echo "There has been a problem during the execution of the profiling, check the job stage folder: \"$job_name\""
         return 1 # Failure
     fi
 
-    echo "The .csv files can be found in $job_output_folder"
+    echo "The profiling files can be found in $job_output_folder"
 
     return 0 # OK
 )
