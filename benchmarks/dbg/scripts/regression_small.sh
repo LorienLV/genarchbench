@@ -41,7 +41,7 @@ before_command="export OMP_PROC_BIND=true;"
 case "$GENARCH_BENCH_CLUSTER" in
 MN4)
     commands=(
-        "$binaries_path/build_gcc/dbg"
+        "module load gcc/10.1.0_binutils; $binaries_path/build_gcc/dbg"
     )
 
     parallelism=(
@@ -62,8 +62,8 @@ MN4)
     ;;
 CTEARM)
     commands=(
-        "$binaries_path/build_gcc/dbg_gcc"
-        "$binaries_path/build_gcc/dbg_fcc"
+        "module load gcc/10.2.0; $binaries_path/build_gcc/dbg_gcc"
+        "module load fuji; $binaries_path/build_gcc/dbg_fcc"
     )
 
     parallelism=(
@@ -88,14 +88,14 @@ CTEARM)
 
     parallelism=(
         'nodes=1, mpi=1, omp=1'
-        'nodes=1, mpi=1, omp=2'
-        'nodes=1, mpi=1, omp=4'
+        # 'nodes=1, mpi=1, omp=2'
+        # 'nodes=1, mpi=1, omp=4'
     )
     ;;
 esac
 
 # Additional arguments to pass to the commands.
-command_opts="\"$inputs_path/small/ERR194147-mem2-chr22.bam\" \
+command_opts="\"$inputs_path/large/ERR194147-mem2-chr22.bam\" \
 chr22:16000000-16500000 \"$inputs_path/large/Homo_sapiens_assembly38.fasta\" \
 \$OMP_NUM_THREADS"
 

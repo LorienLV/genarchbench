@@ -53,11 +53,8 @@ job="WFA-DETAILED-PROFILING"
 
 case "$GENARCH_BENCH_CLUSTER" in
 MN4)
-    # Prepend the vtune script to the commands.
-    before_command="$scriptfolder/../../mn4_vtune_profiling.sh"
-
     commands=(
-        "$binaries_path/bin_gcc/align_benchmark"
+        "module load gcc/10.1.0; $scriptfolder/../../mn4_vtune_profiling.sh $binaries_path/bin_gcc/align_benchmark"
     )
 
     parallelism=(

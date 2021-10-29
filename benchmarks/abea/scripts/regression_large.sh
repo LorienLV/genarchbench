@@ -35,7 +35,7 @@ before_command="export OMP_PROC_BIND=true;"
 case "$GENARCH_BENCH_CLUSTER" in
 MN4)
     commands=(
-        "$binaries_path/f5c_gcc"
+        "module load gcc/10.1.0_binutils; $binaries_path/f5c_gcc"
     )
 
     parallelism=(
@@ -56,8 +56,8 @@ MN4)
     ;;
 CTEARM)
     commands=(
-        "$binaries_path/f5c_gcc"
-        "$binaries_path/f5c_fcc"
+        "module load gcc/10.2.0; $binaries_path/f5c_gcc"
+        "module load fuji; $binaries_path/f5c_fcc"
     )
 
     parallelism=(

@@ -44,7 +44,7 @@ job="POA-REGRESSION-SMALL"
 case "$GENARCH_BENCH_CLUSTER" in
 MN4)
     commands=(
-        "$binaries_path/msa_spoa_omp_gcc"
+        "module load gcc/10.1.0; $binaries_path/msa_spoa_omp_gcc"
     )
 
     parallelism=(
@@ -65,8 +65,8 @@ MN4)
     ;;
 CTEARM)
     commands=(
-        "$binaries_path/msa_spoa_omp_gcc"
-        "$binaries_path/msa_spoa_omp_fcc"
+        "module load gcc/10.2.0; $binaries_path/msa_spoa_omp_gcc"
+        "module load fuji; $binaries_path/msa_spoa_omp_fcc"
     )
 
     parallelism=(

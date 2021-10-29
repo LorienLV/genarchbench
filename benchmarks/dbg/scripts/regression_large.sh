@@ -1,7 +1,7 @@
 #!/bin/bash
 
-# The folder that contains the inputs for this app.
-inputs_path="$GENARCH_BENCH_INPUTS_ROOT/poa/large"
+# The folder that contains the inputs.
+inputs_path="$GENARCH_BENCH_INPUTS_ROOT/dbg"
 
 if [[ -z "$inputs_path" || ! -d "$inputs_path" ]]; then
     echo "ERROR: You have not set a valid input folder $inputs_path"
@@ -12,10 +12,10 @@ scriptfolder="$(dirname $(realpath $0))"
 binaries_path="$(dirname "$scriptfolder")"
 
 # Clean the stage folder of the jobs after finishing? 1 -> yes, 0 -> no.
-clean=0
+clean=1
 
 # The name of the job.
-job="POA-REGRESSION-LARGE"
+job="DBG-REGRESSION-LARGE"
 
 # Commands to run.
 # You can access the number of mpi-ranks using the environment variable
@@ -29,29 +29,19 @@ job="POA-REGRESSION-LARGE"
 #    "command \$MPI_RANKS \$OMP_NUM_THREADS"
 #)
 
-# Nodes, MPI ranks and OMP theads used to execute with each command.
-# parallelism=(
-#     'nodes=1, mpi=1, omp=1'
-#     # 'nodes=1, mpi=1, omp=2'
-#     # 'nodes=1, mpi=1, omp=4'
-#     # 'nodes=1, mpi=1, omp=8'
-#     # 'nodes=1, mpi=1, omp=12'
-#     # 'nodes=1, mpi=1, omp=24'
-#     # 'nodes=1, mpi=1, omp=36'
-#     # 'nodes=1, mpi=1, omp=48'
-# )
-
 # job additional parameters.
 # job_options=(
-#     # '--exclusive'
-#     # '--time=00:00:01'
-#     # '--qos=debug'
+#     '--exclusive'
+#     '--time=00:03:00'
 # )
+
+# Everything you want to do before executing the commands.
+before_command="export OMP_PROC_BIND=true;"
 
 case "$GENARCH_BENCH_CLUSTER" in
 MN4)
     commands=(
-        "module load gcc/10.1.0; $binaries_path/msa_spoa_omp_gcc"
+        "module load gcc/10.1.0_binutils; $binaries_path/build_gcc/dbg"
     )
 
     parallelism=(
@@ -67,13 +57,13 @@ MN4)
 
     job_options=(
         '--exclusive'
-        # '--time=00:03:00'
+        '--time=00:04:00'
     )
     ;;
 CTEARM)
     commands=(
-        "module load gcc/10.2.0; $binaries_path/msa_spoa_omp_gcc"
-        "module load fuji; $binaries_path/msa_spoa_omp_fcc"
+        "module load gcc/10.2.0; $binaries_path/build_gcc/dbg_gcc"
+        "module load fuji; $binaries_path/build_gcc/dbg_fcc"
     )
 
     parallelism=(
@@ -86,22 +76,28 @@ CTEARM)
         'nodes=1, mpi=1, omp=36'
         'nodes=1, mpi=1, omp=48'
     )
+
+    job_options=(
+        '-L rscgrp=large'
+    )
     ;;
 *)
     commands=(
-        "$binaries_path/msa_spoa_omp_gcc"
+        "$binaries_path/build_gcc/dbg"
     )
 
     parallelism=(
         'nodes=1, mpi=1, omp=1'
-        'nodes=1, mpi=1, omp=2'
-        'nodes=1, mpi=1, omp=4'
+        # 'nodes=1, mpi=1, omp=2'
+        # 'nodes=1, mpi=1, omp=4'
     )
     ;;
 esac
 
 # Additional arguments to pass to the commands.
-command_opts="-s \"$inputs_path/input.fasta\" -t \$OMP_NUM_THREADS > out.fasta"
+command_opts="\"$inputs_path/large/ERR194147-mem2-chr22.bam\" \
+chr22:0-50818468 \"$inputs_path/large/Homo_sapiens_assembly38.fasta\" \
+\$OMP_NUM_THREADS"
 
 #
 # This function is executed before launching a job. You can use this function to
@@ -121,14 +117,14 @@ before_run() (
 after_run() (
     job_name="$1"
 
-    wall_time="$(cat "$job_name.err" | grep -m 1 "Runtime:" | cut -d ' ' -f 2)"
+    wall_time="$(tac "$job_name.err" | grep -m 1 "Data processing time:" | cut -d ' ' -f 5)"
 
-    echo "Time in kernel: $wall_time s"
+    echo "Data processing time: $wall_time s"
 
-    # Check if the output file is identical to the reference
-    out="$(cat out.fasta | grep --invert-match -e "workTicks" -e "avgTicks")"
-    reference="$(cat "$inputs_path/out-reference.fasta" | grep --invert-match -e "workTicks" -e "avgTicks")"
-    if [[ "$out" != "$reference" ]]; then
+    # Check that columns "reference_kmer" and "model_kmer" are identical in the
+    # reference and the output files.
+    awk -F $'\t' 'NR==FNR{a[$3$10]++;next} a[$3$10] == 0 {exit 1}' "events.tsv" "$inputs_path/small-reference.tsv"
+    if [[ $? -ne 0 || ! -s "events.tsv" ]]; then
         echo "The output file is not identical to the reference file"
         return 1 # Failure
     fi

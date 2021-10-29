@@ -12,6 +12,8 @@ inputs_path="$GENARCH_BENCH_INPUTS_ROOT/abea"
 
 scriptfolder="$(realpath $0)"
 binaries_path="$(dirname "$(dirname "$(realpath $0)")")"
+
+module load gcc/10.2.0
 binary="$binaries_path/f5c_gcc" # The ABEA binary to use.
 
 if [[ -z "$inputs_path" || ! -d "$inputs_path" ]]; then

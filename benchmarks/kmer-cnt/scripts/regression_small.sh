@@ -78,7 +78,7 @@ MN4)
 CTEARM)
     commands=(
         "module load gcc/10.2.0; $binaries_path/kmer-cnt_gcc"
-        "$binaries_path/kmer-cnt_fcc"
+        "module load fuji;$binaries_path/kmer-cnt_fcc"
     )
 
     parallelism=(

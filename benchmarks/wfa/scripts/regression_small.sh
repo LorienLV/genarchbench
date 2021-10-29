@@ -54,7 +54,7 @@ before_command="export OMP_PROC_BIND=true;"
 case "$GENARCH_BENCH_CLUSTER" in
 MN4)
     commands=(
-        "$binaries_path/bin_gcc/align_benchmark"
+        "module load gcc/10.1.0; $binaries_path/bin_gcc/align_benchmark"
     )
 
     parallelism=(
@@ -75,7 +75,7 @@ MN4)
     ;;
 CTEARM)
     commands=(
-        "$binaries_path/bin_gcc/align_benchmark"
+        "module load gcc/10.2.0; $binaries_path/bin_gcc/align_benchmark"
         "module load fuji; $binaries_path/bin_fcc/align_benchmark"
     )
 

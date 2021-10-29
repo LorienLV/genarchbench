@@ -53,11 +53,8 @@ job="BPM-DETAILED-PROFILING"
 
 case "$GENARCH_BENCH_CLUSTER" in
 MN4)
-    # Prepend the vtune script to the commands.
-    before_command="$scriptfolder/../../mn4_vtune_profiling.sh"
-
     commands=(
-        "$binaries_path/bin_gcc/align_benchmark"
+        "module load gcc/10.1.0; $scriptfolder/../../mn4_vtune_profiling.sh $binaries_path/bin_gcc/align_benchmark"
     )
 
     parallelism=(
@@ -79,11 +76,8 @@ MN4)
     )
     ;;
 CTEARM)
-    # Prepend the FAPP script to the commands.
-    before_command="$scriptfolder/../../ctearm_fapp_profiling.sh -e pa1-pa17"
-
     commands=(
-        "$binaries_path/bin_fcc/align_benchmark"
+        "module load fuji; $scriptfolder/../../ctearm_fapp_profiling.sh -e pa1-pa17 $binaries_path/bin_fcc/align_benchmark"
     )
 
     job_options=(
