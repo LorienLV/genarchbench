@@ -1,17 +1,12 @@
 #!/bin/bash
 
-#PJM -N ABEA.CONFIG
-#PJM -L elapse=00:30:00
-#PJM -L node=1
-#PJM --mpi "proc=1,max-proc-per-node=1"
-
-export OMP_NUM_THREADS=1
+# Execute "source ../setup_*.sh" before running this script.
 
 # The folder that contains the inputs.
 inputs_path="$GENARCH_BENCH_INPUTS_ROOT/abea"
 
-scriptfolder="$(realpath $0)"
-binaries_path="$(dirname "$(dirname "$(realpath $0)")")"
+scriptfolder="$(dirname $(realpath $0))"
+binaries_path="$(dirname "$scriptfolder")"
 
 module load gcc/10.2.0
 binary="$binaries_path/f5c_gcc" # The ABEA binary to use.
