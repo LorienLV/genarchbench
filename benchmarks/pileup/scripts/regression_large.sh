@@ -96,7 +96,7 @@ esac
 
 # Additional arguments to pass to the commands.
 command_opts="\"$inputs_path/HG002_prom_R941_guppy360_2_GRCh38_ch20.bam\" \
-chr20:1-4128271 \$OMP_NUM_THREADS > out.txt"
+chr20:1-14128271 \$OMP_NUM_THREADS > out.txt"
 
 #
 # This function is executed before launching a job. You can use this function to
