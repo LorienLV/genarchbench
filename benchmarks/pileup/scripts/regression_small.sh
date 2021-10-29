@@ -41,7 +41,7 @@ before_command="export OMP_PROC_BIND=true;"
 case "$GENARCH_BENCH_CLUSTER" in
 MN4)
     commands=(
-        "module load gcc/10.1.0; $binaries_path/build_gcc/pileup"
+        "module load gcc/10.1.0_binutils; $binaries_path/build_gcc/pileup"
     )
 
     parallelism=(
@@ -57,7 +57,7 @@ MN4)
 
     job_options=(
         '--exclusive'
-        '--time=00:04:00'
+        '--time=00:00:40'
     )
     ;;
 CTEARM)
