@@ -3,7 +3,7 @@ CC:=gcc
 CXX:=g++
 
 # Set flags.
-CFLAGS:=-g -Wall -pthread -fstack-protector-strong -fPIC -std=c99 -O3 -fopenmp
+CFLAGS:=-g -Wall -pthread -fPIC -std=c99 -O3 -fopenmp
 CPPFLAGS:=-D_FORTIFY_SOURCE=2 -DPRINT_OUTPUT=1
 DEPFLAGS:=-MD -MP # Autogenerate dependencies.
 LDFLAGS:=-lz -lm -lbz2 -llzma -lpthread -lcurl -lcrypto -ldl
