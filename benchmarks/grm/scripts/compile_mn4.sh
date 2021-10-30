@@ -1,5 +1,11 @@
 #!/bin/bash
 
+#SBATCH --nodes=1
+#SBATCH --ntasks=1
+#SBATCH --cpus-per-task=1
+
+export OMP_NUM_THREADS=1
+
 # The compilers to use.
 compilers=(
     'gcc'
@@ -16,7 +22,13 @@ for compiler in "${compilers[@]}"; do
 
     case "$compiler" in
         gcc)
-            make CC=gcc CXX=g++ arch=-march=native
+            module load gcc/10.1.0_binutils
+            module load intel/2020.1
+            module load mkl/2021.3
+
+            make CC=gcc CXX=g++ arch='-march=native' \
+            DYNAMIC_MKL=1 MKL_ROOT='/apps/INTEL/oneapi/2021.3/mkl/2021.3.0' \
+            MKL_IOMP5_DIR='/apps/INTEL/oneapi/2021.3/compiler/2021.3.0/linux/compiler/lib/intel64_lin'
             ;;
         *)
             echo "ERROR: Compiler '$compiler' not supported."

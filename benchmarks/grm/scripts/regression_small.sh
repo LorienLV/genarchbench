@@ -53,8 +53,10 @@ before_command="export OMP_PROC_BIND=true;"
 
 case "$GENARCH_BENCH_CLUSTER" in
 MN4)
+    before_command="module load intel/2020.1; module load mkl/2021.3;"
+
     commands=(
-        "module load gcc/10.1.0; $binaries_path/build_dynamic_gcc/plink2"
+        "module load gcc/10.1.0_binutils; $binaries_path/build_dynamic_gcc/plink2"
     )
 
     parallelism=(
@@ -70,7 +72,7 @@ MN4)
 
     job_options=(
         '--exclusive'
-        '--time=00:04:00'
+        '--time=00:00:40'
     )
     ;;
 CTEARM)

@@ -153,17 +153,17 @@ endif
 #   CXXFLAGS += -I/usr/local/include -stdlib=libc++
 #   LINKFLAGS += -L/usr/local/lib
 # else
-  # ifdef DYNAMIC_MKL
-  #   ifdef NO_LAPACK
-  #     $(error DYNAMIC_MKL and NO_LAPACK conflict)
-  #   endif
-  #   ifdef FORCE_32BIT
-  #     $(error DYNAMIC_MKL + FORCE_32BIT not supported)
-  #   endif
-  #   BASEFLAGS += -DDYNAMIC_MKL -DLAPACK_ILP64 -I${MKLROOT}/include
-  #   BLASFLAGS = -L${MKLROOT}/lib/intel64 -L${MKL_IOMP5_DIR} -Wl,--no-as-needed -lmkl_intel_ilp64 -lmkl_intel_thread -lmkl_core -liomp5
-  #   LINKFLAGS += -ldl
-  # endif
+  ifdef DYNAMIC_MKL
+    ifdef NO_LAPACK
+      $(error DYNAMIC_MKL and NO_LAPACK conflict)
+    endif
+    ifdef FORCE_32BIT
+      $(error DYNAMIC_MKL + FORCE_32BIT not supported)
+    endif
+    BASEFLAGS += -DDYNAMIC_MKL -DLAPACK_ILP64 -I${MKLROOT}/include
+    BLASFLAGS = -L${MKLROOT}/lib/intel64 -L${MKL_IOMP5_DIR} -Wl,--no-as-needed -lmkl_intel_ilp64 -lmkl_intel_thread -lmkl_core -liomp5
+    LINKFLAGS += -ldl
+  endif
 # endif
 
 ifdef NO_LAPACK
