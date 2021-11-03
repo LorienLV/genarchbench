@@ -1,6 +1,6 @@
 #!/bin/bash
 
-#PJM -N CHAIN.COMPILE
+#PJM -N PILEUP.COMPILE
 #PJM -L elapse=00:30:00
 #PJM -L node=1
 #PJM --mpi "proc=1,max-proc-per-node=1"
