@@ -17,4 +17,4 @@ If you find `abea` useful, please cite:
 }
 ```
 
-:red_circle:IMPORTANT:red_circle: If you have moved the input files to a new location, you will have to regenerate the index files. To do so you can use [scripts/generate_indexes.sh](scripts/generate_indexes.sh).
+:exclamation: If you have moved the input files to a new location, you will have to regenerate the index files. To do so you can use [scripts/generate_indexes.sh](scripts/generate_indexes.sh).

@@ -1,30 +1,32 @@
 # GenarchBench
 
-A port of [GenomicsBench](https://github.com/arun-sub/genomicsbench) to A64FX. This project contains every benchmark included in GenomicsBench plus three additional genomics benchmarks.
+\textcolor{red}{\text{ Your text } }
+
+A port of [GenomicsBench](https://github.com/arun-sub/genomicsbench) to A64FX. This project contains every benchmark :bug: included in GenomicsBench plus three additional genomics benchmarks.
 
 ## Benchmarks
 
-| #  | Benchmark  | Description                               | Language | Status                                          | Next Step         |
-|----|------------|-------------------------------------------|----------|-------------------------------------------------|-------------------|
-| 1  | abea       | Adaptive Banded Signal to Event Alignment | C/C++    | <span style="color:green">PORTED</span>         | Study performance |
-| 2  | bpm        | Bit-Parallel Myers Alignment              | C        | <span style="color:green">PORTED</span>         | Study performance |
-| 3  | bsw        | Banded Smith-Waterman                     | C++      | <span style="color:green">PORTED</span>         | Study performance |
-| 4  | chain      | Seed Chaining                             | C++      | <span style="color:green">PORTED</span>         | Study performance |
-| 5  | fast-chain | SVE version of Chain (fast-chain)         | C++      | <span style="color:orange">PENDING</span>       | Write SVE version |
-| 6  | dbg        | De-Bruijn Graph Construction              | C/C++    | <span style="color:yellow">SEMI-PORTED</span>   | Check correctness |
-| 7  | fmi        | FM-Index                                  | C++      | <span style="color:green">PORTED</span>         | Study performance |
-| 8  | grm        | Genomic Relationship Matrix               | C/C++    | <span style="color:orange">PENDING</span>       | Compile in A64FX  |
-| 9  | kmer-cnt   | K-mer Counting                            | C++      | <span style="color:green">PORTED</span>         | Study performance |
-| 10 | nn-base    | Neural Network-based Base Calling         | Python   | <span style="color:orange">PENDING</span>       | Compile in A64FX  |
-| 11 | nn-variant | Neural Network-based Variant Calling      | Python   | <span style="color:orange">PENDING</span>       | Compile in A64FX  |
-| 12 | pairHMM    | Pairwise Hidden Markov Model              | C++/Java | <span style="color:orange">PENDING</span>       | Compile in A64FX  |
-| 13 | pileup     | Pileup Counting                           | C        | <span style="color:green">PORTED</span>         | Study performance |
-| 14 | poa        | Partial-Order Alignment                   | C++      | <span style="color:yellow">SEMI-PORTED</span>   | Incorrect output  |
-| 15 | wfa        | Wavefront Alignment Algorithm             | C        | <span style="color:green">PORTED</span>         | Study performance |
+| #  | Benchmark  | Description                               | Language | Status                        | Next Step         |
+|----|------------|-------------------------------------------|----------|-------------------------------|-------------------|
+| 1  | abea       | Adaptive Banded Signal to Event Alignment | C/C++    | PORTED :green_circle:         | Study performance |
+| 2  | bpm        | Bit-Parallel Myers Alignment              | C        | PORTED :green_circle:         | Study performance |
+| 3  | bsw        | Banded Smith-Waterman                     | C++      | PORTED :green_circle:         | Study performance |
+| 4  | chain      | Seed Chaining                             | C++      | PORTED :green_circle:         | Study performance |
+| 5  | fast-chain | SVE version of Chain (fast-chain)         | C++      | PENDING :orange_circle:       | Write SVE version |
+| 6  | dbg        | De-Bruijn Graph Construction              | C/C++    | SEMI-PORTED :yellow_circle:   | Check correctness |
+| 7  | fmi        | FM-Index                                  | C++      | PORTED :green_circle:         | Study performance |
+| 8  | grm        | Genomic Relationship Matrix               | C/C++    | PENDING :orange_circle:       | Compile in A64FX  |
+| 9  | kmer-cnt   | K-mer Counting                            | C++      | PORTED :green_circle:         | Study performance |
+| 10 | nn-base    | Neural Network-based Base Calling         | Python   | PENDING :orange_circle:       | Compile in A64FX  |
+| 11 | nn-variant | Neural Network-based Variant Calling      | Python   | PENDING :orange_circle:       | Compile in A64FX  |
+| 12 | pairHMM    | Pairwise Hidden Markov Model              | C++/Java | PENDING :orange_circle:       | Compile in A64FX  |
+| 13 | pileup     | Pileup Counting                           | C        | PORTED :green_circle:         | Study performance |
+| 14 | poa        | Partial-Order Alignment                   | C++      | SEMI-PORTED :yellow_circle:   | Incorrect output  |
+| 15 | wfa        | Wavefront Alignment Algorithm             | C        | PORTED :green_circle:         | Study performance |
 
 ## Working with the Benchmarks
 
-There is one folder for each benchmark under ([benchmarks](benchmarks)). The folder of each <span style="color:green">PORTED</span> benchmark contains the source code of the benchmark, its dependent libraries, and scripts to compile, execute and profile the benchmark in MareNostrum4, CTE-ARM (A64FX), and in a local Linux environment.
+There is one folder for each benchmark under ([benchmarks](benchmarks)). The folder of each PORTED :green_circle: benchmark contains the source code of the benchmark, its dependent libraries, and scripts to compile, execute and profile the benchmark in MareNostrum4, CTE-ARM (A64FX), and in a local Linux environment.
 
 ### Set Up the Environment
 
@@ -50,7 +52,7 @@ source benchmarks/setup_local.sh
 
 The scripts will prepare the environment to be able to use the compilation, execution, and profiling scripts of the benchmarks.
 
-:red_circle:IMPORTANT:red_circle: The following sections explain how to compile, execute and profile a benchmark. Some benchmarks, like ABEA, require an initial setup. If you are working outside of CTE-ARM or MN4, please check the README of the benchmark you are working with. 
+:exclamation: The following sections explain how to compile, execute and profile a benchmark. Some benchmarks, like ABEA, require an initial setup. If you are working outside of CTE-ARM or MN4, please check the README of the benchmark you are working with. 
 
 ### Compile a Benchmark
 
@@ -87,7 +89,7 @@ bash scripts/compile_local.sh
 
 The script will compile the benchmark using GCC. Modify it to use other compiler.
 
-:red_circle:IMPORTANT:red_circle: Only <span style="color:green">PORTED</span> benchmarks have scripts to compile. If you are working with a <span style="color:orange">PENDING</span> benchmark, you will have to manually compile. Check the README of the benchmark to find some help.
+:exclamation: Only PORTED :green_circle: benchmarks have scripts to compile. If you are working with a PENDING :orange_circle: benchmark, you will have to manually compile. Check the README of the benchmark to find some help.
 
 ### Execute a Benchmark
 
@@ -101,10 +103,10 @@ bash scripts/regression_large.sh # Run a large test-case with different compiler
 
 If you want to execute a benchmark manually, you can check its README or take a look at one of the regression scripts to find out what command to use.
 
-:red_circle:IMPORTANT:red_circle: Only <span style="color:green">PORTED</span> benchmarks have scripts to execute. If you are working with a <span style="color:orange">PENDING</span> benchmark, you will have to manually execute. Check the README of the benchmark to find some help.
+:exclamation: Only PORTED :green_circle: benchmarks have scripts to execute. If you are working with a PENDING :orange_circle: benchmark, you will have to manually execute. Check the README of the benchmark to find some help.
 
 ### Profile a Benchmark
 
 If you have followed the [Set Up the Environment](#set-up-the-environment) section, you can use the `detailed_profiling.sh` script of a benchmark to profile it. The script automatically detects the job scheduler of the cluster you are working on (only MN4, CTE-ARM) and runs the serial version of the benchmark with FAPP if you are working in CTE-ARM or VTune if you are working on MN4. The profiling results will be stored in the `out` folder of the working directory.
 
-:red_circle:IMPORTANT:red_circle: Only <span style="color:green">PORTED</span> benchmarks have scripts to profile. If you are working with a <span style="color:orange">PENDING</span> benchmark, you will have to manually profile it.
+:exclamation: Only PORTED :green_circle: benchmarks have scripts to profile. If you are working with a PENDING :orange_circle: benchmark, you will have to manually profile it.
