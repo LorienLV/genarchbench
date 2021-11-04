@@ -77,7 +77,7 @@ MN4)
     ;;
 CTEARM)
     commands=(
-        "module load fuji; $scriptfolder/../../ctearm_fapp_profiling.sh -e pa1-pa17 $binaries_path/build_gcc/pileup"
+        "module load fuji; $scriptfolder/../../ctearm_fapp_profiling.sh -e pa1-pa17 $binaries_path/build_fcc/pileup"
     )
 
     job_options=(
