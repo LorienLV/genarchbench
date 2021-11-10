@@ -292,8 +292,8 @@ int main(int argc, char *argv[])
         for (int64_t i = 0; i < roundNumPairs; i += batchSize) {
             int nPairsBatch = (numPairs - i) >= batchSize ? batchSize : numPairs - i;
             //int64_t st1 = __rdtsc();
-            //bsw[tid]->getScores16(seqPairArray + i, seqBufRef + i * MAX_SEQ_LEN_REF, seqBufQer + i * MAX_SEQ_LEN_QER, nPairsBatch, 1, w);
-            bsw[tid]->scalarBandedSWAWrapper(seqPairArray + i, seqBufRef + i * MAX_SEQ_LEN_REF, seqBufQer + i * MAX_SEQ_LEN_QER, nPairsBatch, 1, w);
+            bsw[tid]->getScores16(seqPairArray + i, seqBufRef + i * MAX_SEQ_LEN_REF, seqBufQer + i * MAX_SEQ_LEN_QER, nPairsBatch, 1, w);
+            // bsw[tid]->scalarBandedSWAWrapper(seqPairArray + i, seqBufRef + i * MAX_SEQ_LEN_REF, seqBufQer + i * MAX_SEQ_LEN_QER, nPairsBatch, 1, w);
             //int64_t et1 = __rdtsc();
             //workTicks[CLMUL * tid] += (et1 - st1);
         }
