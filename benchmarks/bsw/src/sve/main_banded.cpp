@@ -43,11 +43,13 @@ Authors: Vasimuddin Md <vasimuddin.md@intel.com>; Sanchit Misra <sanchit.misra@i
 #include "hooks.h"
 #endif
 
-// #define VTUNE_ANALYSIS 1
-
 #define CLMUL 8
-#ifdef VTUNE_ANALYSIS
+
+#if VTUNE_ANALYSIS
     #include <ittnotify.h>
+#endif
+#if FAPP_ANALYSIS
+    #include "fj_tool/fapp.h"
 #endif
 
 #define DEFAULT_MATCH 1
@@ -204,9 +206,6 @@ uint64_t find_stats(uint64_t *val, int nt, double &min, double &max, double &avg
 
 int main(int argc, char *argv[])
 {
-#ifdef VTUNE_ANALYSIS
-    __itt_pause();
-#endif
 	if (argc < 3) {
 		fprintf(stderr, "usage: bsw -pairs <InSeqFile> -t <threads> -b <batch_size>\n");
 		exit(EXIT_FAILURE);
@@ -275,9 +274,12 @@ int main(int argc, char *argv[])
 
     startTick = __rdtsc();
     
-    #ifdef VTUNE_ANALYSIS
-        __itt_resume();
-    #endif
+	#if VTUNE_ANALYSIS
+		__itt_resume();
+	#endif
+	#if FAPP_ANALYSIS
+		fapp_start("getScores", 1, 0);
+	#endif
     //int64_t workTicks[CLMUL * numThreads];
     //memset(workTicks, 0, CLMUL * numThreads * sizeof(int64_t));
 
@@ -304,9 +306,12 @@ int main(int argc, char *argv[])
     __parsec_roi_end();
 #endif
 
-    #ifdef VTUNE_ANALYSIS
-        __itt_pause();
-    #endif
+	#if VTUNE_ANALYSIS
+		__itt_pause();
+	#endif
+	#if FAPP_ANALYSIS
+		fapp_stop("getScores", 1, 0);
+	#endif
 
     totalTicks += __rdtsc() - startTick;
     printf("Executed SVE vector code...\n");

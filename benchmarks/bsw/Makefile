@@ -66,15 +66,22 @@ else ifneq ($(arch),)
 endif
 
 CXXFLAGS=-DENABLE_PREFETCH -DBWA_OTHER_ELE=0 -O3 -std=c++11 -fopenmp -fno-strict-aliasing $(ARCH_FLAGS) 
-# VTUNE_HOME= /opt/intel/oneapi/vtune/2021.1.1
 INCLUDES=
 LIBS=-fopenmp -lz -ldl
 
-ifneq ($(VTUNE_HOME),)
-CXXFLAGS+=-DVTUNE_ANALYSIS=1
-INCLUDES+=-I${VTUNE_HOME}/include
-LIBS+=-L${VTUNE_HOME}/lib64 -littnotify
+# Intel VTune Profiler
+VTUNE_ANALYSIS=0
+
+ifeq ($(VTUNE_ANALYSIS),1)
+	# VTUNE_HOME # Path to VTUNE-HOME directory
+	INCLUDES+=-I$(VTUNE_HOME)/include
+	LIBS+=-L$(VTUNE_HOME)/lib64 -littnotify -lpthread -ldl
 endif
+
+# Fujitsu Advanced Profiler
+FAPP_ANALYSIS=0
+
+CXXFLAGS+=-DVTUNE_ANALYSIS=$(VTUNE_ANALYSIS) -DFAPP_ANALYSIS=$(FAPP_ANALYSIS)
 
 CXXFLAGS+=-MD -MP # Autogenerate dependencies. MUST NOT BE DELETED.
 

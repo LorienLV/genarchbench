@@ -4,6 +4,11 @@
 #SBATCH --ntasks=1
 #SBATCH --cpus-per-task=1
 
+if [[ "$GENARCH_BENCH_CLUSTER" != "MN4" ]]; then
+    echo "ERROR: Run 'source setup_mn4.sh' before using this script"
+    exit 1
+fi
+
 export OMP_NUM_THREADS=1
 
 # The compilers to use.
@@ -17,7 +22,9 @@ for compiler in "${compilers[@]}"; do
     case "$compiler" in
         gcc)
             module load gcc/10.1.0
-            make CC=gcc CXX=g++ arch='-march=skylake-avx512' TARGET_ARCH=x86_64 BUILDDIR=build_gcc
+            make CC=gcc CXX=g++ arch='-march=skylake-avx512' \
+            TARGET_ARCH=x86_64 BUILDDIR=build_gcc \
+            VTUNE_ANALYSIS=1
             ;;
         *)
             echo "ERROR: Compiler '$compiler' not supported."

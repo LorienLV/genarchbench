@@ -5,6 +5,11 @@
 #PJM -L node=1
 #PJM --mpi "proc=1,max-proc-per-node=1"
 
+if [[ "$GENARCH_BENCH_CLUSTER" != "CTE_ARM" ]]; then
+    echo "ERROR: Run 'source setup_ctearm.sh' before using this script"
+    exit 1
+fi
+
 export OMP_NUM_THREADS=1
 
 # The compiler to use, "gcc" and/or "fcc".
@@ -19,11 +24,14 @@ for compiler in "${compilers[@]}"; do
     case "$compiler" in
         gcc)
             module load gcc/10.2.0
-            make CC=gcc CXX=g++ arch=-march=armv8-a+sve TARGET_ARCH=aarch64 BUILDDIR=build_gcc
+            make CC=gcc CXX=g++ arch=-march=armv8-a+sve \
+            TARGET_ARCH=aarch64 BUILDDIR=build_gcc
             ;;
         fcc)
             module load fuji
-            make CC='fcc -Nclang' CXX='FCC -Nclang -lstdc++' arch=-march=armv8-a+sve TARGET_ARCH=aarch64 BUILDDIR=build_fcc
+            make CC='fcc -Nclang' CXX='FCC -Nclang -lstdc++' arch=-march=armv8-a+sve \
+            TARGET_ARCH=aarch64 BUILDDIR=build_fcc \
+            FAPP_ANALYSIS=1
             ;;
         *)
             echo "ERROR: Compiler '$compiler' not supported."
