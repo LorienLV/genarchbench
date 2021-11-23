@@ -35,6 +35,13 @@
 
 #include "omp.h"
 
+#if VTUNE_ANALYSIS
+    #include <ittnotify.h>
+#endif
+#if FAPP_ANALYSIS
+    #include "fj_tool/fapp.h"
+#endif
+
 /*
  * Parameters
  */
@@ -326,6 +333,12 @@ int main(int argc,char* argv[]) {
     #pragma omp barrier
     #pragma omp master
     {
+#if VTUNE_ANALYSIS
+      __itt_resume();
+#endif
+#if FAPP_ANALYSIS
+      fapp_start("align", 1, 0);
+#endif
       gettimeofday(&alignment_start, NULL);
     }
 
@@ -377,6 +390,12 @@ int main(int argc,char* argv[]) {
     #pragma omp master
     {
       gettimeofday(&alignment_end, NULL);
+#if VTUNE_ANALYSIS
+      __itt_pause();
+#endif
+#if FAPP_ANALYSIS
+      fapp_stop("align", 1, 0);
+#endif
     }
 
     // Print the output.
