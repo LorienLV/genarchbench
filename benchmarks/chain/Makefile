@@ -43,19 +43,19 @@ else ifneq ($(arch),)
 		ARCH_FLAGS=$(arch)
 endif
 
-# flags #
-#COMPILE_FLAGS = -std=c++11 -Wall -Wextra -g -O3 -fopenmp -xAVX2 -axAVX2
-#VTUNE_HOME= /opt/intel/vtune_profiler
-COMPILE_FLAGS = -std=c++11 -Wall -Wextra -O3 -fopenmp $(ARCH_FLAGS) # -g
-# INCLUDES = -I$(BUILD_PATH)/minimap2
-# Space-separated pkg-config libraries used by this project
-# LIBS = -L$(BUILD_PATH)/minimap2 -lminimap2 -ldl
+# Intel VTune Profiler
+VTUNE_ANALYSIS=0
 
-# ifneq ($(VTUNE_HOME),)
-# COMPILE_FLAGS += -DVTUNE_ANALYSIS=1
-# INCLUDES += -I${VTUNE_HOME}/include
-# LIBS +=  -L${VTUNE_HOME}/lib64 -littnotify
-# endif
+ifeq ($(VTUNE_ANALYSIS),1)
+	# VTUNE_HOME # Path to VTUNE-HOME directory
+	INCLUDES+=-I$(VTUNE_HOME)/include
+	LIBS+=-L$(VTUNE_HOME)/lib64 -littnotify -lpthread -ldl
+endif
+
+# Fujitsu Advanced Profiler
+FAPP_ANALYSIS=0
+
+COMPILE_FLAGS=-std=c++11 -Wall -Wextra -O3 -fopenmp $(ARCH_FLAGS) -DVTUNE_ANALYSIS=$(VTUNE_ANALYSIS) -DFAPP_ANALYSIS=$(FAPP_ANALYSIS) # -g
 
 .PHONY: default_target
 default_target: release

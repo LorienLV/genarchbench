@@ -7,20 +7,20 @@ usage() {
     echo "            -e pa1 -> just event pa1"
     echo "            -e pa1,pa2,pa3 -> events pa1, pa2 and pa3"
     echo "            -e pa1-pa5 -> events pa1, pa2, pa3, pa4 and pa5"
+    echo "    -l --level"
+    echo "        It enables only the regions satisfying \"level\" >= \"third argument level of"
+    echo "        measurement region specifying routine\" as a measurement target. [default=0]"
     echo "    -h, --help"
     echo "        Show usage"
 }
 
 valid_events="pa1 pa2 pa3 pa4 pa5 pa6 pa7 pa8 pa9 pa10 pa11 pa12 pa13 pa14 pa15 pa16 pa17"
 
+level=0
 events="$valid_events"
 
 while [ "$1" != "" ]; do
     case "$1" in
-    -h | --help)
-        usage
-        exit 0
-        ;;
     -e | --events)
         shift
         events="$1"
@@ -59,6 +59,14 @@ while [ "$1" != "" ]; do
             usage
             exit 1
         fi
+        ;;
+    -l | --level)
+        shift
+        level="$1"
+        ;;
+    -h | --help)
+        usage
+        exit 0
         ;;
     *)
         # The rest of the parameters is the command and its arguments.
