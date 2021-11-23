@@ -130,9 +130,6 @@ const char *__parsec_roi_end(const char *s, int *beg, int *end)
 }
 int main(int argc, char** argv)
 {
-#ifdef VTUNE_ANALYSIS
-    __itt_pause();
-#endif
 	#ifdef NDEBUG
 	signal(SIGSEGV, segfaultHandler);
 	std::set_terminate(exceptionHandler);

@@ -29,8 +29,12 @@ Authors: Vasimuddin Md <vasimuddin.md@intel.com>; Sanchit Misra <sanchit.misra@i
 
 #include "omp.h"
 #include "bandedSWA.h"
-#ifdef VTUNE_ANALYSIS
-#include <ittnotify.h> 
+
+#if VTUNE_ANALYSIS
+    #include <ittnotify.h>
+#endif
+#if FAPP_ANALYSIS
+    #include "fj_tool/fapp.h"
 #endif
 
 #if defined(__clang__) || defined(__GNUC__)
