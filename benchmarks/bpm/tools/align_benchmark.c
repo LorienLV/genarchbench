@@ -32,6 +32,13 @@
 #include "benchmark/benchmark_edit.h"
 #include "benchmark/benchmark_bitpal.h"
 
+#if VTUNE_ANALYSIS
+    #include <ittnotify.h>
+#endif
+#if FAPP_ANALYSIS
+    #include "fj_tool/fapp.h"
+#endif
+
 /*
  * Algorithms
  */
@@ -155,6 +162,12 @@ void align_benchmark(const alg_algorithm_type alg_algorithm) {
     #pragma omp barrier
     #pragma omp master
     {
+#if VTUNE_ANALYSIS
+      __itt_resume();
+#endif
+#if FAPP_ANALYSIS
+      fapp_start("benchmark_bitpal", 1, 0);
+#endif
       timer_start(&(parameters.timer_global));
     }
 
@@ -217,6 +230,12 @@ void align_benchmark(const alg_algorithm_type alg_algorithm) {
     #pragma omp barrier
     #pragma omp master
     {
+#if VTUNE_ANALYSIS
+    __itt_pause();
+#endif
+#if FAPP_ANALYSIS
+    fapp_stop("benchmark_bitpal", 1, 0);
+#endif
       timer_stop(&(parameters.timer_global));
     }
 
