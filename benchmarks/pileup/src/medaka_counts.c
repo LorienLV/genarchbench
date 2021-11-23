@@ -20,10 +20,11 @@
 
 // #define PRINT_OUTPUT 1
 
-// #define VTUNE_ANALYSIS 1
-
-#ifdef VTUNE_ANALYSIS
+#if VTUNE_ANALYSIS
     #include <ittnotify.h>
+#endif
+#if FAPP_ANALYSIS
+    #include "fj_tool/fapp.h"
 #endif
 
 #define bam1_seq(b) ((b)->data + (b)->core.n_cigar*4 + (b)->core.l_qname)
@@ -480,9 +481,6 @@ plp_data calculate_pileup(
 
 // Demonstrates usage
 int main(int argc, char *argv[]) {
-#ifdef VTUNE_ANALYSIS
-    __itt_pause();
-#endif
     if(argc < 4) {
         fprintf(stderr, "Usage %s <bam> <region> <num_threads>\n", argv[0]);
         exit(1);
@@ -549,8 +547,11 @@ int main(int argc, char *argv[]) {
     struct timeval start_time, end_time;
     double runtime = 0;
     gettimeofday(&start_time, NULL);
-#ifdef VTUNE_ANALYSIS
+#if VTUNE_ANALYSIS
     __itt_resume();
+#endif
+#if FAPP_ANALYSIS
+    fapp_start("calculate_pileup", 1, 0);
 #endif
     // process batches in parallel
     #pragma omp parallel num_threads(numThreads)
@@ -563,8 +564,11 @@ int main(int argc, char *argv[]) {
                                         weibull_summation, read_group);
             }
     }
-#ifdef VTUNE_ANALYSIS
+#if VTUNE_ANALYSIS
     __itt_pause();
+#endif
+#if FAPP_ANALYSIS
+    fapp_stop("calculate_pileup", 1, 0);
 #endif
     gettimeofday(&end_time, NULL);
     runtime += (end_time.tv_sec - start_time.tv_sec)*1e6 + end_time.tv_usec - start_time.tv_usec;
