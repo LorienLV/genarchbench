@@ -19,6 +19,13 @@
 #include <sys/wait.h>
 #include <unistd.h>
 
+#if VTUNE_ANALYSIS
+    #include <ittnotify.h>
+#endif
+#if FAPP_ANALYSIS
+    #include "fj_tool/fapp.h"
+#endif
+
 /*
 todo :
 Error counter for consecutive failures in the skip unreadable mode
@@ -1495,6 +1502,12 @@ void process_single(core_t* core, db_t* db,int32_t i) {
 }
 
 void process_db(core_t* core, db_t* db) {
+#if VTUNE_ANALYSIS
+    __itt_resume();
+#endif
+#if FAPP_ANALYSIS
+    fapp_start("process_db", 1, 0);
+#endif
 
     double process_start = realtime();
 
@@ -1556,6 +1569,13 @@ void process_db(core_t* core, db_t* db) {
         }
 
     }
+
+#if VTUNE_ANALYSIS
+    __itt_pause();
+#endif
+#if FAPP_ANALYSIS
+    fapp_stop("process_db", 1, 0);
+#endif
 
     double process_end= realtime();
     core->process_db_time += (process_end-process_start);

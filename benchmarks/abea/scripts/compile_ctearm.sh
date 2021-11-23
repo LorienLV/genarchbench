@@ -5,6 +5,11 @@
 #PJM -L node=1
 #PJM --mpi "proc=1,max-proc-per-node=1"
 
+if [[ "$GENARCH_BENCH_CLUSTER" != "CTE_ARM" ]]; then
+    echo "ERROR: Run 'source setup_ctearm.sh' before using this script"
+    exit 1
+fi
+
 export OMP_NUM_THREADS=1
 
 # The compiler to use, "gcc" and/or "fcc".
@@ -27,7 +32,8 @@ for compiler in "${compilers[@]}"; do
             # allow processing of multibyte characters
             export LANG=en_US.utf8
             export LC_ALL=en_US.utf8
-            make CC='fcc -Nclang' CXX='FCC -Nclang' BINARY=f5c_fcc BUILD_DIR=build_fcc
+            make CC='fcc -Nclang' CXX='FCC -Nclang' BINARY=f5c_fcc BUILD_DIR=build_fcc \
+            FAPP_ANALYSIS=1
             ;;
         *)
             echo "ERROR: Compiler '$compiler' not supported."

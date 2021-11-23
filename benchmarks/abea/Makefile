@@ -5,10 +5,6 @@ HTS_VERSION = 1.9
 HDF5_VERSION = 1.10.4
 HDF5_MAJOR_MINOR = `echo $(HDF5_VERSION) | sed -E 's/\.[0-9]+$$//'`
 
-ifdef ENABLE_PROFILE
-    CFLAGS += -p
-endif
-
 ifeq ($(HDF5), install)
     HDF5_LIB = $(BUILD_DIR)/lib/libhdf5.a
     HDF5_INC = -I$(BUILD_DIR)/include
@@ -42,6 +38,20 @@ LANG 	 = -x c++
 CFLAGS   += -g -Wall -O2 -std=c++11
 LDFLAGS  += $(LIBS) -lpthread -lz -rdynamic
 BUILD_DIR = build
+
+# Intel VTune Profiler
+VTUNE_ANALYSIS=0
+
+ifeq ($(VTUNE_ANALYSIS),1)
+	# VTUNE_HOME # Path to VTUNE-HOME directory
+	INCLUDES+=-I$(VTUNE_HOME)/include
+	LDFLAGS+=-L$(VTUNE_HOME)/lib64 -littnotify -lpthread -ldl
+endif
+
+# Fujitsu Advanced Profiler
+FAPP_ANALYSIS=0
+
+CPPFLAGS+=-DVTUNE_ANALYSIS=$(VTUNE_ANALYSIS) -DFAPP_ANALYSIS=$(FAPP_ANALYSIS)
 
 $(info $(shell mkdir -p $(BUILD_DIR)))
 
@@ -79,46 +89,46 @@ $(BINARY): src/config.h $(HTS_LIB) $(HDF5_LIB) $(OBJ)
 	$(CXX) $(CFLAGS) $(OBJ) $(LDFLAGS) $(CUDA_LDFLAGS) -o $@
 
 $(BUILD_DIR)/main.o: src/main.c src/f5cmisc.h src/error.h
-	$(CXX) $(CFLAGS) $(CPPFLAGS) $(LANG) $< -c -o $@
+	$(CXX) $(INCLUDES) $(CFLAGS) $(CPPFLAGS) $(LANG) $< -c -o $@
 
 $(BUILD_DIR)/meth_main.o: src/meth_main.c src/f5c.h src/fast5lite.h src/f5cmisc.h src/logsum.h
-	$(CXX) $(CFLAGS) $(CPPFLAGS) $(LANG) $< -c -o $@
+	$(CXX) $(INCLUDES) $(CFLAGS) $(CPPFLAGS) $(LANG) $< -c -o $@
 
 $(BUILD_DIR)/f5c.o: src/f5c.c src/f5c.h src/fast5lite.h src/f5cmisc.h
-	$(CXX) $(CFLAGS) $(CPPFLAGS) $(LANG) $< -c -o $@
+	$(CXX) $(INCLUDES) $(CFLAGS) $(CPPFLAGS) $(LANG) $< -c -o $@
 
 $(BUILD_DIR)/events.o: src/events.c src/f5c.h src/fast5lite.h src/f5cmisc.h src/fast5lite.h src/nanopolish_read_db.h src/ksort.h
-	$(CXX) $(CFLAGS) $(CPPFLAGS) $(LANG) $< -c -o $@
+	$(CXX) $(INCLUDES) $(CFLAGS) $(CPPFLAGS) $(LANG) $< -c -o $@
 
 $(BUILD_DIR)/nanopolish_read_db.o: src/nanopolish_read_db.c src/nanopolish_read_db.h
-	$(CXX) $(CFLAGS) $(CPPFLAGS) $(LANG) $< -c -o $@
+	$(CXX) $(INCLUDES) $(CFLAGS) $(CPPFLAGS) $(LANG) $< -c -o $@
 
 $(BUILD_DIR)/nanopolish_index.o: src/nanopolish_index.c src/nanopolish_read_db.h src/fast5lite.h
-	$(CXX) $(CFLAGS) $(CPPFLAGS) $(LANG) $< -c -o $@
+	$(CXX) $(INCLUDES) $(CFLAGS) $(CPPFLAGS) $(LANG) $< -c -o $@
 
 $(BUILD_DIR)/nanopolish_fast5_io.o: src/nanopolish_fast5_io.c src/fast5lite.h
-	$(CXX) $(CFLAGS) $(CPPFLAGS) $(LANG) $< -c -o $@
+	$(CXX) $(INCLUDES) $(CFLAGS) $(CPPFLAGS) $(LANG) $< -c -o $@
 
 $(BUILD_DIR)/model.o: src/model.c src/model.h src/f5c.h src/fast5lite.h src/f5cmisc.h
-	$(CXX) $(CFLAGS) $(CPPFLAGS) $(LANG) $< -c -o $@
+	$(CXX) $(INCLUDES) $(CFLAGS) $(CPPFLAGS) $(LANG) $< -c -o $@
 
 $(BUILD_DIR)/align.o: src/align.c src/f5c.h src/fast5lite.h
-	$(CXX) $(CFLAGS) $(CPPFLAGS) $(LANG) $< -c -o $@
+	$(CXX) $(INCLUDES) $(CFLAGS) $(CPPFLAGS) $(LANG) $< -c -o $@
 
 $(BUILD_DIR)/meth.o: src/meth.c src/f5c.h src/fast5lite.h src/f5cmisc.h
-	$(CXX) $(CFLAGS) $(CPPFLAGS) $(LANG) $< -c -o $@
+	$(CXX) $(INCLUDES) $(CFLAGS) $(CPPFLAGS) $(LANG) $< -c -o $@
 
 $(BUILD_DIR)/hmm.o: src/hmm.c src/f5c.h src/fast5lite.h src/f5cmisc.h src/matrix.h src/logsum.h
-	$(CXX) $(CFLAGS) $(CPPFLAGS) $(LANG) $< -c -o $@
+	$(CXX) $(INCLUDES) $(CFLAGS) $(CPPFLAGS) $(LANG) $< -c -o $@
 
 $(BUILD_DIR)/freq.o: src/freq.c src/khash.h
-	$(CXX) $(CFLAGS) $(CPPFLAGS) $(LANG) $< -c -o $@
+	$(CXX) $(INCLUDES) $(CFLAGS) $(CPPFLAGS) $(LANG) $< -c -o $@
 
 $(BUILD_DIR)/eventalign.o: src/eventalign.c
-	$(CXX) $(CFLAGS) $(CPPFLAGS) $(LANG) $< -c -o $@
+	$(CXX) $(INCLUDES) $(CFLAGS) $(CPPFLAGS) $(LANG) $< -c -o $@
 
 $(BUILD_DIR)/freq_merge.o: src/freq_merge.c
-	$(CXX) $(CFLAGS) $(CPPFLAGS) $(LANG) $< -c -o $@
+	$(CXX) $(INCLUDES) $(CFLAGS) $(CPPFLAGS) $(LANG) $< -c -o $@
 
 # cuda stuff
 # We do not have GPUs
