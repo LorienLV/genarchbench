@@ -1,6 +1,6 @@
 #!/bin/bash
 
-if [[ -z "$GENARCH_BENCH_CLUSTER" ]]; then
+if [[ "$GENARCH_BENCH_CLUSTER" != "local" ]]; then
     echo "ERROR: Run 'source setup_local.sh' before using this script"
     exit 1
 fi
@@ -16,7 +16,7 @@ for compiler in "${compilers[@]}"; do
     case "$compiler" in
         gcc)
             make CC=gcc CXX=g++ arch=native BUILD_PATH=build_gcc BIN_NAME=chain_gcc \
-            # VTUNE_ANALYSIS=1
+            VTUNE_ANALYSIS=1
             ;;
         *)
             echo "ERROR: Compiler '$compiler' not supported."

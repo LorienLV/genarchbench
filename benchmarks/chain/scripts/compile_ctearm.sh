@@ -5,7 +5,7 @@
 #PJM -L node=1
 #PJM --mpi "proc=1,max-proc-per-node=1"
 
-if [[ -z "$GENARCH_BENCH_CLUSTER" ]]; then
+if [[ "$GENARCH_BENCH_CLUSTER" != "CTE_ARM" ]]; then
     echo "ERROR: Run 'source setup_ctearm.sh' before using this script"
     exit 1
 fi

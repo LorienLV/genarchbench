@@ -4,7 +4,7 @@
 #SBATCH --ntasks=1
 #SBATCH --cpus-per-task=1
 
-if [[ -z "$GENARCH_BENCH_CLUSTER" ]]; then
+if [[ "$GENARCH_BENCH_CLUSTER" != "MN4" ]]; then
     echo "ERROR: Run 'source setup_mn4.sh' before using this script"
     exit 1
 fi

@@ -40,9 +40,6 @@ void help() {
 
 
 int main(int argc, char **argv) {
-#if VTUNE_ANALYSIS
-    __itt_pause();
-#endif
     FILE *in, *out;
     std::string inputFileName, outputFileName;
 
