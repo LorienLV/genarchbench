@@ -22,8 +22,11 @@
 
 // #define VTUNE_ANALYSIS 1
 
-#ifdef VTUNE_ANALYSIS
+#if VTUNE_ANALYSIS
     #include <ittnotify.h>
+#endif
+#if FAPP_ANALYSIS
+    #include "fj_tool/fapp.h"
 #endif
 
 bool parseArgs(int argc, char** argv, std::string& readsFasta, 
@@ -221,8 +224,11 @@ int main(int argc, char** argv)
 	const char *roi_q;
 	int roi_i, roi_j;
 	char roi_s[20] = "chr22:0-5";
-#ifdef VTUNE_ANALYSIS
+#if VTUNE_ANALYSIS
     __itt_resume();
+#endif
+#if FAPP_ANALYSIS
+    fapp_start("computing", 1, 0);
 #endif
 	roi_q = __parsec_roi_begin(roi_s, &roi_i, &roi_j);
 	bool useMinimizers = Config::get("use_minimizers");
@@ -238,8 +244,11 @@ int main(int argc, char** argv)
 		//									 TANDEM_FREQ);
 	}
 	roi_q = __parsec_roi_end(roi_s, &roi_i, &roi_j);
-#ifdef VTUNE_ANALYSIS
+#if VTUNE_ANALYSIS
     __itt_pause();
+#endif
+#if FAPP_ANALYSIS
+    fapp_stop("computing", 1, 0);
 #endif
 	gettimeofday(&end_time, NULL);
 	runtime += (end_time.tv_sec - start_time.tv_sec)*1e6 + end_time.tv_usec - start_time.tv_usec;

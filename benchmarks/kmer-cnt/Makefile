@@ -7,13 +7,19 @@ LIBS= -lz -lm -lbz2 -llzma -ldl -fopenmp
 CXXFLAGS=-O3 -fopenmp -std=c++11
 INC = -Ilibcuckoo
 
-ifneq ($(VTUNE_HOME),)
-#VTUNE_HOME= /opt/intel/vtune_profiler
-CPPFLAGS+=-DVTUNE_ANALYSIS=1
-LIBS += -L${VTUNE_HOME}/lib64 -littnotify
-INC += -I${VTUNE_HOME}/include
+# Intel VTune Profiler
+VTUNE_ANALYSIS=0
+
+ifeq ($(VTUNE_ANALYSIS),1)
+	# VTUNE_HOME # Path to VTUNE-HOME directory
+	INC+=-I$(VTUNE_HOME)/include
+	LIBS+=-L$(VTUNE_HOME)/lib64 -littnotify -lpthread -ldl
 endif
 
+# Fujitsu Advanced Profiler
+FAPP_ANALYSIS=0
+
+CPPFLAGS+=-DVTUNE_ANALYSIS=$(VTUNE_ANALYSIS) -DFAPP_ANALYSIS=$(FAPP_ANALYSIS)
 
 all: sequence_container.cpp sequence.cpp vertex_index.cpp kmer_cnt.cpp
 	$(CXX) $(CXXFLAGS) $(CPPFLAGS) sequence_container.cpp sequence.cpp vertex_index.cpp kmer_cnt.cpp $(INC) $(LIBS) -o $(EXE)
