@@ -4,6 +4,11 @@
 #SBATCH --ntasks=1
 #SBATCH --cpus-per-task=1
 
+if [[ "$GENARCH_BENCH_CLUSTER" != "MN4" ]]; then
+    echo "ERROR: Run 'source setup_mn4.sh' before using this script"
+    exit 1
+fi
+
 export OMP_NUM_THREADS=1
 
 # The compiler to use, "gcc" and/or "fcc".
@@ -17,7 +22,8 @@ for compiler in "${compilers[@]}"; do
     case "$compiler" in
         gcc)
             module load gcc/10.1.0
-            make CC=gcc CXX=g++ BUILD_DIR=build_gcc MSA_SPOA_OMP=msa_spoa_omp_gcc
+            make CC=gcc CXX=g++ BUILD_DIR=build_gcc MSA_SPOA_OMP=msa_spoa_omp_gcc \
+            VTUNE_ANALYSIS=1
             ;;
         *)
             echo "ERROR: Compiler '$compiler' not supported."

@@ -42,12 +42,19 @@ SPOA_LIB=$(BUILD_DIR)/spoa/build/lib/libspoa.a
 INCLUDES+=-I$(BUILD_DIR)/spoa/include/spoa
 LDFLAGS+=-L$(BUILD_DIR)/spoa/build/lib/ -lspoa
 
-#VTUNE_HOME= /opt/intel/vtune_profiler
-ifneq ($(VTUNE_HOME),)
-CXXFLAGS+=-DVTUNE_ANALYSIS=1
-INCLUDES+=-I${VTUNE_HOME}/include
-LDFLAGS+=-L${VTUNE_HOME}/lib64 -littnotify
+# Intel VTune Profiler
+VTUNE_ANALYSIS=0
+
+ifeq ($(VTUNE_ANALYSIS),1)
+	# VTUNE_HOME # Path to VTUNE-HOME directory
+	INCLUDES+=-I$(VTUNE_HOME)/include
+	LDFLAGS+=-L$(VTUNE_HOME)/lib64 -littnotify -lpthread -ldl
 endif
+
+# Fujitsu Advanced Profiler
+FAPP_ANALYSIS=0
+
+CPPFLAGS+=-DVTUNE_ANALYSIS=$(VTUNE_ANALYSIS) -DFAPP_ANALYSIS=$(FAPP_ANALYSIS)
 
 # Files.
 SRCS:=$(shell find $(SRC_DIR) -name "*.cpp")
@@ -72,7 +79,7 @@ $(MSA_SPOA_OMP): $(SPOA_LIB) $(MSA_SPOA_OMP_OBJS)
 #
 $(BUILD_DIR)/%.o: $(SRC_DIR)/%.cpp
 	mkdir -p $(@D)
-	$(CXX) $(CXXFLAGS) $(INCLUDES) -c $< -o $@
+	$(CXX) $(INCLUDES) $(CPPFLAGS) $(CXXFLAGS) -c $< -o $@
 
 #
 # Compile SPOA library

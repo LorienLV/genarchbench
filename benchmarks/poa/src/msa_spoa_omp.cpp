@@ -22,15 +22,15 @@
 #include "alignment_engine.hpp"
 // #include <x86intrin.h>
 
-
-// #define VTUNE_ANALYSIS 1
-
 #define CLMUL 8
 
 // #define ENABLE_SORT 1
 
-#ifdef VTUNE_ANALYSIS
+#if VTUNE_ANALYSIS
     #include <ittnotify.h>
+#endif
+#if FAPP_ANALYSIS
+    #include "fj_tool/fapp.h"
 #endif
 
 using namespace std;
@@ -148,9 +148,6 @@ void help() {
 }
 
 int main(int argc, char** argv) {
-#ifdef VTUNE_ANALYSIS
-    __itt_pause();
-#endif
     string seq_file = "seq.fa";
 
     std::uint8_t algorithm = 1;
@@ -226,8 +223,11 @@ int main(int argc, char** argv) {
     // std::memset(workTicks, 0, CLMUL * numThreads * sizeof(int64_t));
     gettimeofday(&start_time, NULL); real_start = get_realtime();
 
-#ifdef VTUNE_ANALYSIS
+#if VTUNE_ANALYSIS
     __itt_resume();
+#endif
+#if FAPP_ANALYSIS
+    fapp_start("alignment", 1, 0);
 #endif
 
 #ifdef ENABLE_SORT
@@ -269,9 +269,13 @@ int main(int argc, char** argv) {
     std::sort(batches.begin(), batches.end(), SortById());
 #endif
 
-#ifdef VTUNE_ANALYSIS
+#if VTUNE_ANALYSIS
     __itt_pause();
 #endif
+#if FAPP_ANALYSIS
+    fapp_stop("alignment", 1, 0);
+#endif
+
     gettimeofday(&end_time, NULL); real_end = get_realtime();
     runtime += (end_time.tv_sec - start_time.tv_sec)*1e6 + end_time.tv_usec - start_time.tv_usec;
     realtime += (real_end-real_start);
