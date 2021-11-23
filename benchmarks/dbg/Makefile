@@ -7,12 +7,19 @@ DEPFLAGS:=-MD -MP # Autogenerate dependencies.
 LDFLAGS:=-lcurl -lcrypto -lz -lm -lbz2 -llzma -lpthread -ldl -fopenmp
 # INCLUDES=
 
-#VTUNE_HOME= /opt/intel/vtune_profiler
-# ifneq ($(VTUNE_HOME),)
-# CXXFLAGS+= -DVTUNE_ANALYSIS=1
-# INC+=	-I${VTUNE_HOME}/include
-# LIBS+=-L${VTUNE_HOME}/lib64 -littnotify
-# endif
+# Intel VTune Profiler
+VTUNE_ANALYSIS=0
+
+ifeq ($(VTUNE_ANALYSIS),1)
+	# VTUNE_HOME # Path to VTUNE-HOME directory
+	INCLUDES+=-I$(VTUNE_HOME)/include
+	LDFLAGS+=-L$(VTUNE_HOME)/lib64 -littnotify -lpthread -ldl
+endif
+
+# Fujitsu Advanced Profiler
+FAPP_ANALYSIS=0
+
+CPPFLAGS+=-DVTUNE_ANALYSIS=$(VTUNE_ANALYSIS) -DFAPP_ANALYSIS=$(FAPP_ANALYSIS)
 
 # Directories.
 BUILD_DIR:=build
