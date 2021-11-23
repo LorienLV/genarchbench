@@ -42,10 +42,11 @@ Authors: Vasimuddin Md <vasimuddin.md@intel.com>; Sanchit Misra <sanchit.misra@i
 #include "hooks.h"
 #endif
 
-// #define VTUNE_ANALYSIS 1
-
-#ifdef VTUNE_ANALYSIS
+#if VTUNE_ANALYSIS
     #include <ittnotify.h>
+#endif
+#if FAPP_ANALYSIS
+    #include "fj_tool/fapp.h"
 #endif
 
 #define PRINT_OUTPUT 1
@@ -56,10 +57,6 @@ Authors: Vasimuddin Md <vasimuddin.md@intel.com>; Sanchit Misra <sanchit.misra@i
 int myrank, num_ranks;
 
 int main(int argc, char **argv) {
-#ifdef VTUNE_ANALYSIS
-    __itt_pause();
-#endif
-
     if(argc!=6)
     {
         printf("Need five arguments : ref_file query_set batch_size minSeedLen n_threads\n");
@@ -174,13 +171,19 @@ int main(int argc, char **argv) {
             printf("Running %d threads\n", omp_get_num_threads());
     }
 
-    int64_t i;
-
-    int64_t startTick, endTick;
-#ifdef VTUNE_ANALYSIS
+#if VTUNE_ANALYSIS
     __itt_resume();
 #endif
+#if FAPP_ANALYSIS
+    fapp_start("computing", 1, 0);
+#endif
+
+    int64_t i;
+    int64_t startTick, endTick;
     startTick = __rdtsc();
+
+    std::chrono::steady_clock::time_point begin_computing = std::chrono::steady_clock::now();
+
     memset(numTotalSmem, 0, num_batches * sizeof(int64_t));
     memset(batchStart, 0, num_batches * sizeof(int64_t));
     //int64_t workTicks[CLMUL * numthreads];
@@ -192,8 +195,6 @@ int main(int argc, char **argv) {
 #ifdef ENABLE_PARSEC_HOOKS
     __parsec_roi_begin();
 #endif
-
-    std::chrono::steady_clock::time_point begin_computing = std::chrono::steady_clock::now();
 
 #pragma omp parallel num_threads(numthreads)
     {
@@ -303,16 +304,21 @@ int main(int argc, char **argv) {
         //printf("%d] %ld ticks, workTicks = %ld\n", tid, endTick - startTick, workTicks[CLMUL * tid]);
     }
 
-    std::chrono::steady_clock::time_point end_computing = std::chrono::steady_clock::now();
-
 #ifdef ENABLE_PARSEC_HOOKS
     __parsec_roi_end();
 #endif
 
+    std::chrono::steady_clock::time_point end_computing = std::chrono::steady_clock::now();
+
     endTick = __rdtsc();
-#ifdef VTUNE_ANALYSIS
+
+#if VTUNE_ANALYSIS
     __itt_pause();
 #endif
+#if FAPP_ANALYSIS
+    fapp_stop("computing", 1, 0);
+#endif
+
     //int64_t sumTicks = 0;
     //int64_t maxTicks = 0;
     //for(i = 0; i < numthreads; i++)

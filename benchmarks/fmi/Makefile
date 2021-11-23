@@ -71,11 +71,19 @@ CPPFLAGS=	-DENABLE_PREFETCH -DBWA_OTHER_ELE=0
 INCLUDES=	-I$(BWAMEM2_ARCH_PATH)/src -I$(BWAMEM2_PATH)/ext/safestringlib/include # -DENABLE_PARSEC_HOOKS -I/romol/hooks/include
 LIBS=		-L$(BWAMEM2_ARCH_PATH) -L$(BWAMEM2_PATH)/ext/safestringlib -lsafestring -fopenmp -lz -lbwa -ldl # -L/romol/hooks/lib -lhooks
 
-ifneq ($(VTUNE_HOME),)
-CPPFLAGS+=	-DVTUNE_ANALYSIS=1
-INCLUDES+=	-I${VTUNE_HOME}/include
-LIBS+=-L${VTUNE_HOME}/lib64 -littnotify
+# Intel VTune Profiler
+VTUNE_ANALYSIS=0
+
+ifeq ($(VTUNE_ANALYSIS),1)
+	# VTUNE_HOME # Path to VTUNE-HOME directory
+	INCLUDES+=-I$(VTUNE_HOME)/include
+	LIBS+=-L$(VTUNE_HOME)/lib64 -littnotify -lpthread -ldl
 endif
+
+# Fujitsu Advanced Profiler
+FAPP_ANALYSIS=0
+
+CPPFLAGS+=-DVTUNE_ANALYSIS=$(VTUNE_ANALYSIS) -DFAPP_ANALYSIS=$(FAPP_ANALYSIS)
 
 .PHONY:all clean depend
 .SUFFIXES:.cpp .o
