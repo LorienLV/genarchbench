@@ -18,7 +18,7 @@ binaries_path="$(dirname "$scriptfolder")"
 clean=1
 
 # The name of the job.
-job="PILEUP-DETAILED-PROFILING"
+job="POA-DETAILED-PROFILING"
 
 # Commands to run.
 # You can access the number of mpi-ranks using the environment variable
@@ -72,7 +72,7 @@ MN4)
         '--reservation=vtune'
         '--constraint=perfparanoid'
         '--exclusive'
-        '--time=00:08:00'
+        '--time=00:15:00'
     )
     ;;
 CTEARM)
@@ -102,7 +102,7 @@ CTEARM)
 esac
 
 # Additional arguments to pass to the commands.
-command_opts="-s \"$inputs_path/input.fasta\" -t \$OMP_NUM_THREADS > out.fasta"
+command_opts="-s \"$inputs_path/input-1000.fasta\" -t \$OMP_NUM_THREADS > out.fasta"
 
 #
 # This function is executed before launching a job. You can use this function to
