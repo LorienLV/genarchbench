@@ -1,7 +1,7 @@
 #!/bin/bash
 
 # The folder that contains the inputs for this app.
-inputs_path="$GENARCH_BENCH_INPUTS_ROOT/poa/large"
+inputs_path="$GENARCH_BENCH_INPUTS_ROOT/poa/small"
 
 if [[ -z "$inputs_path" || ! -d "$inputs_path" ]]; then
     echo "ERROR: You have not set a valid input folder $inputs_path"
