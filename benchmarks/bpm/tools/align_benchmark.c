@@ -33,10 +33,13 @@
 #include "benchmark/benchmark_bitpal.h"
 
 #if VTUNE_ANALYSIS
-    #include <ittnotify.h>
+  #include <ittnotify.h>
+#endif
+#if ADVISOR_ANALYSIS
+  #include "advisor-annotate.h"
 #endif
 #if FAPP_ANALYSIS
-    #include "fj_tool/fapp.h"
+  #include "fj_tool/fapp.h"
 #endif
 
 /*
@@ -165,8 +168,11 @@ void align_benchmark(const alg_algorithm_type alg_algorithm) {
 #if VTUNE_ANALYSIS
       __itt_resume();
 #endif
+#if ADVISOR_ANALYSIS
+      ANNOTATE_DISABLE_COLLECTION_PUSH;
+#endif
 #if FAPP_ANALYSIS
-      fapp_start("benchmark_bitpal", 1, 0);
+      fapp_start("computing", 1, 0);
 #endif
       timer_start(&(parameters.timer_global));
     }
@@ -231,10 +237,13 @@ void align_benchmark(const alg_algorithm_type alg_algorithm) {
     #pragma omp master
     {
 #if VTUNE_ANALYSIS
-    __itt_pause();
+      __itt_pause();
+#endif
+#if ADVISOR_ANALYSIS
+      ANNOTATE_DISABLE_COLLECTION_POP;
 #endif
 #if FAPP_ANALYSIS
-    fapp_stop("benchmark_bitpal", 1, 0);
+      fapp_stop("computing", 1, 0);
 #endif
       timer_stop(&(parameters.timer_global));
     }

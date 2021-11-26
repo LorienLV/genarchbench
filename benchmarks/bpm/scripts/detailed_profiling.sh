@@ -54,7 +54,7 @@ job="BPM-DETAILED-PROFILING"
 case "$GENARCH_BENCH_CLUSTER" in
 MN4)
     commands=(
-        "module load gcc/10.1.0; $scriptfolder/../../mn4_vtune_profiling.sh $binaries_path/bin_gcc/align_benchmark"
+        "module load gcc/10.1.0; $scriptfolder/../../mn4_detailed_profiling.sh $binaries_path/bin_gcc/align_benchmark"
     )
 
     parallelism=(
@@ -96,8 +96,24 @@ CTEARM)
     )
     ;;
 *)
-    echo "Cluster not supported"
-    exit 1
+    commands=(
+        "$scriptfolder/../../mn4_detailed_profiling.sh $binaries_path/bin_gcc/align_benchmark"
+    )
+
+    job_options=(
+        '-L rscgrp=large'
+    )
+
+    parallelism=(
+        'nodes=1, mpi=1, omp=1'
+        # 'nodes=1, mpi=1, omp=2'
+        # 'nodes=1, mpi=1, omp=4'
+        # 'nodes=1, mpi=1, omp=8'
+        # 'nodes=1, mpi=1, omp=12'
+        # 'nodes=1, mpi=1, omp=24'
+        # 'nodes=1, mpi=1, omp=36'
+        # 'nodes=1, mpi=1, omp=48'
+    )
     ;;
 esac
 
@@ -130,7 +146,11 @@ after_run() (
     error=0
     case "$GENARCH_BENCH_CLUSTER" in
     MN4)
-        cp -r *.out *.err *runsa "$job_output_folder"
+        mkdir "$job_output_folder/vtune"
+        mkdir "$job_output_folder/advisor"
+
+        cp -r *runsa "$job_output_folder/vtune" && \
+        cp -r advisor_results "$job_output_folder/advisor"
         error=$?
         ;;
     CTEARM)
