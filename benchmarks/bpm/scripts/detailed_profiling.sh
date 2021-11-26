@@ -54,7 +54,7 @@ job="BPM-DETAILED-PROFILING"
 case "$GENARCH_BENCH_CLUSTER" in
 MN4)
     commands=(
-        "module load gcc/10.1.0; $scriptfolder/../../mn4_detailed_profiling.sh $binaries_path/bin_gcc/align_benchmark"
+        "module load gcc/10.1.0; $scriptfolder/../../mn4_vtune_profiling.sh $binaries_path/bin_gcc/align_benchmark"
     )
 
     parallelism=(
@@ -72,7 +72,7 @@ MN4)
         '--reservation=vtune'
         '--constraint=perfparanoid'
         '--exclusive'
-        # '--time=00:02:00'
+        '--time=00:02:00'
     )
     ;;
 CTEARM)
@@ -130,11 +130,7 @@ after_run() (
     error=0
     case "$GENARCH_BENCH_CLUSTER" in
     MN4)
-        mkdir "$job_output_folder/vtune"
-        mkdir "$job_output_folder/advisor"
-
-        cp -r *runsa "$job_output_folder/vtune" && \
-        cp -r advisor_results "$job_output_folder/advisor"
+        cp -r *.out *.err *runsa "$job_output_folder"
         error=$?
         ;;
     CTEARM)
