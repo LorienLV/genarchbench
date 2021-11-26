@@ -72,7 +72,7 @@ MN4)
         '--reservation=vtune'
         '--constraint=perfparanoid'
         '--exclusive'
-        '--time=00:02:00'
+        # '--time=00:02:00'
     )
     ;;
 CTEARM)
@@ -96,24 +96,8 @@ CTEARM)
     )
     ;;
 *)
-    commands=(
-        "$scriptfolder/../../mn4_detailed_profiling.sh $binaries_path/bin_gcc/align_benchmark"
-    )
-
-    job_options=(
-        '-L rscgrp=large'
-    )
-
-    parallelism=(
-        'nodes=1, mpi=1, omp=1'
-        # 'nodes=1, mpi=1, omp=2'
-        # 'nodes=1, mpi=1, omp=4'
-        # 'nodes=1, mpi=1, omp=8'
-        # 'nodes=1, mpi=1, omp=12'
-        # 'nodes=1, mpi=1, omp=24'
-        # 'nodes=1, mpi=1, omp=36'
-        # 'nodes=1, mpi=1, omp=48'
-    )
+    echo "Cluster not supported"
+    exit 1
     ;;
 esac
 

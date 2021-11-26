@@ -169,7 +169,7 @@ void align_benchmark(const alg_algorithm_type alg_algorithm) {
       __itt_resume();
 #endif
 #if ADVISOR_ANALYSIS
-      ANNOTATE_DISABLE_COLLECTION_PUSH;
+      ANNOTATE_DISABLE_COLLECTION_POP;
 #endif
 #if FAPP_ANALYSIS
       fapp_start("computing", 1, 0);
@@ -240,7 +240,7 @@ void align_benchmark(const alg_algorithm_type alg_algorithm) {
       __itt_pause();
 #endif
 #if ADVISOR_ANALYSIS
-      ANNOTATE_DISABLE_COLLECTION_POP;
+      ANNOTATE_DISABLE_COLLECTION_PUSH;
 #endif
 #if FAPP_ANALYSIS
       fapp_stop("computing", 1, 0);
