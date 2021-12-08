@@ -6,21 +6,21 @@ A port of [GenomicsBench](https://github.com/arun-sub/genomicsbench) to A64FX. T
 
 | #  | Benchmark  | Description                               | Language | Status                                          | Next Step         |
 |----|------------|-------------------------------------------|----------|-------------------------------------------------|-------------------|
-| 1  | abea       | Adaptive Banded Signal to Event Alignment | C/C++    | <span style="color:green">PORTED</span>         | Study performance |
-| 2  | bpm        | Bit-Parallel Myers Alignment              | C        | <span style="color:green">PORTED</span>         | Study performance |
-| 3  | bsw        | Banded Smith-Waterman                     | C++      | <span style="color:green">PORTED</span>         | Study performance |
-| 4  | chain      | Seed Chaining                             | C++      | <span style="color:green">PORTED</span>         | Study performance |
+| 1  | abea       | Adaptive Banded Signal to Event Alignment | C/C++    | <span style="color:green">PORTED</span>         | Tuning            |
+| 2  | bpm        | Bit-Parallel Myers Alignment              | C        | <span style="color:green">PORTED</span>         | Tuning            |
+| 3  | bsw        | Banded Smith-Waterman                     | C++      | <span style="color:green">PORTED</span>         | ---               |
+| 4  | chain      | Seed Chaining                             | C++      | <span style="color:green">PORTED</span>         | Tuning            |
 | 5  | fast-chain | SVE version of Chain (fast-chain)         | C++      | <span style="color:orange">PENDING</span>       | Write SVE version |
 | 6  | dbg        | De-Bruijn Graph Construction              | C/C++    | <span style="color:yellow">SEMI-PORTED</span>   | Check correctness |
-| 7  | fmi        | FM-Index                                  | C++      | <span style="color:green">PORTED</span>         | Study performance |
+| 7  | fmi        | FM-Index                                  | C++      | <span style="color:green">PORTED</span>         | Tuning            |
 | 8  | grm        | Genomic Relationship Matrix               | C/C++    | <span style="color:orange">PENDING</span>       | Compile in A64FX  |
-| 9  | kmer-cnt   | K-mer Counting                            | C++      | <span style="color:green">PORTED</span>         | Study performance |
+| 9  | kmer-cnt   | K-mer Counting                            | C++      | <span style="color:green">PORTED</span>         | Tuning            |
 | 10 | nn-base    | Neural Network-based Base Calling         | Python   | <span style="color:orange">PENDING</span>       | Compile in A64FX  |
 | 11 | nn-variant | Neural Network-based Variant Calling      | Python   | <span style="color:orange">PENDING</span>       | Compile in A64FX  |
 | 12 | pairHMM    | Pairwise Hidden Markov Model              | C++/Java | <span style="color:orange">PENDING</span>       | Compile in A64FX  |
-| 13 | pileup     | Pileup Counting                           | C        | <span style="color:green">PORTED</span>         | Study performance |
-| 14 | poa        | Partial-Order Alignment                   | C++      | <span style="color:yellow">SEMI-PORTED</span>   | Incorrect output  |
-| 15 | wfa        | Wavefront Alignment Algorithm             | C        | <span style="color:green">PORTED</span>         | Study performance |
+| 13 | pileup     | Pileup Counting                           | C        | <span style="color:green">PORTED</span>         | Tuning            |
+| 14 | poa        | Partial-Order Alignment                   | C++      | <span style="color:green">PORTED</span>         | Tuning            |
+| 15 | wfa        | Wavefront Alignment Algorithm             | C        | <span style="color:green">PORTED</span>         | Tuning            |
 
 ## Working with the Benchmarks
 
