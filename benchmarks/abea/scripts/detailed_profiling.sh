@@ -103,7 +103,8 @@ esac
 
 # Additional arguments to pass to the commands.
 command_opts="eventalign -b "$inputs_path"/small/1000reads.bam -g \
-"$inputs_path"/humangenome.fa -r "$inputs_path"/1000reads.fastq -B 3.7M > events.tsv"
+"$inputs_path"/humangenome.fa -r "$inputs_path"/1000reads.fastq -B 3.7M \
+-t \$OMP_NUM_THREADS > events.tsv"
 
 #
 # This function is executed before launching a job. You can use this function to
