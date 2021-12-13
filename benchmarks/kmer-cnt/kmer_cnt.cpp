@@ -200,7 +200,7 @@ int main(int argc, char** argv)
 	readsContainer.buildPositionIndex();
 	VertexIndex vertexIndex(readsContainer, 
 							(int)Config::get("assemble_kmer_sample"));
-	vertexIndex.outputProgress(true);
+	vertexIndex.outputProgress(false);
 
 	/*int64_t sumLength = 0;
 	for (auto& seq : readsContainer.iterSeqs())

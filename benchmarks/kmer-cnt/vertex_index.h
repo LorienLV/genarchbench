@@ -19,6 +19,7 @@
 #include "config.h"
 #include "logger.h"
 
+#define COUNT_VERSION 1
 
 typedef std::map<size_t, size_t> KmerDistribution;
 
@@ -57,7 +58,11 @@ private:
 
 	std::atomic<uint8_t>*			_flatCounter;
 	//std::vector<std::atomic<char>>  _flatCounter;
+#if (COUNT_VERSION == 0 || COUNT_VERSION == 1)
 	cuckoohash_map<Kmer, size_t> 	_hashCounter;
+#elif (COUNT_VERSION == 2)
+	std::vector<std::unordered_map<Kmer, size_t>> _hashCounter;
+#endif
 	KmerDistribution _kmerDistribution;
 
 	std::atomic<size_t> _numKmers;

@@ -57,3 +57,38 @@ void processInParallel(const std::vector<T>& scheduledTasks,
 	}
 }
 
+template <class T>
+void processInParallel2(const std::vector<T>& scheduledTasks,
+					   std::function<void(const T&, const size_t, const size_t)> updateFun,
+					   size_t maxThreads, bool progressBar)
+{
+	if (scheduledTasks.empty()) return;
+
+	ProgressPercent progress(scheduledTasks.size());
+	if (progressBar) progress.advance(0);
+
+	auto threadWorker = [](const size_t nthreads, const size_t thread, 
+						 const std::vector<T>& scheduledTasks, 
+						 std::function<void(const T&, const size_t, const size_t)> updateFun, 
+						 ProgressPercent &progress, const bool progressBar)
+	{
+		for (const auto& task : scheduledTasks) {
+			updateFun(task, nthreads, thread);
+
+			if (progressBar) progress.advance();
+		}
+	};
+
+	std::vector<std::thread> threads(std::min(maxThreads, 
+											  scheduledTasks.size()));
+	for (size_t i = 0; i < threads.size(); ++i)
+	{
+		threads[i] = std::thread(threadWorker, threads.size(), i, 
+								 std::ref(scheduledTasks), updateFun, 
+								 std::ref(progress), progressBar);
+	}
+	for (size_t i = 0; i < threads.size(); ++i)
+	{
+		threads[i].join();
+	}
+}

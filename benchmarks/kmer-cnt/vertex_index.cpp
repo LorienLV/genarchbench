@@ -509,7 +509,7 @@ void VertexIndex::clear()
 	//_kmerCounts.reserve(0);
 }
 
-
+#if (COUNT_VERSION == 0)
 void KmerCounter::count(bool useFlatCounter)
 {
 	//Logger::get().debug() << "Before counter: " 
@@ -610,8 +610,168 @@ void KmerCounter::count(bool useFlatCounter)
 	Logger::get().debug() << "Hash size: " << _hashCounter.size();
 	Logger::get().debug() << "Total k-mers " << _numKmers;
 }
+#elif (COUNT_VERSION == 1)
+void KmerCounter::count(bool useFlatCounter)
+{
+	_useFlatCounter = false;
+ 
+	if (_outputProgress) Logger::get().info() << "Counting k-mers:";
 
+	std::function<void(const FastaRecord::Id&)> readUpdate = 
+	[this] (const FastaRecord::Id& readId)
+	{
+		if (!readId.strand()) return;
+		
+		for (auto kmerPos : IterKmers(_seqContainer.getSeq(readId)))
+		{
+			kmerPos.kmer.standardForm();
 
+			_hashCounter.upsert(kmerPos.kmer, [](size_t& num){++num;}, 1);
+		}
+	};
+
+	std::vector<FastaRecord::Id> allReads;
+	for (const auto& seq : _seqContainer.iterSeqs())
+	{
+		allReads.push_back(seq.id);
+	}
+
+	if (Parameters::get().numThreads == 1) {
+		for (const auto& readId : allReads) {
+			readUpdate(readId);
+		}
+	}
+	else {
+		processInParallel(allReads, readUpdate, Parameters::get().numThreads, _outputProgress);
+	}
+
+    /*
+	Logger::get().debug() << "Updating k-mer histogram";
+	if (_useFlatCounter)
+	{
+		for (size_t kmerId = 0; kmerId < COUNTER_LEN * 2; ++kmerId)
+		{
+			Kmer kmer(kmerId);
+			size_t freq = this->getFreq(kmer);
+			if (freq > 0) _kmerDistribution[freq] += 1;
+			// if (kmerId % 1000000 == 0) Logger::get().debug() << kmerId << " " << freq;
+		}
+	}
+	else
+	{
+		for (const auto& kmer : _hashCounter.lock_table())
+		{
+			_kmerDistribution[kmer.second] += 1;
+		}
+	}
+    */
+
+	//Logger::get().debug() << "After counter: " 
+	//	<< getPeakRSS() / 1024 / 1024 / 1024 << " Gb";
+
+	_numKmers = _hashCounter.size();
+
+	Logger::get().debug() << "Hash size: " << _hashCounter.size();
+	Logger::get().debug() << "Total k-mers " << _numKmers;
+}
+#elif (COUNT_VERSION == 2)
+void KmerCounter::count(bool useFlatCounter)
+{
+	_hashCounter.resize(Parameters::get().numThreads);
+	for (auto &map : _hashCounter) {
+		map.reserve(65536);
+	}
+
+	_useFlatCounter = false;
+ 
+	if (_outputProgress) Logger::get().info() << "Counting k-mers:";
+
+	static const size_t MAX_KMERS = std::pow(4, Parameters::get().kmerSize);
+
+	std::function<void(const FastaRecord::Id&, const size_t, const size_t)> readUpdate = 
+	[this] (const FastaRecord::Id& readId, const size_t nthreads, const size_t thread)
+	{
+		if (!readId.strand()) return;
+
+		const size_t num_kmers = (thread < nthreads - 1) ? 
+							MAX_KMERS / nthreads :
+							1 + ((MAX_KMERS - 1) / nthreads); // Ceiling
+
+		const size_t first_kmer = thread * (MAX_KMERS / nthreads);
+		const size_t last_kmer = first_kmer + num_kmers - 1;
+
+		auto &thread_map = _hashCounter[thread];
+		
+		for (auto kmerPos : IterKmers(_seqContainer.getSeq(readId)))
+		{
+			kmerPos.kmer.standardForm();
+
+			if (kmerPos.kmer.numRepr() >= first_kmer && kmerPos.kmer.numRepr() <= last_kmer) {
+				const auto& it = thread_map.find(kmerPos.kmer);
+
+				// Kmer found -> add 1
+				if (it != thread_map.end()) {
+					it->second += 1;
+				}
+				else { // Kmer not found -> insert {kmer,1}
+					thread_map.insert({kmerPos.kmer, 1});
+				}
+			}
+		}
+	};
+
+	std::vector<FastaRecord::Id> allReads;
+	for (const auto& seq : _seqContainer.iterSeqs())
+	{
+		allReads.push_back(seq.id);
+	}
+
+	// if (Parameters::get().numThreads == 1) {
+	// 	for (const auto& readId : allReads) {
+	// 		readUpdate(readId);
+	// 	}
+	// }
+	// else {
+	processInParallel2(allReads, readUpdate, Parameters::get().numThreads, _outputProgress);
+	// }
+
+    /*
+	Logger::get().debug() << "Updating k-mer histogram";
+	if (_useFlatCounter)
+	{
+		for (size_t kmerId = 0; kmerId < COUNTER_LEN * 2; ++kmerId)
+		{
+			Kmer kmer(kmerId);
+			size_t freq = this->getFreq(kmer);
+			if (freq > 0) _kmerDistribution[freq] += 1;
+			// if (kmerId % 1000000 == 0) Logger::get().debug() << kmerId << " " << freq;
+		}
+	}
+	else
+	{
+		for (const auto& kmer : _hashCounter.lock_table())
+		{
+			_kmerDistribution[kmer.second] += 1;
+		}
+	}
+    */
+
+	//Logger::get().debug() << "After counter: " 
+	//	<< getPeakRSS() / 1024 / 1024 / 1024 << " Gb";
+
+	size_t hash_size = 0;
+	for (const auto &map : _hashCounter) {
+		hash_size += map.size();
+	}
+
+	_numKmers = hash_size;
+
+	Logger::get().debug() << "Hash size: " << hash_size;
+	Logger::get().debug() << "Total k-mers " << _numKmers;
+}
+#endif
+
+#if (COUNT_VERSION == 0 || COUNT_VERSION == 1)
 size_t KmerCounter::getFreq(Kmer kmer) const
 {
 	//kmer.standardForm();
@@ -636,6 +796,19 @@ size_t KmerCounter::getFreq(Kmer kmer) const
 	_hashCounter.find(kmer, freq);
 	return freq + addCount;
 }
+#elif (COUNT_VERSION == 2)
+size_t KmerCounter::getFreq(Kmer kmer) const
+{
+	for (auto &map : _hashCounter) {
+		const auto& it = map.find(kmer);
+
+		if (it != map.end()) {
+			return it->second;
+		}
+	}
+	throw std::out_of_range("key not found in table");
+}
+#endif
 
 void KmerCounter::clear()
 {
