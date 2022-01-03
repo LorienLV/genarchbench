@@ -62,8 +62,8 @@ MN4)
     ;;
 CTEARM)
     commands=(
-        "module load gcc/10.2.0; $binaries_path/build_gcc/dbg_gcc"
-        "module load fuji; $binaries_path/build_gcc/dbg_fcc"
+        "module load gcc/10.2.0; $binaries_path/build_gcc/dbg"
+        "module load fuji; $binaries_path/build_gcc/dbg"
     )
 
     parallelism=(
@@ -119,12 +119,16 @@ after_run() (
 
     wall_time="$(tac "$job_name.err" | grep -m 1 "Kernel runtime:" | cut -d ' ' -f 3)"
 
-    echo "Kernel runtime: $wall_time s"
-
     # The reference file of this input would be huge. Check the correctness with the
     # small input.
 
-    return 0 # OK
+    if [[ -n $wall_time ]]; then
+        echo "Kernel runtime: $wall_time s"
+        return 0
+    else
+        echo "Error: Check \"$job_name\" folder"
+        return 1
+    fi
 )
 
 source "$scriptfolder/../../run_wrapper.sh"
