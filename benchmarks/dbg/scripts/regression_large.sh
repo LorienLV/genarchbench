@@ -88,8 +88,8 @@ CTEARM)
 
     parallelism=(
         'nodes=1, mpi=1, omp=1'
-        # 'nodes=1, mpi=1, omp=2'
-        # 'nodes=1, mpi=1, omp=4'
+        'nodes=1, mpi=1, omp=2'
+        'nodes=1, mpi=1, omp=4'
     )
     ;;
 esac
@@ -97,7 +97,7 @@ esac
 # Additional arguments to pass to the commands.
 command_opts="\"$inputs_path/large/ERR194147-mem2-chr22.bam\" \
 chr22:0-50818468 \"$inputs_path/large/Homo_sapiens_assembly38.fasta\" \
-\$OMP_NUM_THREADS"
+\$OMP_NUM_THREADS 0"
 
 #
 # This function is executed before launching a job. You can use this function to
@@ -117,17 +117,12 @@ before_run() (
 after_run() (
     job_name="$1"
 
-    wall_time="$(tac "$job_name.err" | grep -m 1 "Data processing time:" | cut -d ' ' -f 5)"
+    wall_time="$(tac "$job_name.err" | grep -m 1 "Kernel runtime:" | cut -d ' ' -f 3)"
 
-    echo "Data processing time: $wall_time s"
+    echo "Kernel runtime: $wall_time s"
 
-    # Check that columns "reference_kmer" and "model_kmer" are identical in the
-    # reference and the output files.
-    awk -F $'\t' 'NR==FNR{a[$3$10]++;next} a[$3$10] == 0 {exit 1}' "events.tsv" "$inputs_path/small-reference.tsv"
-    if [[ $? -ne 0 || ! -s "events.tsv" ]]; then
-        echo "The output file is not identical to the reference file"
-        return 1 # Failure
-    fi
+    # The reference file of this input would be huge. Check the correctness with the
+    # small input.
 
     return 0 # OK
 )

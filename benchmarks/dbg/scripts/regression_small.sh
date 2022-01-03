@@ -8,6 +8,10 @@ if [[ -z "$inputs_path" || ! -d "$inputs_path" ]]; then
     exit 1
 fi
 
+# To print the graph and compare the output with the reference. Setting this variable
+# to 1 will greatly increase the execution time of the kernel.
+check_output=0
+
 scriptfolder="$(dirname $(realpath $0))"
 binaries_path="$(dirname "$scriptfolder")"
 
@@ -88,8 +92,8 @@ CTEARM)
 
     parallelism=(
         'nodes=1, mpi=1, omp=1'
-        # 'nodes=1, mpi=1, omp=2'
-        # 'nodes=1, mpi=1, omp=4'
+        'nodes=1, mpi=1, omp=2'
+        'nodes=1, mpi=1, omp=4'
     )
     ;;
 esac
@@ -97,7 +101,7 @@ esac
 # Additional arguments to pass to the commands.
 command_opts="\"$inputs_path/large/ERR194147-mem2-chr22.bam\" \
 chr22:16000000-16500000 \"$inputs_path/large/Homo_sapiens_assembly38.fasta\" \
-\$OMP_NUM_THREADS"
+\$OMP_NUM_THREADS $check_output"
 
 #
 # This function is executed before launching a job. You can use this function to
@@ -117,16 +121,16 @@ before_run() (
 after_run() (
     job_name="$1"
 
-    wall_time="$(tac "$job_name.err" | grep -m 1 "Data processing time:" | cut -d ' ' -f 5)"
+    wall_time="$(tac "$job_name.err" | grep -m 1 "Kernel runtime:" | cut -d ' ' -f 3)"
 
-    echo "Data processing time: $wall_time s"
+    echo "Kernel runtime: $wall_time s"
 
-    # Check that columns "reference_kmer" and "model_kmer" are identical in the
-    # reference and the output files.
-    awk -F $'\t' 'NR==FNR{a[$3$10]++;next} a[$3$10] == 0 {exit 1}' "events.tsv" "$inputs_path/small-reference.tsv"
-    if [[ $? -ne 0 || ! -s "events.tsv" ]]; then
-        echo "The output file is not identical to the reference file"
-        return 1 # Failure
+    if [[ $check_output -eq 1 ]]; then
+        sort -n -k1,2 "$job_name.out" | diff --brief - "$inputs_path/small/reference.out" &>/dev/null
+        if [[ $? -ne 0 ]]; then
+            echo "The output file is not identical to the reference file"
+            return 1 # Failure
+        fi
     fi
 
     return 0 # OK

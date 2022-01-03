@@ -862,6 +862,17 @@ void destroyDeBruijnGraph(DeBruijnGraph* theGraph) {
     destroyNodeDict(theGraph->nodes);
     free(theGraph);
 }
+
+void printDeBruijnGraph(DeBruijnGraph* theGraph) {
+    Node** allNodes = theGraph->allNodes->elements;
+    int nNodes = theGraph->allNodes->top + 1;
+
+    for (int i = 0; i < nNodes; i++) {
+        Node* thisNode = allNodes[i];
+        fprintf(stdout, "%s", thisNode->sequence);
+    }
+}
+
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 int DeBruijnGraph_InsertOrUpdateNode(DeBruijnGraph* theGraph, Node** theNode){
@@ -1389,7 +1400,7 @@ void loadBAMDataIntoGraph(DeBruijnGraph* theGraph, struct alignedRead* start, st
 
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-void assembleReadsAndDetectVariants(int refStart, int refEnd, struct alignedRead* windowStart, struct alignedRead* windowEnd, char* refSeq) {
+void assembleReadsAndDetectVariants(int refStart, int refEnd, struct alignedRead* windowStart, struct alignedRead* windowEnd, char* refSeq, bool print_graph) {
     /*
     Below are filled from default Platypus options
     */
@@ -1429,6 +1440,15 @@ void assembleReadsAndDetectVariants(int refStart, int refEnd, struct alignedRead
         }
     }
     */
+    if (print_graph) {
+        #pragma omp critical
+        {
+            fprintf(stdout, "%d %d ", refStart, refStart);
+            printDeBruijnGraph(theGraph);
+            fprintf(stdout, "\n");
+        }
+    }
+
     destroyDeBruijnGraph(theGraph);
     //logger.debug("Finished assembling region %s:%s-%s" %(chrom, start, end))
     //logger.debug("Found vars %s" %(theVars))
@@ -1438,8 +1458,8 @@ void assembleReadsAndDetectVariants(int refStart, int refEnd, struct alignedRead
 
 int main(int argc,char** argv){
     // check args
-    if (argc != 5) {
-        fprintf(stderr, "Usage %s file.bam chr:start-stop ref.fa n_threads\n", argv[0]);
+    if (argc != 6) {
+        fprintf(stderr, "Usage %s file.bam chr:start-stop ref.fa n_threads verbose\n", argv[0]);
         exit(EXIT_FAILURE);
     }
     
@@ -1481,6 +1501,8 @@ int main(int argc,char** argv){
 	b = bam_init1();
     
     int numThreads = atoi(argv[4]);
+
+    int verbose = atoi(argv[5]);
 
     // my structure for a readbuffer (see common.h)
     struct bamReadBuffer readBuffer;
@@ -1578,11 +1600,11 @@ int main(int argc,char** argv){
             int assemEnd = std::min(assemStart + assemblyRegionSize, end);
             int refStart = std::max(0, assemStart - assemblyRegionSize);
             int refEnd = assemEnd + assemblyRegionSize;
-            int verbosity = 2;
-            if (verbosity >= 3) {
-                fprintf(stderr, "Assembling region %s:%d-%d, tid = %d\n", tmp, assemStart, assemEnd, tid);
-            }
-            assembleReadsAndDetectVariants(refStart, refEnd, batches[i].windowStart, batches[i].windowEnd, batches[i].ref);
+            // int verbosity = 2;
+            // if (verbosity >= 3) {
+            //     fprintf(stderr, "Assembling region %s:%d-%d, tid = %d\n", tmp, assemStart, assemEnd, tid);
+            // }
+            assembleReadsAndDetectVariants(refStart, refEnd, batches[i].windowStart, batches[i].windowEnd, batches[i].ref, verbose > 0);
         }
 }
 #if VTUNE_ANALYSIS
