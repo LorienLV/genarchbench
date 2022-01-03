@@ -11,7 +11,7 @@ A port of [GenomicsBench](https://github.com/arun-sub/genomicsbench) to A64FX. T
 | 3  | bsw        | Banded Smith-Waterman                     | C++      | <span style="color:green">PORTED</span>         | ---               |
 | 4  | chain      | Seed Chaining                             | C++      | <span style="color:green">PORTED</span>         | Tuning            |
 | 5  | fast-chain | SVE version of Chain (fast-chain)         | C++      | <span style="color:orange">PENDING</span>       | Write SVE version |
-| 6  | dbg        | De-Bruijn Graph Construction              | C/C++    | <span style="color:yellow">SEMI-PORTED</span>   | Check correctness |
+| 6  | dbg        | De-Bruijn Graph Construction              | C/C++    | <span style="color:green">PORTED</span>         | Tuning            |
 | 7  | fmi        | FM-Index                                  | C++      | <span style="color:green">PORTED</span>         | Tuning            |
 | 8  | grm        | Genomic Relationship Matrix               | C/C++    | <span style="color:orange">PENDING</span>       | Compile in A64FX  |
 | 9  | kmer-cnt   | K-mer Counting                            | C++      | <span style="color:green">PORTED</span>         | Tuning            |
