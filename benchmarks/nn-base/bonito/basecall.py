@@ -2,7 +2,9 @@
 Bonito Basecaller
 """
 
-import os, sys, time
+import os
+import sys
+import time
 from glob import glob
 from warnings import warn
 from logging import getLogger
@@ -12,7 +14,7 @@ from datetime import timedelta
 from collections import OrderedDict
 from argparse import ArgumentParser, ArgumentDefaultsHelpFormatter
 from ont_fast5_api.fast5_interface import get_fast5_file
-from bonito_cuda_runtime import CuModel
+#from bonito_cuda_runtime import CuModel
 
 import numpy as np
 from tqdm import tqdm
@@ -61,6 +63,7 @@ class Swish(Module):
 
     https://arxiv.org/abs/1710.05941
     """
+
     def forward(self, x):
         return SwishAutoFn.apply(x)
 
@@ -77,6 +80,7 @@ class Model(Module):
 
     https://arxiv.org/pdf/1910.10261.pdf
     """
+
     def __init__(self, config):
         super(Model, self).__init__()
         if 'qscore' not in config:
@@ -99,10 +103,12 @@ class Model(Module):
 
     def decode(self, x, beamsize=5, threshold=1e-3, qscores=False, return_path=False):
         if beamsize == 1 or qscores:
-            seq, path  = viterbi_search(x, self.alphabet, qscores, self.qscale, self.qbias)
+            seq, path = viterbi_search(
+                x, self.alphabet, qscores, self.qscale, self.qbias)
         else:
             seq, path = beam_search(x, self.alphabet, beamsize, threshold)
-        if return_path: return seq, path
+        if return_path:
+            return seq, path
         return seq
 
 
@@ -110,6 +116,7 @@ class Encoder(Module):
     """
     Builds the model encoder
     """
+
     def __init__(self, config):
         super(Encoder, self).__init__()
         self.config = config
@@ -141,6 +148,7 @@ class TCSConv1d(Module):
     """
     Time-Channel Separable 1D Convolution
     """
+
     def __init__(self, in_channels, out_channels, kernel_size, stride=1, padding=0, dilation=1, groups=1, bias=False, separable=False):
 
         super(TCSConv1d, self).__init__()
@@ -175,6 +183,7 @@ class Block(Module):
     """
     TCSConv, Batch Normalisation, Activation, Dropout
     """
+
     def __init__(self, in_channels, out_channels, activation, repeat=5, kernel_size=1, stride=1, dilation=1, dropout=0.0, residual=False, separable=False):
 
         super(Block, self).__init__()
@@ -210,7 +219,8 @@ class Block(Module):
 
         # add the residual connection
         if self.use_res:
-            self.residual = Sequential(*self.get_tcs(in_channels, out_channels))
+            self.residual = Sequential(
+                *self.get_tcs(in_channels, out_channels))
 
         # add the activation and dropout
         self.activation = Sequential(*self.get_activation(activation, dropout))
@@ -220,7 +230,8 @@ class Block(Module):
 
     def get_padding(self, kernel_size, stride, dilation):
         if stride > 1 and dilation > 1:
-            raise ValueError("Dilation and stride can not both be greater than 1")
+            raise ValueError(
+                "Dilation and stride can not both be greater than 1")
         return (kernel_size // 2) * dilation
 
     def get_tcs(self, in_channels, out_channels, kernel_size=1, stride=1, dilation=1, padding=0, bias=False, separable=False):
@@ -246,9 +257,11 @@ class Decoder(Module):
     """
     Decoder
     """
+
     def __init__(self, features, classes):
         super(Decoder, self).__init__()
-        self.layers = Sequential(Conv1d(features, classes, kernel_size=1, bias=True))
+        self.layers = Sequential(
+            Conv1d(features, classes, kernel_size=1, bias=True))
 
     def forward(self, x):
         x = self.layers(x)
@@ -257,6 +270,8 @@ class Decoder(Module):
 ################################################################################
 # util
 ################################################################################
+
+
 def load_model(dirname, device, weights=None, half=False, chunksize=0, use_rt=False):
     """
     Load a model from disk
@@ -279,7 +294,8 @@ def load_model(dirname, device, weights=None, half=False, chunksize=0, use_rt=Fa
     if use_rt:
         model = CuModel(model.config, chunksize, new_state_dict)
 
-    if half: model = model.half()
+    if half:
+        model = model.half()
     model.eval()
     model.to(device)
     return model
@@ -289,7 +305,8 @@ def half_supported():
     """
     Returns whether FP16 is support on the GPU
     """
-    return torch.cuda.get_device_capability()[0] >= 7
+    #return torch.cuda.get_device_capability()[0] >= 7
+    return False
 
 
 def chunk(raw_data, chunksize, overlap):
@@ -298,7 +315,8 @@ def chunk(raw_data, chunksize, overlap):
     """
     if chunksize > 0 and raw_data.shape[0] > chunksize:
         num_chunks = raw_data.shape[0] // (chunksize - overlap) + 1
-        tmp = torch.zeros(num_chunks * (chunksize - overlap)).type(raw_data.dtype)
+        tmp = torch.zeros(num_chunks * (chunksize - overlap)
+                          ).type(raw_data.dtype)
         tmp[:raw_data.shape[0]] = raw_data
         return tmp.unfold(0, chunksize, chunksize - overlap).unsqueeze(1)
     return raw_data.unsqueeze(0).unsqueeze(0)
@@ -311,7 +329,8 @@ def stitch(predictions, overlap):
     if predictions.shape[0] == 1:
         return predictions.squeeze(0)
     stitched = [predictions[0, 0:-overlap]]
-    for i in range(1, predictions.shape[0] - 1): stitched.append(predictions[i][overlap:-overlap])
+    for i in range(1, predictions.shape[0] - 1):
+        stitched.append(predictions[i][overlap:-overlap])
     stitched.append(predictions[-1][overlap:])
     return np.concatenate(stitched)
 
@@ -320,7 +339,8 @@ def mean_qscore_from_qstring(qstring):
     """
     Convert qstring into a mean qscore
     """
-    if len(qstring) == 0: return 0.0
+    if len(qstring) == 0:
+        return 0.0
     err_probs = [10**((ord(c) - 33) / -10) for c in qstring]
     mean_err = np.mean(err_probs)
     return -10 * np.log10(max(mean_err, 1e-4))
@@ -377,12 +397,14 @@ def norm_by_noisiest_section(signal, samples=100, threshold=6.0):
         noise[window] = np.where(signal[window].std() > threshold, 1, 0)
 
     # start and end low for peak finding
-    noise[0] = 0; noise[-1] = 0
+    noise[0] = 0
+    noise[-1] = 0
     peaks, info = find_peaks(noise, width=(None, None))
 
     if len(peaks):
         widest = np.argmax(info['widths'])
-        med, mad = med_mad(signal[info['left_bases'][widest]: info['right_bases'][widest]])
+        med, mad = med_mad(
+            signal[info['left_bases'][widest]: info['right_bases'][widest]])
     else:
         med, mad = med_mad(signal)
     return (signal - med) / mad
@@ -397,12 +419,11 @@ def med_mad(x, factor=1.4826):
     return med, mad
 
 
-
-
 ################################################################################
 # io
 ################################################################################
 logger = getLogger('bonito')
+
 
 def summary_file():
     """
@@ -455,6 +476,7 @@ def write_summary_row(fd, read, seqlen, qscore, sep='\t'):
     fd.write('%s\n' % sep.join(fields))
     fd.flush()
 
+
 def write_fasta(header, sequence, fd=sys.stdout):
     """
     Write a fasta record to a file descriptor.
@@ -479,6 +501,7 @@ class PreprocessReader(Process):
     """
     Reader Processor that reads and processes fast5 files
     """
+
     def __init__(self, directory, maxsize=5):
         super().__init__()
         self.directory = directory
@@ -505,6 +528,7 @@ class DecoderWriterPool:
    """
    Simple pool of decoder writers
    """
+
    def __init__(self, model, procs=4, **kwargs):
        self.lock = Lock()
        self.queue = Queue()
@@ -520,8 +544,10 @@ class DecoderWriterPool:
            self.decoders.append(decoder)
 
    def stop(self):
-       for decoder in self.decoders: self.queue.put(None)
-       for decoder in self.decoders: decoder.join()
+       for decoder in self.decoders:
+           self.queue.put(None)
+       for decoder in self.decoders:
+           decoder.join()
 
    def __enter__(self):
        return self
@@ -534,6 +560,7 @@ class DecoderWriter(Process):
     """
     Decoder Process that writes output records to stdout
     """
+
     def __init__(self, model, queue, lock, fastq=False, beamsize=5):
         super().__init__()
         self.queue = queue
@@ -545,7 +572,8 @@ class DecoderWriter(Process):
     def run(self):
         while True:
             job = self.queue.get()
-            if job is None: return
+            if job is None:
+                return
             read, predictions = job
 
             # convert logprobs to probs
@@ -569,13 +597,15 @@ class DecoderWriter(Process):
                         write_fastq(read.read_id, sequence, qstring)
                     else:
                         write_fasta(read.read_id, sequence)
-                    write_summary_row(summary, read, len(sequence), mean_qscore)
+                    write_summary_row(
+                        summary, read, len(sequence), mean_qscore)
             else:
                 logger.warn("> skipping empty sequence %s", read.read_id)
 
 ################################################################################
-# basecalling 
+# basecalling
 ################################################################################
+
 
 def main(args):
 
@@ -605,7 +635,8 @@ def main(args):
                 break
 
             if len(read.signal) > max_read_size:
-                sys.stderr.write("> skipping long read %s (%s samples)\n" % (read.read_id, len(read.signal)))
+                sys.stderr.write("> skipping long read %s (%s samples)\n" % (
+                    read.read_id, len(read.signal)))
                 continue
 
             num_reads += 1
@@ -622,7 +653,8 @@ def main(args):
     duration = time.perf_counter() - t0
 
     sys.stderr.write("> completed reads: %s\n" % num_reads)
-    sys.stderr.write("> duration: %s\n" % timedelta(seconds=np.round(duration)))
+    sys.stderr.write("> duration: %s\n" %
+                     timedelta(seconds=np.round(duration)))
     sys.stderr.write("> samples per second %.1E\n" % (samples / duration))
     sys.stderr.write("> done\n")
 
@@ -634,15 +666,18 @@ def argparser():
     )
     parser.add_argument("model_directory")
     parser.add_argument("reads_directory")
-    parser.add_argument("--device", default="cuda")
+    #parser.add_argument("--device", default="cuda")
+    parser.add_argument("--device", default="cpu")
     parser.add_argument("--weights", default="0", type=str)
     parser.add_argument("--beamsize", default=5, type=int)
     parser.add_argument("--chunksize", default=0, type=int)
     parser.add_argument("--overlap", default=0, type=int)
-    parser.add_argument("--half", action="store_true", default=half_supported())
+    parser.add_argument("--half", action="store_true",
+                        default=half_supported())
     parser.add_argument("--fastq", action="store_true", default=False)
     parser.add_argument("--cudart", action="store_true", default=False)
     return parser
+
 
 if __name__ == "__main__":
     parser = argparser()
