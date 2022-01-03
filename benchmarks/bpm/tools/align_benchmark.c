@@ -166,7 +166,7 @@ void align_benchmark(const alg_algorithm_type alg_algorithm) {
       __itt_resume();
 #endif
 #if FAPP_ANALYSIS
-      fapp_start("benchmark_bitpal", 1, 0);
+      fapp_start("benchmark_edit_bpm", 1, 0);
 #endif
       timer_start(&(parameters.timer_global));
     }
@@ -234,7 +234,7 @@ void align_benchmark(const alg_algorithm_type alg_algorithm) {
     __itt_pause();
 #endif
 #if FAPP_ANALYSIS
-    fapp_stop("benchmark_bitpal", 1, 0);
+    fapp_stop("benchmark_edit_bpm", 1, 0);
 #endif
       timer_stop(&(parameters.timer_global));
     }
