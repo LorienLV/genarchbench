@@ -9,11 +9,15 @@
 #include <queue>
 #include <cmath>
 
+#include <omp.h>
+
 #include "vertex_index.h"
 #include "logger.h"
 #include "parallel.h"
 #include "config.h"
 #include "memory_info.h"
+
+#define CEIL_DIV(x, y) (1 + (((x) - 1) / (y)))
 
 
 void VertexIndex::countKmers()
@@ -677,103 +681,113 @@ void KmerCounter::count(bool useFlatCounter)
 #elif (COUNT_VERSION == 2)
 void KmerCounter::count(bool useFlatCounter)
 {
-	_hashCounter.resize(Parameters::get().numThreads);
-	for (auto &map : _hashCounter) {
-		map.reserve(65536);
+	int nthreads = Parameters::get().numThreads;
+
+	if (useFlatCounter && Parameters::get().kmerSize > 17) {
+		throw std::runtime_error("Can't use flat counter for k-mer size > 17");
+	}
+	_useFlatCounter = useFlatCounter;
+
+	std::vector<FastaRecord::Id> allReads;
+	for (const auto& seq : _seqContainer.iterSeqs()) {
+		allReads.push_back(seq.id);
 	}
 
-	_useFlatCounter = false;
- 
-	if (_outputProgress) Logger::get().info() << "Counting k-mers:";
+	const size_t MAX_KMERS = std::pow(4, Parameters::get().kmerSize);
 
-	static const size_t MAX_KMERS = std::pow(4, Parameters::get().kmerSize);
+	size_t hashSize = 0;
 
-	std::function<void(const FastaRecord::Id&, const size_t, const size_t)> readUpdate = 
-	[this] (const FastaRecord::Id& readId, const size_t nthreads, const size_t thread)
+	#pragma omp parallel num_threads(nthreads)
 	{
-		if (!readId.strand()) return;
+		int thread = omp_get_thread_num();
+
 
 		const size_t num_kmers = (thread < nthreads - 1) ? 
-							MAX_KMERS / nthreads :
-							1 + ((MAX_KMERS - 1) / nthreads); // Ceiling
+							      MAX_KMERS / nthreads :
+							      CEIL_DIV(MAX_KMERS, nthreads);
 
 		const size_t first_kmer = thread * (MAX_KMERS / nthreads);
 		const size_t last_kmer = first_kmer + num_kmers - 1;
 
-		auto &thread_map = _hashCounter[thread];
-		
-		for (auto kmerPos : IterKmers(_seqContainer.getSeq(readId)))
-		{
-			kmerPos.kmer.standardForm();
+		const size_t first_kmer_mod2 = (first_kmer % 2 == 0) ? first_kmer : first_kmer - 1;
 
-			if (kmerPos.kmer.numRepr() >= first_kmer && kmerPos.kmer.numRepr() <= last_kmer) {
-				const auto& it = thread_map.find(kmerPos.kmer);
+		std::unordered_map<Kmer, size_t> _hashCounter;
+		_hashCounter.reserve(65536);
 
-				// Kmer found -> add 1
-				if (it != thread_map.end()) {
-					it->second += 1;
-				}
-				else { // Kmer not found -> insert {kmer,1}
-					thread_map.insert({kmerPos.kmer, 1});
+		std::vector<uint8_t> _flatCounter(0);
+
+		if (_useFlatCounter) {
+			_flatCounter.resize(CEIL_DIV(num_kmers, 2), 0);
+		}
+
+		for (const auto &readId : allReads) {
+
+			if (!readId.strand()) {
+				continue;
+			}
+
+			for (auto kmerPos : IterKmers(_seqContainer.getSeq(readId))) {
+
+				kmerPos.kmer.standardForm();
+
+				if (kmerPos.kmer.numRepr() >= first_kmer && kmerPos.kmer.numRepr() <= last_kmer) {
+					if (_useFlatCounter) {
+						size_t arrayPos = (kmerPos.kmer.numRepr() - first_kmer_mod2) / 2;
+						bool highBits = kmerPos.kmer.numRepr() % 2;
+
+						uint8_t current8 = _flatCounter[arrayPos]; 
+						uint8_t current4 = highBits ? (current8 >> 4) : (current8 & 15);
+
+						if (current4 == 15) { // Will overflow, store in the hashtable.
+							const auto& it = _hashCounter.find(kmerPos.kmer);
+							// Kmer found -> add 1
+							if (it != _hashCounter.end()) {
+								it->second += 1;
+							}
+							else { // Kmer not found -> insert {kmer,1}
+								_hashCounter.insert({kmerPos.kmer, 1});
+							}
+						}
+						else { // No overflow, store in the flatCounter.
+							if (current4 == 0) {
+								++_numKmers;
+							}
+
+							uint8_t next8 = highBits ? (current8 + 16) : (current8 + 1);
+
+							_flatCounter[arrayPos] = next8;
+						}
+					}
+					else {
+						const auto& it = _hashCounter.find(kmerPos.kmer);
+
+						if (it != _hashCounter.end()) { // Kmer found -> add 1
+							it->second += 1;
+						}
+						else { // Kmer not found -> insert {kmer,1}
+							++_numKmers;
+							_hashCounter.insert({kmerPos.kmer, 1});
+						}
+					}
+
 				}
 			}
 		}
-	};
 
-	std::vector<FastaRecord::Id> allReads;
-	for (const auto& seq : _seqContainer.iterSeqs())
-	{
-		allReads.push_back(seq.id);
-	}
-
-	// if (Parameters::get().numThreads == 1) {
-	// 	for (const auto& readId : allReads) {
-	// 		readUpdate(readId);
-	// 	}
-	// }
-	// else {
-	processInParallel2(allReads, readUpdate, Parameters::get().numThreads, _outputProgress);
-	// }
-
-    /*
-	Logger::get().debug() << "Updating k-mer histogram";
-	if (_useFlatCounter)
-	{
-		for (size_t kmerId = 0; kmerId < COUNTER_LEN * 2; ++kmerId)
+		#pragma omp critical
 		{
-			Kmer kmer(kmerId);
-			size_t freq = this->getFreq(kmer);
-			if (freq > 0) _kmerDistribution[freq] += 1;
-			// if (kmerId % 1000000 == 0) Logger::get().debug() << kmerId << " " << freq;
+			hashSize += _hashCounter.size();
 		}
 	}
-	else
-	{
-		for (const auto& kmer : _hashCounter.lock_table())
-		{
-			_kmerDistribution[kmer.second] += 1;
-		}
-	}
-    */
 
-	//Logger::get().debug() << "After counter: " 
-	//	<< getPeakRSS() / 1024 / 1024 / 1024 << " Gb";
-
-	size_t hash_size = 0;
-	for (const auto &map : _hashCounter) {
-		hash_size += map.size();
-	}
-
-	_numKmers = hash_size;
-
-	Logger::get().debug() << "Hash size: " << hash_size;
+	Logger::get().debug() << "Hash size: " << hashSize;
 	Logger::get().debug() << "Total k-mers " << _numKmers;
 }
 #endif
 
-#if (COUNT_VERSION == 0 || COUNT_VERSION == 1)
 size_t KmerCounter::getFreq(Kmer kmer) const
 {
+#if (COUNT_VERSION == 0 || COUNT_VERSION == 1)
 	//kmer.standardForm();
 
 	size_t addCount = 0;
@@ -795,23 +809,14 @@ size_t KmerCounter::getFreq(Kmer kmer) const
 	size_t freq = 0;
 	_hashCounter.find(kmer, freq);
 	return freq + addCount;
-}
 #elif (COUNT_VERSION == 2)
-size_t KmerCounter::getFreq(Kmer kmer) const
-{
-	for (auto &map : _hashCounter) {
-		const auto& it = map.find(kmer);
-
-		if (it != map.end()) {
-			return it->second;
-		}
-	}
-	throw std::out_of_range("key not found in table");
-}
+	throw std::logic_error("Function getFreq() not implemented."); // TODO
 #endif
+}
 
 void KmerCounter::clear()
 {
+#if (COUNT_VERSION == 0 || COUNT_VERSION == 1)
 	_hashCounter.clear();
 	_hashCounter.reserve(0);
 	if (_flatCounter)
@@ -819,10 +824,17 @@ void KmerCounter::clear()
 		delete[] _flatCounter;
 		_flatCounter = nullptr;
 	}
+// #elif (COUNT_VERSION == 2)
+	// throw std::logic_error("Function clear() not implemented."); // TODO
+#endif
 }
 
 size_t KmerCounter::getKmerNum() const
 {
-	if (!_useFlatCounter) return _hashCounter.size();
+#if (COUNT_VERSION == 0 || COUNT_VERSION == 1)
 	return _numKmers;
+	if (!_useFlatCounter) return _hashCounter.size();
+#elif (COUNT_VERSION == 2)
+	return _numKmers;
+#endif
 }

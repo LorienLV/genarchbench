@@ -11,6 +11,7 @@
 #include <vector>
 #include <iostream>
 #include <cstring>
+#include <memory>
 
 #include <cuckoohash_map.hh>
 
@@ -19,18 +20,25 @@
 #include "config.h"
 #include "logger.h"
 
-#define COUNT_VERSION 1
+#define COUNT_VERSION 2
 
 typedef std::map<size_t, size_t> KmerDistribution;
 
 class KmerCounter
 {
 public:
+#if (COUNT_VERSION == 0 || COUNT_VERSION == 1)
 	KmerCounter(const SequenceContainer& seqContainer):
 		_seqContainer(seqContainer), 
 		_flatCounter(nullptr), _numKmers(0)
 	{}
+#elif (COUNT_VERSION == 2)
+	KmerCounter(const SequenceContainer& seqContainer):
+		_seqContainer(seqContainer), _numKmers(0)
+	{}
+#endif
 
+#if (COUNT_VERSION == 0 || COUNT_VERSION == 1)
 	~KmerCounter()
 	{
 		if (_flatCounter) 
@@ -39,6 +47,7 @@ public:
 			_flatCounter = nullptr;
 		}
 	}
+#endif
 
 	const KmerDistribution& getKmerHist() const
 	{
@@ -56,12 +65,13 @@ private:
 	bool _outputProgress;
 	bool _useFlatCounter;
 
-	std::atomic<uint8_t>*			_flatCounter;
 	//std::vector<std::atomic<char>>  _flatCounter;
 #if (COUNT_VERSION == 0 || COUNT_VERSION == 1)
+	std::atomic<uint8_t>*			_flatCounter;
 	cuckoohash_map<Kmer, size_t> 	_hashCounter;
 #elif (COUNT_VERSION == 2)
-	std::vector<std::unordered_map<Kmer, size_t>> _hashCounter;
+	// std::vector<std::unique_ptr<std::unordered_map<Kmer, size_t>>> _hashCounter;
+	// std::vector<std::unique_ptr<std::vector<uint8_t>>> _flatCounter;
 #endif
 	KmerDistribution _kmerDistribution;
 
