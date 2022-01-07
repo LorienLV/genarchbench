@@ -628,7 +628,7 @@ def main(args):
 
     with writer, reader, torch.no_grad():
 
-        while True:
+        while num_reads < args.maxreads:
 
             read = reader.queue.get()
             if read is None:
@@ -676,6 +676,7 @@ def argparser():
                         default=half_supported())
     parser.add_argument("--fastq", action="store_true", default=False)
     parser.add_argument("--cudart", action="store_true", default=False)
+    parser.add_argument("--maxreads", default=1, type=int)
     return parser
 
 
