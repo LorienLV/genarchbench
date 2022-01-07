@@ -2,3 +2,5 @@ build*/
 bin*/
 *.d
 *.o
+
+__pycache__/
