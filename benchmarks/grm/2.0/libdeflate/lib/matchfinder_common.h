@@ -19,6 +19,8 @@ typedef s16 mf_pos_t;
 #define MATCHFINDER_INITVAL ((mf_pos_t)-MATCHFINDER_WINDOW_SIZE)
 
 #define MATCHFINDER_ALIGNMENT 8
+#define MATCHFINDER_MEM_ALIGNMENT	32
+#define MATCHFINDER_SIZE_ALIGNMENT	128
 
 #define arch_matchfinder_init(data, size)	false
 #define arch_matchfinder_rebase(data, size)	false

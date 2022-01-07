@@ -128,7 +128,7 @@ extern "C" {
 /*------------------------------------------
   128-bit SIMD like data type for standard C
   ------------------------------------------*/
-#ifdef __LP64__
+#if (defined __LP64__ && defined __SSE2__)
   #include <emmintrin.h>
 
 /** 128-bit data structure */
