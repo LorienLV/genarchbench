@@ -1,4 +1,7 @@
-tqdm==4.31.1
-torch==1.4.0
-scipy==1.5.2
 fast-ctc-decode==0.2.5
+numpy==1.21.3
+ont_fast5_api==4.0.0
+scipy==1.5.2
+toml==0.10.2
+torch==1.4.0
+tqdm==4.31.1
