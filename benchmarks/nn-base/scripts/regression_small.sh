@@ -95,7 +95,7 @@ CTEARM)
 esac
 
 # Additional arguments to pass to the commands.
-command_opts="\"$benchmark_path/models/bonito_dna_r941\" \"$inputs_path\" --chunksize 3000 --fastq --maxreads 1 > out.fastq"
+command_opts="\"$benchmark_path/models/bonito_dna_r941\" \"$inputs_path\" --chunksize 3000 --fastq > out.fastq"
 
 #
 # This function is executed before launching a job. You can use this function to
