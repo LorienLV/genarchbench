@@ -62,7 +62,7 @@ MN4)
     ;;
 CTEARM)
     commands=(
-        "module load gcc/11.0.0-3503git python/3.6.8; $benchmark_path/bonito/basecall.py"
+        "module load gcc/11.0.0-3503git python/3.6.8; python3 $benchmark_path/bonito/basecall.py"
         # "module load fuji; $benchmark_path/build_gcc/dbg_fcc"
     )
 
@@ -115,17 +115,15 @@ before_run() (
 after_run() (
     job_name="$1"
 
-    # wall_time="$(tac "$job_name.err" | grep -m 1 "Kernel runtime:" | cut -d ' ' -f 3)"
+    wall_time="$(tac "$job_name.err" | grep -m 1 "duration:" | cut -d ' ' -f 3)"
 
-    # echo "Kernel runtime: $wall_time s"
+    echo "Duration: $wall_time"
 
-    # if [[ $check_output -eq 1 ]]; then
-    #     sort -n -k1,2 "$job_name.out" | diff --brief - "$inputs_path/small/reference.out" &>/dev/null
-    #     if [[ $? -ne 0 ]]; then
-    #         echo "The output file is not identical to the reference file"
-    #         return 1 # Failure
-    #     fi
-    # fi
+    diff --brief out.fastq "$inputs_path/reference.out.fastq" &>/dev/null
+    if [[ $? -ne 0 ]]; then
+        echo "The output file is not identical to the reference file"
+        return 1 # Failure
+    fi
 
     return 0 # OK
 )
