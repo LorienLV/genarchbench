@@ -32,11 +32,11 @@ def prediction(args, m):
     end_time = time() - begin_time
 
     comp = []
-    #for i in range(len(input_mini_match)):
-    #    print(prediction_output[i][0], output_mini_match[i][0])
-    #    comp.append(np.all(np.round(prediction_output[i][0], 3) == np.round(output_mini_match[i][0], 3)))
+    for i in range(len(input_mini_match)):
+       print(prediction_output[i][0], output_mini_match[i][0])
+       comp.append(np.all(np.round(prediction_output[i][0], 3) == np.round(output_mini_match[i][0], 3)))
 
-    #print(comp)
+    print(comp)
     #if False not in comp:
     #    print("My_prediction function is correct, which takes %.4f s" % end_time)
     #else:
