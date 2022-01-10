@@ -1,0 +1,3 @@
+# Ignore regression test stage folders.
+NN-BASE-REGRESSION-*
+NN-BASE-DETAILED-*

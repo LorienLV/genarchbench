@@ -1,7 +1,7 @@
 #!/bin/bash
 
 # The folder that contains the inputs.
-inputs_path="$GENARCH_BENCH_INPUTS_ROOT/nn-base/small"
+inputs_path="$GENARCH_BENCH_INPUTS_ROOT/nn-base/large"
 
 if [[ -z "$inputs_path" || ! -d "$inputs_path" ]]; then
     echo "ERROR: You have not set a valid input folder $inputs_path"
@@ -88,8 +88,8 @@ CTEARM)
 
     parallelism=(
         'nodes=1, mpi=1, omp=1'
-        'nodes=1, mpi=1, omp=2'
-        'nodes=1, mpi=1, omp=4'
+        # 'nodes=1, mpi=1, omp=2'
+        # 'nodes=1, mpi=1, omp=4'
     )
     ;;
 esac
