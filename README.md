@@ -15,7 +15,7 @@ A port of [GenomicsBench](https://github.com/arun-sub/genomicsbench) to A64FX. T
 | 7  | fmi        | FM-Index                                  | C++      | <span style="color:green">PORTED</span>         | Tuning            |
 | 8  | grm        | Genomic Relationship Matrix               | C/C++    | <span style="color:orange">PENDING</span>       | Compile in A64FX  |
 | 9  | kmer-cnt   | K-mer Counting                            | C++      | <span style="color:green">PORTED</span>         | Tuning            |
-| 10 | nn-base    | Neural Network-based Base Calling         | Python   | <span style="color:orange">PENDING</span>       | Compile in A64FX  |
+| 10 | nn-base    | Neural Network-based Base Calling         | Python   | <span style="color:green">PORTED</span>         | Tuning  |
 | 11 | nn-variant | Neural Network-based Variant Calling      | Python   | <span style="color:orange">PENDING</span>       | Compile in A64FX  |
 | 12 | pairHMM    | Pairwise Hidden Markov Model              | C++/Java | <span style="color:orange">PENDING</span>       | Compile in A64FX  |
 | 13 | pileup     | Pileup Counting                           | C        | <span style="color:green">PORTED</span>         | Tuning            |
