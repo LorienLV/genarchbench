@@ -1,11 +1,5 @@
 # Linux/OS X Makefile for PLINK 2.00.
 #
-
-#
-# WARNING: THIS MAKEFILE HAS BEEN MODIFIED FOR GENBENCH. ONLY UNCOMMENTED OPTIONS
-# ARE SUPPORTED.
-#
-
 # Compilation options (leave blank after "=" to disable, put "= 1" to enable):
 #   Do not use AVX2 instructions: NO_AVX2
 #   Do not use SSE4.2 instructions: NO_SSE42
@@ -22,24 +16,22 @@
 #     FORCE_32BIT (warning: you may need to add a zconf.h symlink to make that
 #     work)
 #   Debug symbols: set DEBUG to -g
-# NO_AVX2 = 
+# NO_AVX2 =
 # NO_SSE42 =
-# CPU_CHECK =
+CPU_CHECK = 1
 NO_LAPACK =
-FORCE_CBLAS_F77 =
-ZSTD_O2 =
-# STATIC_ZLIB =
+PREFER_CBLAS_F77 =
+ZSTD_O2 = 1
+STATIC_ZLIB =
 STATIC_ZSTD = 1
-# DYNAMIC_MKL =
-# MKLROOT = /opt/intel/oneapi/mkl/2021.1.1
-# MKL_IOMP5_DIR = /opt/intel/oneapi/compiler/2021.1.2/linux/compiler/lib/intel64_lin
-# FORCE_32BIT =
+DYNAMIC_MKL =
+MKLROOT = #/home/ubuntu/intel/mkl
+MKL_IOMP5_DIR = #/home/ubuntu/intel/compilers_and_libraries_2017.2.174/linux/compiler/lib/intel64
+FORCE_32BIT =
 DEBUG =
 CC ?= gcc
-#CC ?= icc
 CXX ?= g++
-#CXX ?= icpc
-#VTUNE_HOME= /opt/intel/vtune_profiler
+
 BASEFLAGS=-DZSTD_MULTITHREAD
 # ***** end configuration *****
 
@@ -47,38 +39,10 @@ BASEFLAGS += ${DEBUG}
 
 include ../Makefile.src
 
-LINKFLAGS=-lm -lpthread -ldl ${DEBUG}
-
+LINKFLAGS=-lm -lpthread ${DEBUG}
 ZLIB=
-# ARCH32=
-# CPUCHECK_FLAGS = ${DEBUG}
-
-# ifdef FORCE_32BIT
-  # # this is targeted at Scientific Linux 6.
-  # STATIC_ZLIB = 1
-  # ZSTD_O2 = 1
-  # ARCH32 = -m32 -march=i686
-  # CXXFLAGS = -std=c++0x
-# else
-  # ifdef NO_AVX2
-  #   ifndef NO_SSE42
-  #     BASEFLAGS += -msse4.2
-  #     ifdef CPU_CHECK
-  #       BASEFLAGS += -DCPU_CHECK_SSE42
-  #       CPUCHECK_FLAGS = -O2 -DCPU_CHECK_SSE42 ${CXXWARN2}
-  #     endif
-  #   endif
-  # else
-  #   BASEFLAGS += -mavx2 -mbmi -mbmi2 -mlzcnt
-  #   ifdef CPU_CHECK
-  #     BASEFLAGS += -DCPU_CHECK_AVX2
-  #     CPUCHECK_FLAGS = -O2 -DCPU_CHECK_AVX2 ${CXXWARN2}
-  #   endif
-  # endif
-  # CXXFLAGS = -std=c++11
-# endif
-
-CXXFLAGS = -std=c++11
+ARCH32=
+CPUCHECK_FLAGS = ${DEBUG}
 
 # ARCH flags.
 ifeq ($(arch),sse41)
@@ -134,25 +98,30 @@ ifdef STATIC_ZSTD
   BASEFLAGS += -DSTATIC_ZSTD
 else
   ZCSRC2 =
+  ZSSRC2 =
   SKIP_STATIC_ZSTD = echo
   OBJ = $(CSRC:.c=.o) $(CCSRC:.cc=.o)
   OBJ2 = $(notdir $(OBJ))
   LINKFLAGS += -lzstd
 endif
 
-# UNAME := $(shell uname)
-# ifeq ($(UNAME), Darwin)
-#   ifdef FORCE_32BIT
-#     $(error 32-bit OS X builds are not supported)
-#   endif
-#   ifdef DYNAMIC_MKL
-#     $(error MKL is not currently supported on OS X)
-#   endif
-#   BLASFLAGS=-framework Accelerate
-#   CFLAGS += -I/usr/local/include
-#   CXXFLAGS += -I/usr/local/include -stdlib=libc++
-#   LINKFLAGS += -L/usr/local/lib
-# else
+LIBTOOL=ar
+STATIC=rcs
+UNAME := $(shell uname)
+ifeq ($(UNAME), Darwin)
+  ifdef FORCE_32BIT
+    $(error 32-bit OS X builds are not supported)
+  endif
+  ifdef DYNAMIC_MKL
+    $(error MKL is not currently supported on OS X)
+  endif
+  BLASFLAGS=-framework Accelerate
+  CFLAGS += -I/usr/local/include
+  CXXFLAGS += -I/usr/local/include -stdlib=libc++
+  LINKFLAGS += -L/usr/local/lib
+  LIBTOOL=libtool
+  STATIC=-static
+else
   ifdef DYNAMIC_MKL
     ifdef NO_LAPACK
       $(error DYNAMIC_MKL and NO_LAPACK conflict)
@@ -164,7 +133,7 @@ endif
     BLASFLAGS = -L${MKLROOT}/lib/intel64 -L${MKL_IOMP5_DIR} -Wl,--no-as-needed -lmkl_intel_ilp64 -lmkl_intel_thread -lmkl_core -liomp5
     LINKFLAGS += -ldl
   endif
-# endif
+endif
 
 ifdef NO_LAPACK
   BASEFLAGS += -DNOLAPACK
@@ -173,32 +142,48 @@ endif
 
 CFLAGS += ${BASEFLAGS} ${CWARN2} ${CINCLUDE2}
 ZCFLAGS += ${BASEFLAGS} ${CWARN2} ${ZSTD_INCLUDE2}
-CXXFLAGS += ${BASEFLAGS} ${CXXWARN2}
+CXXFLAGS += ${BASEFLAGS} ${CXXWARN2} ${CXXINCLUDE2}
 
-# ifdef FORCE_32BIT
-#   CXXFLAGS += -Wno-sign-compare
-# endif
+ifdef FORCE_32BIT
+  CXXFLAGS += -Wno-sign-compare
+endif
 
-# ifneq ($(VTUNE_HOME),)
-# CFLAGS+=-I${VTUNE_HOME}/include -DVTUNE_ANALYSIS=1
-# CXXFLAGS+=-I${VTUNE_HOME}/include -DVTUNE_ANALYSIS=1
-# LINKFLAGS+=-L${VTUNE_HOME}/lib64 -littnotify
-# endif
+SFX ?= ""
 
-all: plink2 pgen_compress
+all: plink2$(SFX) pgen_compress$(SFX)
 
-plink2: $(CSRC2) $(ZCSRC2) $(CCSRC2) ../plink2_cpu.cc
+plink2$(SFX): $(CSRC2) $(ZCSRC2) $(ZSSRC2) $(CCSRC2) ../plink2_cpu.cc
 	$(CC) $(CFLAGS) $(CSRC2) -c
-	$(SKIP_STATIC_ZSTD) gcc $(ZCFLAGS) $(ZCSRC2) -c
+	$(SKIP_STATIC_ZSTD) $(CC) $(ZCFLAGS) $(ZCSRC2) $(ZSSRC2) -c
 	$(CXX) $(CXXFLAGS) $(CCSRC2) -c
 	$(CXX) $(CPUCHECK_FLAGS) ../plink2_cpu.cc -c
-	$(CXX) $(OBJ2) plink2_cpu.o $(ARCH32) -o plink2 $(BLASFLAGS) $(LINKFLAGS)
+	$(CXX) $(OBJ2) plink2_cpu.o $(ARCH32) -o $@ $(BLASFLAGS) $(LINKFLAGS)
 
-pgen_compress: $(PGCSRC2)
-	$(CXX) $(CXXFLAGS) $(PGCSRC2) -o pgen_compress
+pgen_compress$(SFX): $(PGCSRC2)
+	$(CXX) $(CXXFLAGS) $(PGCSRC2) -o $@
+
+pgenlib.a: $(PGENLIB_CCSRC2)
+	$(CXX) $(CXXFLAGS) $(PGENLIB_CCSRC2) -c
+	$(LIBTOOL) $(STATIC) -o $@ $(PGENLIB_OBJ2)
+
+plink2lib.a: $(CSRC2) $(ZCSRC2) $(ZSSRC2) $(PLINK2LIB_CCSRC2)
+	$(CC) $(CFLAGS) $(CSRC2) -c
+	$(CC) $(ZCFLAGS) $(ZCSRC2) $(ZSSRC2) -c
+	$(CXX) $(CXXFLAGS) $(PLINK2LIB_CCSRC2) -c
+	$(LIBTOOL) $(STATIC) -o $@ $(PLINK2LIB_OBJ2)
+
+static_pgenlib_test: pgenlib.a ../pgen_compress.cc
+	$(CXX) $(CXXFLAGS) -o $@ ../pgen_compress.cc -L. pgenlib.a
+
+static_plink2lib_test: plink2lib.a ../pgen_compress.cc
+	$(CXX) $(CXXFLAGS) -o $@ ../pgen_compress.cc -L. plink2lib.a
 
 .PHONY: clean
 clean:
 	rm -f *.o
 	rm -f plink2
 	rm -f pgen_compress
+	rm -f pgenlib.a
+	rm -f plink2lib.a
+	rm -f static_pgenlib_test
+	rm -f static_plink2lib_test

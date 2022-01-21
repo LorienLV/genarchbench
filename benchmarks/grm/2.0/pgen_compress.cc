@@ -30,9 +30,9 @@ int32_t main(int32_t argc, char** argv) {
     if ((argc < 3) || (argc > 5)) {
       fputs(
 "Usage:\n"
-"pgen_compress [input .bed or .pgen] [output filename] {sample_ct}\n"
+"pgen_compress <input .bed or .pgen> <output filename> [sample_ct]\n"
 "  (sample_ct is required when loading a .bed file)\n"
-"pgen_compress -u [input .pgen] [output .bed]\n"
+"pgen_compress -u <input .pgen> <output .bed>\n"
             , stdout);
       goto main_ret_INVALID_CMDLINE;
     }
@@ -130,7 +130,7 @@ int32_t main(int32_t argc, char** argv) {
     write_sample_ct = sample_ct;
 #endif
     uint32_t max_vrec_len;
-    reterr = SpgwInitPhase1(argv[2], nullptr, nullptr, variant_ct, write_sample_ct, kfPgenGlobal0, 2, &spgw, &cur_alloc_cacheline_ct, &max_vrec_len);
+    reterr = SpgwInitPhase1(argv[2], nullptr, nullptr, variant_ct, write_sample_ct, 0, kfPgenGlobal0, 2, &spgw, &cur_alloc_cacheline_ct, &max_vrec_len);
     if (reterr) {
       fprintf(stderr, "compression phase 1 error %u\n", S_CAST(uint32_t, reterr));
       goto main_ret_1;

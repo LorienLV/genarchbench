@@ -1,10 +1,14 @@
+The Python/ subdirectory includes a basic Python .pgen read/write library, and
+the pgenlibr/ subdirectory includes a basic R .pgen reader.
+
 The include/ subdirectory contains two (LGPL3-licensed) major libraries, while
 the immediate directory contains the PLINK 2.0 application built on top of
 them.  These are carefully written to be valid C99 (from gcc and clang's
 perspective, anyway) to simplify FFI development, while still taking advantage
 of quite a few C++-specific affordances to improve safety and occasionally
-performance.  They are currently x86-specific, but there are annotations to
-facilitate a possible future port to ARM.
+performance.  The code is primarily targeted at x86, but it should compile and
+run on ARM and other platforms supported by the simde module (cloned from
+https://github.com/simd-everywhere/simde ).
 
 The first library is plink2_text, which provides a pair of classes designed to
 replace std::getline(), fgets(), and similar ways of iterating over text lines.
@@ -78,12 +82,9 @@ As for the PLINK 2.0 application:
   requires MinGW[-w64] and zlib; a prebuilt OpenBLAS package from
   https://sourceforge.net/projects/openblas/files/ is also strongly
   recommended.
-* GPUs are not exploited, and there are currently no plans to write much
-  GPU-specific code before PLINK 2.0's core function set is completed around
-  2021.  However, a few linear-algebra-heavy workloads may benefit
-  significantly from a simple replacement of Intel MKL by cuBLAS + cuSOLVER.
-  This can probably be supported earlier; feel free to open a GitHub issue
-  about it if it would make a big difference to you.
+* build_cuda/ contains a Makefile for producing an Nvidia GPU-using build on
+  Linux.  Note that there is almost no GPU-using code for now (really just a
+  proof of concept).
 * The LGPL3-licensed plink2_stats component may be of independent interest.  It
   includes a function for computing the 2x2 Fisher's exact test p-value in
   approximately O(sqrt(n)) time--much faster than the O(n) algorithms employed

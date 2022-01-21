@@ -1,4 +1,4 @@
-// This file is part of PLINK 1.90, copyright (C) 2005-2020 Shaun Purcell,
+// This file is part of PLINK 1.90, copyright (C) 2005-2022 Shaun Purcell,
 // Christopher Chang.
 //
 // This program is free software: you can redistribute it and/or modify
@@ -2467,6 +2467,13 @@ int32_t calc_freqs_and_hwe(FILE* bedfile, char* outname, char* outname_end, uint
   }
   if (nonmissing_rate_tot <= 0.9999995 * ((double)((intptr_t)nonmissing_rate_tot_max))) {
     LOGPRINTF("Total genotyping rate %sis %g.\n", sample_exclude_ct? "in remaining samples " : "", nonmissing_rate_tot / ((double)((intptr_t)nonmissing_rate_tot_max)));
+  } else {
+    // oops, forgot this
+    if (nonmissing_rate_tot == nonmissing_rate_tot_max) {
+      LOGPRINTF("Total genotyping rate %sis exactly 1.\n", sample_exclude_ct? "in remaining samples " : "");
+    } else {
+      LOGPRINTF("Total genotyping rate %sis in [0.9999995, 1).\n", sample_exclude_ct? "in remaining samples " : "");
+    }
   }
   while (0) {
   calc_freqs_and_hwe_ret_NOMEM:

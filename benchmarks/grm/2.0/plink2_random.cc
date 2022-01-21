@@ -1,4 +1,4 @@
-// This library is part of PLINK 2.00, copyright (C) 2005-2020 Shaun Purcell,
+// This library is part of PLINK 2.00, copyright (C) 2005-2022 Shaun Purcell,
 // Christopher Chang.
 //
 // This library is free software: you can redistribute it and/or modify it
@@ -92,9 +92,8 @@ PglErr FillGaussianDArr(uintptr_t entry_pair_ct, uint32_t thread_ct, sfmt_t* sfm
     if (thread_ct > max_useful_thread_ct) {
       thread_ct = max_useful_thread_ct;
     }
-    if (unlikely(
-            SetThreadCt0(thread_ct - 1, &tg) ||
-            InitAllocSfmtpArr(thread_ct, 1, sfmtp, &ctx.sfmtp_arr))) {
+    if (unlikely(SetThreadCt0(thread_ct - 1, &tg) ||
+                 InitAllocSfmtpArr(thread_ct, 1, sfmtp, &ctx.sfmtp_arr))) {
       goto FillGaussianDArr_ret_NOMEM;
     }
     ctx.dst = darray;
@@ -164,9 +163,8 @@ PglErr RandomizeBigstack(uint32_t thread_ct, sfmt_t* sfmtp) {
     if (thread_ct > 16) {
       thread_ct = 16;
     }
-    if (unlikely(
-            SetThreadCt0(thread_ct - 1, &tg) ||
-            InitAllocSfmtpArr(thread_ct, 1, sfmtp, &ctx.sfmtp_arr))) {
+    if (unlikely(SetThreadCt0(thread_ct - 1, &tg) ||
+                 InitAllocSfmtpArr(thread_ct, 1, sfmtp, &ctx.sfmtp_arr))) {
       goto RandomizeBigstack_ret_NOMEM;
     }
     ctx.arena_bottom = g_bigstack_base;

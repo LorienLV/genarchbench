@@ -1,4 +1,4 @@
-// This file is part of PLINK 1.90, copyright (C) 2005-2020 Shaun Purcell,
+// This file is part of PLINK 1.90, copyright (C) 2005-2022 Shaun Purcell,
 // Christopher Chang.
 //
 // This program is free software: you can redistribute it and/or modify
@@ -779,6 +779,7 @@ int32_t update_marker_pos(Two_col_params* update_map, uint32_t* marker_id_htable
   uintptr_t hit_ct = 0;
   uintptr_t miss_ct = 0;
   uint32_t marker_ct = unfiltered_marker_ct - *marker_exclude_ct_ptr;
+  uint32_t removed_marker_ct = 0;
   uint32_t map_is_unsorted = ((*map_is_unsorted_ptr) & UNSORTED_CHROM);
   uint32_t chrom_fo_idx_p1 = 0;
   uint32_t chrom_end = 0;
@@ -867,7 +868,7 @@ int32_t update_marker_pos(Two_col_params* update_map, uint32_t* marker_id_htable
     }
     if (bp_coord < 0) {
       set_bit(marker_uidx, marker_exclude);
-      marker_ct--;
+      ++removed_marker_ct;
     } else {
       marker_pos[marker_uidx] = bp_coord;
     }
@@ -882,6 +883,10 @@ int32_t update_marker_pos(Two_col_params* update_map, uint32_t* marker_id_htable
     sprintf(g_logbuf, "--update-map: %" PRIuPTR " value%s updated.\n", hit_ct, (hit_ct == 1)? "" : "s");
   }
   logprintb();
+  if (removed_marker_ct) {
+    LOGPRINTF("Note: %u variant%s removed by --update-map due to negative coordinate%s.\n", removed_marker_ct, (removed_marker_ct == 1)? "" : "s", (removed_marker_ct == 1)? "" : "s");
+    marker_ct -= removed_marker_ct;
+  }
   *marker_exclude_ct_ptr = unfiltered_marker_ct - marker_ct;
   if (!marker_ct) {
     logerrprint("Error: All variants excluded by --update-map (due to negative marker\npositions).\n");
@@ -2230,6 +2235,7 @@ int32_t load_ax_alleles(Two_col_params* axalleles, uintptr_t unfiltered_marker_c
   uint32_t colid_first = (axalleles->colid < axalleles->colx);
   uintptr_t unfiltered_marker_ctl = BITCT_TO_WORDCT(unfiltered_marker_ct);
   uintptr_t max_marker_allele_len = *max_marker_allele_len_ptr;
+  uint32_t mismatch_ct = 0;
   uintptr_t* already_seen;
   char* loadbuf;
   char* colid_ptr;
@@ -2345,13 +2351,18 @@ int32_t load_ax_alleles(Two_col_params* axalleles, uintptr_t unfiltered_marker_c
     } else {
       colid_ptr[idlen] = '\0';
       LOGERRPRINTF("Warning: Impossible A%c allele assignment for variant %s.\n", is_a2? '2' : '1', colid_ptr);
+      ++mismatch_ct;
     }
   }
   if (!feof(infile)) {
     goto load_ax_alleles_ret_READ_FAIL;
   }
   marker_uidx = popcount_longs(already_seen, unfiltered_marker_ctl);
-  LOGPRINTF("--a%c-allele: %u assignment%s made.\n", is_a2? '2' : '1', marker_uidx, (marker_uidx == 1)? "" : "s");
+  if (!mismatch_ct) {
+    LOGPRINTF("--a%c-allele: %u assignment%s made.\n", is_a2? '2' : '1', marker_uidx, (marker_uidx == 1)? "" : "s");
+  } else {
+    LOGPRINTF("--a%c-allele: %u assignment%s attempted, %u made.\n", is_a2? '2' : '1', marker_uidx, (marker_uidx == 1)? "" : "s", marker_uidx - mismatch_ct);
+  }
   *max_marker_allele_len_ptr = max_marker_allele_len;
   while (0) {
   load_ax_alleles_ret_NOMEM:

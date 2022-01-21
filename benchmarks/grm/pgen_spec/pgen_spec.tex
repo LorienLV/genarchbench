@@ -347,7 +347,7 @@ components of the difflist are, in order:
   than 255 but not larger than 255+63.)  To reduce overhead for short lists,
   the byte size of the last group is not stored in this manner.
 \item If 2-bit genotype category values are also stored in the difflist, the
-  fourth component is a packed array of them, occupying $\lfloor L/4\rfloor $
+  fourth component is a packed array of them, occupying $\lceil L/4\rceil $
   bytes.
 \item The final component is a sequence of $L-G$ varints encoding (\textless
   sample ID \#$k$\textgreater $\>-$ \textless sample ID \#$(k-1)$\textgreater)
@@ -415,10 +415,12 @@ used on the resulting packed array.
   block (i.e. its index is congruent to 0 mod $2^{16}$) cannot be
   LD-compressed.
 \item \texttt{3}: LD-compressed, inverted.  A difflist with all (sample ID,
-  genotype value) pairs for samples in different categories than they would be
-  in the previous non-LD-compressed variant after inversion (categories 0 and 2
-  swapped).  This addresses spots where the reference genome is ``wrong'' for
-  the population of interest.
+  inverted genotype value) pairs for samples in different categories than they
+  would be in the previous non-LD-compressed variant after inversion
+  (categories 0 and 2 swapped).  I.e. decoding can be handled in the same way
+  as for variant record type 2, except for a final inversion step applied
+  \textit{after} the difflist contents have been patched in.  This addresses
+  spots where the reference genome is ``wrong'' for the population of interest.
 \item \texttt{4}: Difflist with all (sample ID, genotype category value) pairs
   for samples outside category 0.
 \item \texttt{5}: Reserved for future use.  (When all samples appear to be in
@@ -683,6 +685,7 @@ Otherwise:
   these are all optional, but when they do appear they are interpreted as
   described in the Body subsection.  Any other value in the header line is
   treated as a phenotype/covariate name.
+\item If present, the SID column must immediately follow the IID column.
 \item Duplicate column headers are not allowed.
 \end{itemize}
 

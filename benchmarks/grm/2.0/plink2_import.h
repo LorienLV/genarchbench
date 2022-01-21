@@ -1,7 +1,7 @@
 #ifndef __PLINK2_IMPORT_H__
 #define __PLINK2_IMPORT_H__
 
-// This file is part of PLINK 2.00, copyright (C) 2005-2020 Shaun Purcell,
+// This file is part of PLINK 2.00, copyright (C) 2005-2022 Shaun Purcell,
 // Christopher Chang.
 //
 // This program is free software: you can redistribute it and/or modify it
@@ -24,14 +24,6 @@
 #ifdef __cplusplus
 namespace plink2 {
 #endif
-
-FLAGSET_DEF_START()
-  kfImport0,
-  kfImportKeepAutoconv = (1 << 0),
-  kfImportKeepAutoconvVzs = (1 << 1),
-  kfImportDoubleId = (1 << 2),
-  kfImportVcfRequireGt = (1 << 3)
-FLAGSET_DEF_END(ImportFlags);
 
 ENUM_U31_DEF_START()
   kVcfHalfCallReference,
@@ -85,6 +77,7 @@ typedef struct GenDummyInfoStruct {
   uint32_t pheno_ct;
   double geno_mfreq;
   double pheno_mfreq;
+  double phase_freq;
   double dosage_freq;
 } GenDummyInfo;
 
@@ -96,11 +89,11 @@ PglErr VcfToPgen(const char* vcfname, const char* preexisting_psamname, const ch
 
 PglErr BcfToPgen(const char* bcfname, const char* preexisting_psamname, const char* const_fid, const char* dosage_import_field, MiscFlags misc_flags, ImportFlags import_flags, uint32_t no_samples_ok, uint32_t hard_call_thresh, uint32_t dosage_erase_thresh, double import_dosage_certainty, char id_delim, char idspace_to, int32_t vcf_min_gq, int32_t vcf_min_dp, int32_t vcf_max_dp, VcfHalfCall halfcall_mode, FamCol fam_cols, uint32_t max_thread_ct, char* outname, char* outname_end, ChrInfo* cip, uint32_t* pgen_generated_ptr, uint32_t* psam_generated_ptr);
 
-PglErr OxGenToPgen(const char* genname, const char* samplename, const char* ox_single_chr_str, const char* ox_missing_code, MiscFlags misc_flags, ImportFlags import_flags, OxfordImportFlags oxford_import_flags, uint32_t hard_call_thresh, uint32_t dosage_erase_thresh, double import_dosage_certainty, uint32_t max_thread_ct, char* outname, char* outname_end, ChrInfo* cip);
+PglErr OxGenToPgen(const char* genname, const char* samplename, const char* const_fid, const char* ox_single_chr_str, const char* ox_missing_code, MiscFlags misc_flags, ImportFlags import_flags, OxfordImportFlags oxford_import_flags, uint32_t hard_call_thresh, uint32_t dosage_erase_thresh, double import_dosage_certainty, char id_delim, uint32_t max_thread_ct, char* outname, char* outname_end, ChrInfo* cip);
 
 PglErr OxBgenToPgen(const char* bgenname, const char* samplename, const char* const_fid, const char* ox_single_chr_str, const char* ox_missing_code, MiscFlags misc_flags, ImportFlags import_flags, OxfordImportFlags oxford_import_flags, uint32_t hard_call_thresh, uint32_t dosage_erase_thresh, double import_dosage_certainty, char id_delim, char idspace_to, uint32_t max_thread_ct, char* outname, char* outname_end, ChrInfo* cip);
 
-PglErr OxHapslegendToPgen(const char* hapsname, const char* legendname, const char* samplename, const char* ox_single_chr_str, const char* ox_missing_code, MiscFlags misc_flags, ImportFlags import_flags, OxfordImportFlags oxford_import_flags, uint32_t max_thread_ct, char* outname, char* outname_end, ChrInfo* cip);
+PglErr OxHapslegendToPgen(const char* hapsname, const char* legendname, const char* samplename, const char* const_fid, const char* ox_single_chr_str, const char* ox_missing_code, MiscFlags misc_flags, ImportFlags import_flags, OxfordImportFlags oxford_import_flags, char id_delim, uint32_t max_thread_ct, char* outname, char* outname_end, ChrInfo* cip);
 
 PglErr Plink1DosageToPgen(const char* dosagename, const char* famname, const char* mapname, const char* import_single_chr_str, const Plink1DosageInfo* pdip, MiscFlags misc_flags, ImportFlags import_flags, FamCol fam_cols, int32_t missing_pheno, uint32_t hard_call_thresh, uint32_t dosage_erase_thresh, double import_dosage_certainty, uint32_t max_thread_ct, char* outname, char* outname_end, ChrInfo* cip);
 

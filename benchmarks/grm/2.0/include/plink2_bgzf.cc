@@ -1,4 +1,4 @@
-// This library is part of PLINK 2.00, copyright (C) 2005-2020 Shaun Purcell,
+// This library is part of PLINK 2.00, copyright (C) 2005-2022 Shaun Purcell,
 // Christopher Chang.
 //
 // This library is free software: you can redistribute it and/or modify it
@@ -144,7 +144,7 @@ PglErr BgzfReadJoinAndRespawn(unsigned char* dst_end, BgzfRawMtDecompressStream*
           if (unlikely(!IsBgzfHeader(in_iter))) {
             goto BgzfReadJoinAndRespawn_ret_INVALID_BGZF;
           }
-#  ifdef __arm__
+#  ifdef NO_UNALIGNED
 #    error "Unaligned accesses in BgzfReadJoinAndRespawn()."
 #  endif
           const uint32_t bsize_minus1 = *R_CAST(uint16_t*, &(in_iter[16]));
@@ -920,6 +920,54 @@ BoolErr BgzfWrite(const char* buf, uintptr_t len, BgzfCompressStream* cstream_pt
   memcpy(&(cwp->ucbuf[dst_offset]), buf, len);
   bgzfp->partial_slot_idx = slot_idx;
   bgzfp->partial_nbytes = dst_offset + len;
+  return 0;
+}
+
+BoolErr BgzfFlushTry(uint32_t capacity_needed_to_defer_flush, BgzfCompressStream* cstream_ptr) {
+  BgzfCompressStreamMain* bgzfp = GetBgzfp(cstream_ptr);
+  const uint32_t slot_ct = bgzfp->slot_ct;
+  if (!slot_ct) {
+    // No compression.
+    return 0;
+  }
+  if (bgzfp->write_errno) {
+    errno = bgzfp->write_errno;
+    return 1;
+  }
+  uint32_t slot_idx = bgzfp->partial_slot_idx;
+  BgzfCompressCommWithP* cwp = bgzfp->cwps[slot_idx];
+  uint32_t dst_offset = bgzfp->partial_nbytes;
+  if (dst_offset + capacity_needed_to_defer_flush <= kBgzfInputBlockSize) {
+    return 0;
+  }
+#ifdef _WIN32
+  cwp->nbytes = dst_offset;
+  SetEvent(cwp->ucbuf_filled_event);
+#else
+  pthread_mutex_lock(&(cwp->ucbuf_mutex));
+  cwp->nbytes = dst_offset;
+  pthread_cond_signal(&(cwp->ucbuf_condvar));
+  pthread_mutex_unlock(&(cwp->ucbuf_mutex));
+#endif
+  if (++slot_idx == slot_ct) {
+    slot_idx = 0;
+  }
+  cwp = bgzfp->cwps[slot_idx];
+#ifdef _WIN32
+  WaitForSingleObject(cwp->ucbuf_open_event, INFINITE);
+#else
+  pthread_mutex_lock(&(cwp->ucbuf_mutex));
+  while (cwp->nbytes != UINT32_MAX) {
+    pthread_cond_wait(&(cwp->ucbuf_condvar), &(cwp->ucbuf_mutex));
+  }
+  pthread_mutex_unlock(&(cwp->ucbuf_mutex));
+#endif
+  bgzfp->partial_slot_idx = slot_idx;
+  bgzfp->partial_nbytes = 0;
+  if (bgzfp->write_errno) {
+    errno = bgzfp->write_errno;
+    return 1;
+  }
   return 0;
 }
 

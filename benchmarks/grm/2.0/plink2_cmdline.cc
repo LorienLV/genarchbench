@@ -1,4 +1,4 @@
-// This library is part of PLINK 2.00, copyright (C) 2005-2020 Shaun Purcell,
+// This library is part of PLINK 2.00, copyright (C) 2005-2022 Shaun Purcell,
 // Christopher Chang.
 //
 // This library is free software: you can redistribute it and/or modify it
@@ -299,30 +299,53 @@ BoolErr SortStrboxIndexed(uintptr_t str_ct, uintptr_t max_str_blen, uint32_t use
   return 0;
 }
 
-/*
-BoolErr StrptrArrIndexedSort(const char* const* unsorted_strptrs, uint32_t str_ct, uint32_t overread_ok, uint32_t use_nsort, uint32_t* id_map) {
-  if (str_ct < 2) {
-    if (str_ct) {
-      id_map[0] = 0;
+BoolErr SortStrptrArrIndexed(uint32_t str_ct, uint32_t leave_first_alone, uint32_t overread_ok, uint32_t use_nsort, const char** strptrs, uint32_t* new_to_old_idx, uint32_t* old_to_new_idx) {
+  const uint32_t str_sort_ct = str_ct - leave_first_alone;
+  if (str_sort_ct < 2) {
+    if (new_to_old_idx) {
+      for (uint32_t str_idx = 0; str_idx != str_ct; ++str_idx) {
+        new_to_old_idx[str_idx] = str_idx;
+      }
+    }
+    if (old_to_new_idx) {
+      for (uint32_t str_idx = 0; str_idx != str_ct; ++str_idx) {
+        old_to_new_idx[str_idx] = str_idx;
+      }
     }
     return 0;
   }
-  if (bigstack_left() < str_ct * sizeof(StrSortIndexedDeref)) {
+  if (bigstack_left() < str_sort_ct * sizeof(StrSortIndexedDeref)) {
     return 1;
   }
-  StrSortIndexedDeref* wkspace_alias = (StrSortIndexedDeref*)g_bigstack_base;
-  for (uint32_t str_idx = 0; str_idx != str_ct; ++str_idx) {
-    wkspace_alias[str_idx].strptr = unsorted_strptrs[str_idx];
-    wkspace_alias[str_idx].orig_idx = str_idx;
+  StrSortIndexedDeref* wkspace_alias = R_CAST(StrSortIndexedDeref*, g_bigstack_base);
+  const char** strptrs_to_sort = &(strptrs[leave_first_alone]);
+  for (uint32_t str_idx = 0; str_idx != str_sort_ct; ++str_idx) {
+    wkspace_alias[str_idx].strptr = strptrs_to_sort[str_idx];
+    wkspace_alias[str_idx].orig_idx = str_idx + leave_first_alone;
   }
-  StrptrArrSortMain(str_ct, overread_ok, use_nsort, wkspace_alias);
-  for (uint32_t str_idx = 0; str_idx != str_ct; ++str_idx) {
-    id_map[str_idx] = wkspace_alias[str_idx].orig_idx;
+  StrptrArrSortMain(str_sort_ct, overread_ok, use_nsort, wkspace_alias);
+  if (leave_first_alone) {
+    if (new_to_old_idx) {
+      new_to_old_idx[0] = 0;
+      new_to_old_idx = &(new_to_old_idx[1]);
+    }
+    if (old_to_new_idx) {
+      old_to_new_idx[0] = 0;
+    }
+  }
+  for (uint32_t str_idx = 0; str_idx != str_sort_ct; ++str_idx) {
+    strptrs_to_sort[str_idx] = wkspace_alias[str_idx].strptr;
+    const uint32_t orig_idx = wkspace_alias[str_idx].orig_idx;
+    if (new_to_old_idx) {
+      new_to_old_idx[str_idx] = orig_idx;
+    }
+    if (old_to_new_idx) {
+      old_to_new_idx[orig_idx] = str_idx + leave_first_alone;
+    }
   }
   BigstackReset(wkspace_alias);
   return 0;
 }
-*/
 
 
 uint32_t CountSortedSmallerU32(const uint32_t* sorted_u32_arr, uint32_t arr_length, uint32_t needle) {
@@ -687,6 +710,24 @@ BoolErr bigstack_calloc_u64(uintptr_t ct, uint64_t** u64_arr_ptr) {
   return 0;
 }
 
+BoolErr bigstack_calloc_v(uintptr_t ct, VecW** v_arr_ptr) {
+  *v_arr_ptr = S_CAST(VecW*, bigstack_alloc(ct * kBytesPerVec));
+  if (unlikely(!(*v_arr_ptr))) {
+    return 1;
+  }
+  ZeroVecArr(ct, *v_arr_ptr);
+  return 0;
+}
+
+BoolErr bigstack_calloc_wp(uintptr_t ct, uintptr_t*** wp_arr_ptr) {
+  *wp_arr_ptr = S_CAST(uintptr_t**, bigstack_alloc(ct * sizeof(intptr_t)));
+  if (unlikely(!(*wp_arr_ptr))) {
+    return 1;
+  }
+  ZeroPtrArr(ct, *wp_arr_ptr);
+  return 0;
+}
+
 BoolErr bigstack_calloc_cp(uintptr_t ct, char*** cp_arr_ptr) {
   *cp_arr_ptr = S_CAST(char**, bigstack_alloc(ct * sizeof(intptr_t)));
   if (unlikely(!(*cp_arr_ptr))) {
@@ -702,6 +743,15 @@ BoolErr bigstack_calloc_kcp(uintptr_t ct, const char*** kcp_arr_ptr) {
     return 1;
   }
   ZeroPtrArr(ct, *kcp_arr_ptr);
+  return 0;
+}
+
+BoolErr bigstack_calloc_cpp(uintptr_t ct, char**** cpp_arr_ptr) {
+  *cpp_arr_ptr = S_CAST(char***, bigstack_alloc(ct * sizeof(intptr_t)));
+  if (unlikely(!(*cpp_arr_ptr))) {
+    return 1;
+  }
+  ZeroPtrArr(ct, *cpp_arr_ptr);
   return 0;
 }
 
@@ -756,6 +806,15 @@ BoolErr bigstack_end_calloc_u64(uintptr_t ct, uint64_t** u64_arr_ptr) {
     return 1;
   }
   ZeroU64Arr(ct, *u64_arr_ptr);
+  return 0;
+}
+
+BoolErr bigstack_end_calloc_wp(uintptr_t ct, uintptr_t*** wp_arr_ptr) {
+  *wp_arr_ptr = S_CAST(uintptr_t**, bigstack_end_alloc(ct * sizeof(intptr_t)));
+  if (unlikely(!(*wp_arr_ptr))) {
+    return 1;
+  }
+  ZeroPtrArr(ct, *wp_arr_ptr);
   return 0;
 }
 
@@ -899,40 +958,6 @@ void DivisionMagicNums(uint32_t divisor, uint64_t* multp, uint32_t* __restrict p
 }
 
 
-void FillBitsNz(uintptr_t start_idx, uintptr_t end_idx, uintptr_t* bitarr) {
-  assert(end_idx > start_idx);
-  uintptr_t maj_start = start_idx / kBitsPerWord;
-  uintptr_t maj_end = end_idx / kBitsPerWord;
-  uintptr_t minor;
-  if (maj_start == maj_end) {
-    bitarr[maj_start] |= (k1LU << (end_idx % kBitsPerWord)) - (k1LU << (start_idx % kBitsPerWord));
-  } else {
-    bitarr[maj_start] |= ~((k1LU << (start_idx % kBitsPerWord)) - k1LU);
-    SetAllWArr(maj_end - maj_start - 1, &(bitarr[maj_start + 1]));
-    minor = end_idx % kBitsPerWord;
-    if (minor) {
-      bitarr[maj_end] |= (k1LU << minor) - k1LU;
-    }
-  }
-}
-
-void ClearBitsNz(uintptr_t start_idx, uintptr_t end_idx, uintptr_t* bitarr) {
-  assert(end_idx > start_idx);
-  uintptr_t maj_start = start_idx / kBitsPerWord;
-  uintptr_t maj_end = end_idx / kBitsPerWord;
-  uintptr_t minor;
-  if (maj_start == maj_end) {
-    bitarr[maj_start] &= ~((k1LU << (end_idx % kBitsPerWord)) - (k1LU << (start_idx % kBitsPerWord)));
-  } else {
-    bitarr[maj_start] = bzhi(bitarr[maj_start], start_idx % kBitsPerWord);
-    ZeroWArr(maj_end - maj_start - 1, &(bitarr[maj_start + 1]));
-    minor = end_idx % kBitsPerWord;
-    if (minor) {
-      bitarr[maj_end] &= ~((k1LU << minor) - k1LU);
-    }
-  }
-}
-
 // floor permitted to be -1, though not smaller than that.
 int32_t FindLast1BitBeforeBounded(const uintptr_t* bitarr, uint32_t loc, int32_t floor) {
   const uintptr_t* bitarr_ptr = &(bitarr[loc / kBitsPerWord]);
@@ -1009,46 +1034,6 @@ void BitvecInvmaskCopy(const uintptr_t* __restrict source_bitvec, const uintptr_
 #endif
 }
 
-void BitvecInvertCopy(const uintptr_t* __restrict source_bitvec, uintptr_t word_ct, uintptr_t* __restrict target_bitvec) {
-#ifdef __LP64__
-  const VecW* source_bitvvec_iter = R_CAST(const VecW*, source_bitvec);
-  VecW* target_bitvvec_iter = R_CAST(VecW*, target_bitvec);
-  const uintptr_t full_vec_ct = word_ct / kWordsPerVec;
-  const VecW all1 = VCONST_W(~k0LU);
-  // As of Apple clang 11, this manual unroll is no longer relevant.  todo:
-  // check Linux performance, and remove all of these unrolls if perf is good
-  // enough without them.
-  if (full_vec_ct & 1) {
-    *target_bitvvec_iter++ = (*source_bitvvec_iter++) ^ all1;
-  }
-  if (full_vec_ct & 2) {
-    *target_bitvvec_iter++ = (*source_bitvvec_iter++) ^ all1;
-    *target_bitvvec_iter++ = (*source_bitvvec_iter++) ^ all1;
-  }
-  for (uintptr_t ulii = 3; ulii < full_vec_ct; ulii += 4) {
-    *target_bitvvec_iter++ = (*source_bitvvec_iter++) ^ all1;
-    *target_bitvvec_iter++ = (*source_bitvvec_iter++) ^ all1;
-    *target_bitvvec_iter++ = (*source_bitvvec_iter++) ^ all1;
-    *target_bitvvec_iter++ = (*source_bitvvec_iter++) ^ all1;
-  }
-#  ifdef USE_AVX2
-  if (word_ct & 2) {
-    const uintptr_t base_idx = full_vec_ct * kWordsPerVec;
-    target_bitvec[base_idx] = ~source_bitvec[base_idx];
-    target_bitvec[base_idx + 1] = ~source_bitvec[base_idx + 1];
-  }
-#  endif
-  if (word_ct & 1) {
-    target_bitvec[word_ct - 1] = ~source_bitvec[word_ct - 1];
-  }
-#else
-  for (uintptr_t widx = 0; widx != word_ct; ++widx) {
-    target_bitvec[widx] = ~source_bitvec[widx];
-  }
-#endif
-}
-
-/*
 void BitvecXor(const uintptr_t* __restrict arg_bitvec, uintptr_t word_ct, uintptr_t* main_bitvec) {
   // main_bitvec := main_bitvec XOR arg_bitvec
 #ifdef __LP64__
@@ -1084,7 +1069,6 @@ void BitvecXor(const uintptr_t* __restrict arg_bitvec, uintptr_t word_ct, uintpt
   }
 #endif
 }
-*/
 
 void BitvecInvertAndMask(const uintptr_t* __restrict include_bitvec, uintptr_t word_ct, uintptr_t* __restrict main_bitvec) {
   // main_bitvec := (~main_bitvec) AND include_bitvec
@@ -1361,33 +1345,6 @@ BoolErr HtableGoodSizeAlloc(uint32_t item_ct, uintptr_t bytes_avail, uint32_t** 
   return 0;
 }
 
-uint32_t PopulateStrboxHtable(const char* strbox, uintptr_t str_ct, uintptr_t max_str_blen, uint32_t str_htable_size, uint32_t* str_htable) {
-  // may want subset_mask parameter later
-  SetAllU32Arr(str_htable_size, str_htable);
-  const char* strbox_iter = strbox;
-  for (uintptr_t str_idx = 0; str_idx != str_ct; ++str_idx) {
-    const uint32_t slen = strlen(strbox_iter);
-    // previously used quadratic probing, but turns out that that isn't
-    // meaningfully better than linear probing.
-    for (uint32_t hashval = Hashceil(strbox_iter, slen, str_htable_size); ; ) {
-      const uint32_t cur_htable_entry = str_htable[hashval];
-      if (cur_htable_entry == UINT32_MAX) {
-        str_htable[hashval] = str_idx;
-        break;
-      }
-      if (memequal(strbox_iter, &(strbox[cur_htable_entry * max_str_blen]), slen + 1)) {
-        // guaranteed to be positive
-        return str_idx;
-      }
-      if (++hashval == str_htable_size) {
-        hashval = 0;
-      }
-    }
-    strbox_iter = &(strbox_iter[max_str_blen]);
-  }
-  return 0;
-}
-
 // could merge this with non-subset case, but this isn't much code
 /*
 uint32_t populate_strbox_subset_htable(const uintptr_t* __restrict subset_mask, const char* strbox, uintptr_t raw_str_ct, uintptr_t str_ct, uintptr_t max_str_blen, uint32_t str_htable_size, uint32_t* str_htable) {
@@ -1435,8 +1392,40 @@ uint32_t IdHtableFindNnt(const char* cur_id, const char* const* item_ids, const 
   // returns UINT32_MAX on failure
   for (uint32_t hashval = Hashceil(cur_id, cur_id_slen, id_htable_size); ; ) {
     const uint32_t cur_htable_idval = id_htable[hashval];
-    if ((cur_htable_idval == UINT32_MAX) || (memequal(cur_id, item_ids[cur_htable_idval], cur_id_slen) && (!item_ids[cur_htable_idval][cur_id_slen]))) {
+    if ((cur_htable_idval == UINT32_MAX) || strequal_unsafe(item_ids[cur_htable_idval], cur_id, cur_id_slen)) {
       return cur_htable_idval;
+    }
+    if (++hashval == id_htable_size) {
+      hashval = 0;
+    }
+  }
+}
+
+uint32_t IdHtableAdd(const char* cur_id, const char* const* item_ids, uint32_t cur_id_slen, uint32_t id_htable_size, uint32_t value, uint32_t* id_htable) {
+  for (uint32_t hashval = Hashceil(cur_id, cur_id_slen, id_htable_size); ; ) {
+    const uint32_t cur_htable_entry = id_htable[hashval];
+    if (cur_htable_entry == UINT32_MAX) {
+      id_htable[hashval] = value;
+      return UINT32_MAX;
+    }
+    if (memequal(cur_id, item_ids[cur_htable_entry], cur_id_slen + 1)) {
+      return cur_htable_entry;
+    }
+    if (++hashval == id_htable_size) {
+      hashval = 0;
+    }
+  }
+}
+
+uint32_t IdHtableAddNnt(const char* cur_id, const char* const* item_ids, uint32_t cur_id_slen, uint32_t id_htable_size, uint32_t value, uint32_t* id_htable) {
+  for (uint32_t hashval = Hashceil(cur_id, cur_id_slen, id_htable_size); ; ) {
+    const uint32_t cur_htable_entry = id_htable[hashval];
+    if (cur_htable_entry == UINT32_MAX) {
+      id_htable[hashval] = value;
+      return UINT32_MAX;
+    }
+    if (strequal_unsafe(item_ids[cur_htable_entry], cur_id, cur_id_slen)) {
+      return cur_htable_entry;
     }
     if (++hashval == id_htable_size) {
       hashval = 0;
@@ -1459,6 +1448,49 @@ uint32_t StrboxHtableFind(const char* cur_id, const char* strbox, const uint32_t
   }
 }
 
+uint32_t StrboxHtableFindNnt(const char* cur_id, const char* strbox, const uint32_t* id_htable, uintptr_t max_str_blen, uint32_t cur_id_slen, uint32_t id_htable_size) {
+  for (uint32_t hashval = Hashceil(cur_id, cur_id_slen, id_htable_size); ; ) {
+    const uint32_t cur_htable_idval = id_htable[hashval];
+    if ((cur_htable_idval == UINT32_MAX) || strequal_unsafe(&(strbox[cur_htable_idval * max_str_blen]), cur_id, cur_id_slen)) {
+      return cur_htable_idval;
+    }
+    if (++hashval == id_htable_size) {
+      hashval = 0;
+    }
+  }
+}
+
+uint32_t StrboxHtableAdd(const char* cur_id, const char* strbox, uintptr_t max_str_blen, uint32_t cur_id_slen, uint32_t id_htable_size, uint32_t value, uint32_t* id_htable) {
+  for (uint32_t hashval = Hashceil(cur_id, cur_id_slen, id_htable_size); ; ) {
+    const uint32_t cur_htable_entry = id_htable[hashval];
+    if (cur_htable_entry == UINT32_MAX) {
+      id_htable[hashval] = value;
+      return UINT32_MAX;
+    }
+    if (memequal(cur_id, &(strbox[cur_htable_entry * max_str_blen]), cur_id_slen + 1)) {
+      return cur_htable_entry;
+    }
+    if (++hashval == id_htable_size) {
+      hashval = 0;
+    }
+  }
+}
+
+uint32_t PopulateStrboxHtable(const char* strbox, uint32_t str_ct, uintptr_t max_str_blen, uint32_t str_htable_size, uint32_t* str_htable) {
+  // may want subset_mask parameter later
+  SetAllU32Arr(str_htable_size, str_htable);
+  const char* strbox_iter = strbox;
+  for (uintptr_t str_idx = 0; str_idx != str_ct; ++str_idx) {
+    const uint32_t slen = strlen(strbox_iter);
+    if (StrboxHtableAdd(strbox_iter, strbox, max_str_blen, slen, str_htable_size, str_idx, str_htable) != UINT32_MAX) {
+      // guaranteed to be positive
+      return str_idx;
+    }
+    strbox_iter = &(strbox_iter[max_str_blen]);
+  }
+  return 0;
+}
+
 uint32_t VariantIdDupflagHtableFind(const char* idbuf, const char* const* variant_ids, const uint32_t* id_htable, uint32_t cur_id_slen, uint32_t id_htable_size, uint32_t max_id_slen) {
   // assumes duplicate variant IDs are flagged, but full variant_uidx linked
   // lists are not stored
@@ -1472,7 +1504,7 @@ uint32_t VariantIdDupflagHtableFind(const char* idbuf, const char* const* varian
   }
   for (uint32_t hashval = Hashceil(idbuf, cur_id_slen, id_htable_size); ; ) {
     const uint32_t cur_htable_idval = id_htable[hashval];
-    if ((cur_htable_idval == UINT32_MAX) || (memequal(idbuf, variant_ids[cur_htable_idval & 0x7fffffff], cur_id_slen) && (!variant_ids[cur_htable_idval & 0x7fffffff][cur_id_slen]))) {
+    if ((cur_htable_idval == UINT32_MAX) || strequal_unsafe(variant_ids[cur_htable_idval & 0x7fffffff], idbuf, cur_id_slen)) {
       return cur_htable_idval;
     }
     if (++hashval == id_htable_size) {
@@ -1512,7 +1544,7 @@ uint32_t VariantIdDupHtableFind(const char* idbuf, const char* const* variant_id
       variant_uidx = cur_htable_idval;
     }
     const char* sptr = variant_ids[variant_uidx];
-    if (memequal(idbuf, sptr, cur_id_slen) && (!sptr[cur_id_slen])) {
+    if (strequal_unsafe(sptr, idbuf, cur_id_slen)) {
       *llidx_ptr = cur_llidx;
       return variant_uidx;
     }
@@ -1621,9 +1653,8 @@ PglErr CopySortStrboxSubsetNoalloc(const uintptr_t* __restrict subset_mask, cons
 
 PglErr CopySortStrboxSubset(const uintptr_t* __restrict subset_mask, const char* __restrict orig_strbox, uintptr_t str_ct, uintptr_t max_str_blen, uint32_t allow_dups, uint32_t collapse_idxs, uint32_t use_nsort, char** sorted_strbox_ptr, uint32_t** id_map_ptr) {
   // id_map on bottom because --indiv-sort frees *sorted_strbox_ptr
-  if (unlikely(
-          bigstack_alloc_u32(str_ct, id_map_ptr) ||
-          bigstack_alloc_c(str_ct * max_str_blen, sorted_strbox_ptr))) {
+  if (unlikely(bigstack_alloc_u32(str_ct, id_map_ptr) ||
+               bigstack_alloc_c(str_ct * max_str_blen, sorted_strbox_ptr))) {
     return kPglRetNomem;
   }
   return CopySortStrboxSubsetNoalloc(subset_mask, orig_strbox, str_ct, max_str_blen, allow_dups, collapse_idxs, use_nsort, *sorted_strbox_ptr, *id_map_ptr);
@@ -1690,7 +1721,7 @@ PglErr StringRangeListToBitarr(const char* header_line, const RangeList* range_l
     const uintptr_t max_id_blen = range_list_ptr->name_max_blen;
     for (uint32_t item_idx = 0; ; ) {
       const char* token_end = CommaOrTspaceTokenEnd(header_line_iter, comma_delim);
-      const int32_t sorted_pos = bsearch_str(header_line_iter, sorted_ids, token_end - header_line_iter, max_id_blen, name_ct);
+      const int32_t sorted_pos = bsearch_strbox(header_line_iter, sorted_ids, token_end - header_line_iter, max_id_blen, name_ct);
       if (sorted_pos != -1) {
         uint32_t cmdline_pos = sorted_pos;
         if (id_map) {
@@ -1764,9 +1795,8 @@ PglErr StringRangeListToBitarrAlloc(const char* header_line, const RangeList* ra
   int32_t* seen_idxs;
   char* sorted_ids;
   uint32_t* id_map;
-  if (unlikely(
-          bigstack_calloc_w(token_ctl, bitarr_ptr) ||
-          bigstack_alloc_i32(name_ct, &seen_idxs))) {
+  if (unlikely(bigstack_calloc_w(token_ctl, bitarr_ptr) ||
+               bigstack_alloc_i32(name_ct, &seen_idxs))) {
     return kPglRetNomem;
   }
   // kludge to use CopySortStrboxSubset()
@@ -1981,6 +2011,24 @@ void CopyBitarrRange(const uintptr_t* __restrict src_bitarr, uintptr_t src_start
       cur_src_word |= src_bitarr_iter[1] << (kBitsPerWord - src_rshift);
     }
     *target_bitarr_iter |= (cur_src_word & ((~k0LU) >> (kBitsPerWord - S_CAST(uint32_t, len)))) << target_initial_lshift;
+  }
+}
+
+void VerticalCounterUpdate(const uintptr_t* acc1, uint32_t acc1_vec_ct, uint32_t* rem15_and_255d15, VecW* acc4_8_32) {
+  VcountIncr1To4(acc1, acc1_vec_ct, acc4_8_32);
+  rem15_and_255d15[0] -= 1;
+  if (!rem15_and_255d15[0]) {
+    const uint32_t acc4_vec_ct = acc1_vec_ct * 4;
+    VecW* acc8 = &(acc4_8_32[acc4_vec_ct]);
+    Vcount0Incr4To8(acc4_vec_ct, acc4_8_32, acc8);
+    rem15_and_255d15[0] = 15;
+    rem15_and_255d15[1] -= 1;
+    if (!rem15_and_255d15[1]) {
+      const uint32_t acc8_vec_ct = acc4_vec_ct * 2;
+      VecW* acc32 = &(acc8[acc8_vec_ct]);
+      Vcount0Incr8To32(acc8_vec_ct, acc8, acc32);
+      rem15_and_255d15[1] = 17;
+    }
   }
 }
 
@@ -3023,7 +3071,6 @@ PglErr AllocAndPopulateIdHtableMt(const uintptr_t* subset_mask, const char* cons
   return PopulateIdHtableMt(g_bigstack_end, subset_mask, item_ids, item_ct, store_all_dups, id_htable_size, max_thread_ct, &g_bigstack_base, *id_htable_ptr, dup_ct_ptr);
 }
 
-
 uint32_t Edit1Match(const char* s1, const char* s2, uint32_t len1, uint32_t len2) {
   // Permit one difference of the following forms (Damerau-Levenshtein distance
   // 1):
@@ -3273,12 +3320,12 @@ char ExtractCharParam(const char* ss) {
 
 PglErr CmdlineAllocString(const char* source, const char* flag_name, uint32_t max_slen, char** sbuf_ptr) {
   const uint32_t slen = strlen(source);
-  if (slen > max_slen) {
+  if (unlikely(slen > max_slen)) {
     logerrprintf("Error: %s argument too long.\n", flag_name);
     return kPglRetInvalidCmdline;
   }
   const uint32_t blen = slen + 1;
-  if (pgl_malloc(blen, sbuf_ptr)) {
+  if (unlikely(pgl_malloc(blen, sbuf_ptr))) {
     return kPglRetNomem;
   }
   memcpy(*sbuf_ptr, source, blen);
@@ -3287,11 +3334,11 @@ PglErr CmdlineAllocString(const char* source, const char* flag_name, uint32_t ma
 
 PglErr AllocFname(const char* source, const char* flagname_p, uint32_t extra_size, char** fnbuf_ptr) {
   const uint32_t blen = strlen(source) + 1;
-  if (blen > (kPglFnamesize - extra_size)) {
+  if (unlikely(blen > (kPglFnamesize - extra_size))) {
     logerrprintf("Error: --%s filename too long.\n", flagname_p);
     return kPglRetOpenFail;
   }
-  if (pgl_malloc(blen + extra_size, fnbuf_ptr)) {
+  if (unlikely(pgl_malloc(blen + extra_size, fnbuf_ptr))) {
     return kPglRetNomem;
   }
   memcpy(*fnbuf_ptr, source, blen);
@@ -4216,11 +4263,10 @@ PglErr SearchHeaderLine(const char* header_line_iter, const char* const* search_
     uint32_t* id_map;
     uint32_t* priority_vals;
     uint64_t* cols_and_types;
-    if (unlikely(
-            bigstack_alloc_c(search_term_ct * max_blen, &merged_strbox) ||
-            bigstack_alloc_u32(search_term_ct, &id_map) ||
-            bigstack_alloc_u32(search_col_ct, &priority_vals) ||
-            bigstack_alloc_u64(search_col_ct, &cols_and_types))) {
+    if (unlikely(bigstack_alloc_c(search_term_ct * max_blen, &merged_strbox) ||
+                 bigstack_alloc_u32(search_term_ct, &id_map) ||
+                 bigstack_alloc_u32(search_col_ct, &priority_vals) ||
+                 bigstack_alloc_u64(search_col_ct, &cols_and_types))) {
       goto SearchHeaderLine_ret_NOMEM;
     }
     uint32_t search_term_idx = 0;
@@ -4249,7 +4295,7 @@ PglErr SearchHeaderLine(const char* header_line_iter, const char* const* search_
     for (uintptr_t col_idx = 0; ; ++col_idx) {
       const char* token_end = CurTokenEnd(header_line_iter);
       const uint32_t token_slen = token_end - header_line_iter;
-      int32_t ii = bsearch_str(header_line_iter, merged_strbox, token_slen, max_blen, search_term_ct);
+      int32_t ii = bsearch_strbox(header_line_iter, merged_strbox, token_slen, max_blen, search_term_ct);
       if (ii != -1) {
         const uint32_t cur_map_idx = id_map[S_CAST(uint32_t, ii)];
         const uint32_t search_col_idx = cur_map_idx & 31;
@@ -4356,7 +4402,7 @@ PglErr ParseColDescriptor(const char* col_descriptor_iter, const char* supported
         const char* id_start = &(col_descriptor_iter[1]);
         const char* tok_end = strchrnul(id_start, ',');
         const uint32_t slen = tok_end - id_start;
-        int32_t alpha_idx = bsearch_str(id_start, sorted_ids, slen, max_id_blen, id_ct);
+        int32_t alpha_idx = bsearch_strbox(id_start, sorted_ids, slen, max_id_blen, id_ct);
         if (unlikely(alpha_idx == -1)) {
           char* write_iter = strcpya_k(g_logbuf, "Error: Unrecognized ID '");
           write_iter = memcpya(write_iter, id_start, slen);
@@ -4375,7 +4421,7 @@ PglErr ParseColDescriptor(const char* col_descriptor_iter, const char* supported
             // special case: if default column set includes e.g. "maybesid",
             // and user types "-sid", that should work
             memcpy(&(maybebuf[5]), id_start, slen);
-            alpha_idx = bsearch_str(maybebuf, sorted_ids, slen + 5, max_id_blen, id_ct);
+            alpha_idx = bsearch_strbox(maybebuf, sorted_ids, slen + 5, max_id_blen, id_ct);
             if (alpha_idx != -1) {
               shift = id_map[S_CAST(uint32_t, alpha_idx)];
               result &= ~(first_col_shifted << shift);
@@ -4396,7 +4442,7 @@ PglErr ParseColDescriptor(const char* col_descriptor_iter, const char* supported
       while (1) {
         const char* tok_end = strchrnul(col_descriptor_iter, ',');
         const uint32_t slen = tok_end - col_descriptor_iter;
-        const int32_t alpha_idx = bsearch_str(col_descriptor_iter, sorted_ids, slen, max_id_blen, id_ct);
+        const int32_t alpha_idx = bsearch_strbox(col_descriptor_iter, sorted_ids, slen, max_id_blen, id_ct);
         if (unlikely(alpha_idx == -1)) {
           char* write_iter = strcpya_k(g_logbuf, "Error: Unrecognized ID '");
           write_iter = memcpya(write_iter, col_descriptor_iter, slen);

@@ -1,7 +1,7 @@
 #ifndef __PLINK2_GLM_H__
 #define __PLINK2_GLM_H__
 
-// This file is part of PLINK 2.00, copyright (C) 2005-2020 Shaun Purcell,
+// This file is part of PLINK 2.00, copyright (C) 2005-2022 Shaun Purcell,
 // Christopher Chang.
 //
 // This program is free software: you can redistribute it and/or modify it
@@ -41,23 +41,26 @@ FLAGSET_DEF_START()
   kfGlmHethom = (1 << 6),
   kfGlmDominant = (1 << 7),
   kfGlmRecessive = (1 << 8),
+  kfGlmHetonly = (1 << 9),
 
-  kfGlmInteraction = (1 << 9),
-  kfGlmHideCovar = (1 << 10),
-  kfGlmIntercept = (1 << 11),
-  kfGlmSkip = (1 << 12),
-  kfGlmNoFirth = (1 << 13),
-  kfGlmFirth = (1 << 14),
-  kfGlmPerm = (1 << 15),
-  kfGlmPermCount = (1 << 16),
-  kfGlmConditionDominant = (1 << 17),
-  kfGlmConditionRecessive = (1 << 18),
-  kfGlmConditionMultiallelic = (1 << 19),
-  kfGlmLocalOmitLast = (1 << 20),
-  kfGlmTestsAll = (1 << 21),
-  kfGlmPhenoIds = (1 << 22),
-  kfGlmLocalHaps = (1 << 23),
-  kfGlmLocalCats1based = (1 << 24)
+  kfGlmInteraction = (1 << 10),
+  kfGlmHideCovar = (1 << 11),
+  kfGlmIntercept = (1 << 12),
+  kfGlmSkipInvalidPheno = (1 << 13),
+  kfGlmNoFirth = (1 << 14),
+  kfGlmFirth = (1 << 15),
+  kfGlmPerm = (1 << 16),
+  kfGlmPermCount = (1 << 17),
+  kfGlmConditionDominant = (1 << 18),
+  kfGlmConditionRecessive = (1 << 19),
+  kfGlmConditionMultiallelic = (1 << 20),
+  kfGlmLocalOmitLast = (1 << 21),
+  kfGlmTestsAll = (1 << 22),
+  kfGlmPhenoIds = (1 << 23),
+  kfGlmLocalHaps = (1 << 24),
+  kfGlmLocalCats1based = (1 << 25),
+  kfGlmFirthResidualize = (1 << 26),
+  kfGlmCcResidualize = (1 << 27)
 FLAGSET_DEF_END(GlmFlags);
 
 FLAGSET_DEF_START()
@@ -112,12 +115,6 @@ typedef struct GlmInfoStruct {
 void InitGlm(GlmInfo* glm_info_ptr);
 
 void CleanupGlm(GlmInfo* glm_info_ptr);
-
-// for testing purposes
-// plink2_matrix.h must be included in this file
-// BoolErr LogisticRegression(const float* yy, const float* xx, uint32_t sample_ct, uint32_t predictor_ct, float* coef, uint32_t* is_unfinished_ptr, float* ll, float* pp, float* vv, float* hh, float* grad, float* dcoef) {
-
-// BoolErr FirthRegression(const float* yy, const float* xx, uint32_t sample_ct, uint32_t predictor_ct, float* coef, uint32_t* is_unfinished_ptr, float* hh, double* half_inverted_buf, MatrixInvertBuf1* inv_1d_buf, double* dbl_2d_buf, float* pp, float* vv, float* grad, float* dcoef, float* ww, float* tmpnxk_buf) {
 
 PglErr GlmMain(const uintptr_t* orig_sample_include, const SampleIdInfo* siip, const uintptr_t* sex_nm, const uintptr_t* sex_male, const PhenoCol* pheno_cols, const char* pheno_names, const PhenoCol* covar_cols, const char* covar_names, const uintptr_t* orig_variant_include, const ChrInfo* cip, const uint32_t* variant_bps, const char* const* variant_ids, const uintptr_t* allele_idx_offsets, const AlleleCode* maj_alleles, const char* const* allele_storage, const GlmInfo* glm_info_ptr, const AdjustInfo* adjust_info_ptr, const APerm* aperm_ptr, const char* local_covar_fname, const char* local_pvar_fname, const char* local_psam_fname, uint32_t raw_sample_ct, uint32_t orig_sample_ct, uint32_t pheno_ct, uintptr_t max_pheno_name_blen, uint32_t orig_covar_ct, uintptr_t max_covar_name_blen, uint32_t raw_variant_ct, uint32_t orig_variant_ct, uint32_t max_variant_id_slen, uint32_t max_allele_slen, uint32_t xchr_model, double ci_size, double vif_thresh, double ln_pfilter, double output_min_ln, uint32_t max_thread_ct, uintptr_t pgr_alloc_cacheline_ct, PgenFileInfo* pgfip, PgenReader* simple_pgrp, char* outname, char* outname_end);
 

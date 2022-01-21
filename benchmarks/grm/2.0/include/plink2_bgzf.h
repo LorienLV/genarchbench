@@ -1,7 +1,7 @@
 #ifndef __PLINK2_BGZF_H__
 #define __PLINK2_BGZF_H__
 
-// This library is part of PLINK 2.00, copyright (C) 2005-2020 Shaun Purcell,
+// This library is part of PLINK 2.00, copyright (C) 2005-2022 Shaun Purcell,
 // Christopher Chang.
 //
 // This library is free software: you can redistribute it and/or modify it
@@ -284,6 +284,12 @@ HEADER_INLINE PglErr InitBgzfCompressStream(const char* out_fname, uint32_t thre
 
 // errno is set on write-fail.
 BoolErr BgzfWrite(const char* buf, uintptr_t len, BgzfCompressStream* cstream_ptr);
+
+BoolErr BgzfFlushTry(uint32_t capacity_needed_to_defer_flush, BgzfCompressStream* cstream_ptr);
+
+HEADER_INLINE BoolErr BgzfFlush(BgzfCompressStream* cstream_ptr) {
+  return BgzfFlushTry(kBgzfInputBlockSize, cstream_ptr);
+}
 
 BoolErr CleanupBgzfCompressStream(BgzfCompressStream* cstream_ptr, PglErr* reterrp);
 

@@ -1,4 +1,4 @@
-// This file is part of PLINK 2.00, copyright (C) 2005-2020 Shaun Purcell,
+// This file is part of PLINK 2.00, copyright (C) 2005-2022 Shaun Purcell,
 // Christopher Chang.
 //
 // This program is free software: you can redistribute it and/or modify it
@@ -76,7 +76,7 @@ PglErr LoadIntervalBed(const ChrInfo* cip, const uint32_t* variant_bps, const ch
         line_iter = AdvPastDelim(&(cur_set_id[set_id_slen]), '\n');
         cur_set_id[set_id_slen] = '\0';
         if (subset_ct) {
-          if (bsearch_str(cur_set_id, sorted_subset_ids, set_id_slen, max_subset_id_blen, subset_ct) == -1) {
+          if (bsearch_strbox(cur_set_id, sorted_subset_ids, set_id_slen, max_subset_id_blen, subset_ct) == -1) {
             continue;
           }
         }
@@ -142,9 +142,8 @@ PglErr LoadIntervalBed(const ChrInfo* cip, const uint32_t* variant_bps, const ch
         goto LoadIntervalBed_ret_MALFORMED_INPUT;
       }
       const char** strptr_arr;
-      if (unlikely(
-              bigstack_alloc_c(set_ct * max_set_id_blen, set_names_ptr) ||
-              bigstack_alloc_kcp(set_ct, &strptr_arr))) {
+      if (unlikely(bigstack_alloc_c(set_ct * max_set_id_blen, set_names_ptr) ||
+                   bigstack_alloc_kcp(set_ct, &strptr_arr))) {
         goto LoadIntervalBed_ret_NOMEM;
       }
       set_names = *set_names_ptr;
@@ -220,7 +219,7 @@ PglErr LoadIntervalBed(const ChrInfo* cip, const uint32_t* variant_bps, const ch
         }
         // (track_set_names must be true if subset_ct is nonzero)
         // might need to move this outside the if-statement later
-        if (subset_ct && (bsearch_str(last_token, sorted_subset_ids, strlen_se(last_token), max_subset_id_blen, subset_ct) == -1)) {
+        if (subset_ct && (bsearch_strbox(last_token, sorted_subset_ids, strlen_se(last_token), max_subset_id_blen, subset_ct) == -1)) {
           continue;
         }
       }
@@ -252,7 +251,7 @@ PglErr LoadIntervalBed(const ChrInfo* cip, const uint32_t* variant_bps, const ch
       line_iter = AdvToDelim(line_iter, '\n');
       uint32_t cur_set_idx = 0;
       if (set_ct > 1) {
-        // bugfix: bsearch_str_natural requires null-terminated string
+        // bugfix: bsearch_strbox_natural requires null-terminated string
         last_token[last_token_slen] = '\0';
         if (c_prefix) {
           last_token = &(last_token[-2]);
@@ -263,7 +262,7 @@ PglErr LoadIntervalBed(const ChrInfo* cip, const uint32_t* variant_bps, const ch
           last_token[kMaxChrCodeDigits - 1] -= 15;
         }
         // this should never fail
-        cur_set_idx = bsearch_str_natural(last_token, set_names, max_set_id_blen, set_ct);
+        cur_set_idx = bsearch_strbox_natural(last_token, set_names, max_set_id_blen, set_ct);
       }
       if (variant_bps) {
         // translate to within-chromosome uidx

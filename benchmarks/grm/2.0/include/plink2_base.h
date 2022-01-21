@@ -1,7 +1,7 @@
 #ifndef __PLINK2_BASE_H__
 #define __PLINK2_BASE_H__
 
-// This library is part of PLINK 2.00, copyright (C) 2005-2020 Shaun Purcell,
+// This library is part of PLINK 2.00, copyright (C) 2005-2022 Shaun Purcell,
 // Christopher Chang.
 //
 // This library is free software: you can redistribute it and/or modify it
@@ -97,7 +97,7 @@
 // 10000 * major + 100 * minor + patch
 // Exception to CONSTI32, since we want the preprocessor to have access
 // to this value.  Named with all caps as a consequence.
-#define PLINK2_BASE_VERNUM 702
+#define PLINK2_BASE_VERNUM 706
 
 
 #define _FILE_OFFSET_BITS 64
@@ -134,29 +134,25 @@
 #endif
 
 #ifdef __LP64__
-#  ifndef __SSE2__
-// possible todo: remove this requirement, the 32-bit VecW-using code does most
-// of what we need.  But little point in doing this before we have e.g. an
-// ARM-based machine to test with that scientists would plausibly want to run
-// plink2 on.
-#    error "64-bit builds currently require SSE2.  Try producing a 32-bit build instead."
+#  ifdef __x86_64__
+#    include <emmintrin.h>
+#  else
+#    define SIMDE_ENABLE_NATIVE_ALIASES
+#    include "x86/sse2.h"
 #  endif
-#  include <emmintrin.h>
 #  ifdef __SSE4_2__
 #    define USE_SSE42
 #    include <smmintrin.h>
 #    ifdef __AVX2__
-#      include <immintrin.h>
-#      ifndef __BMI__
-#        error "AVX2 builds require -mbmi as well."
+#      if defined(__BMI__) && defined(__BMI2__) && defined(__LZCNT__)
+#        include <immintrin.h>
+#        define USE_AVX2
+#      else
+// Graceful downgrade, in case -march=native misfires on a VM.  See
+// https://github.com/chrchang/plink-ng/issues/155 .
+#        warning "AVX2 builds require -mbmi, -mbmi2, and -mlzcnt as well.  Downgrading to SSE4.2 build."
+#        undef USE_AVX2
 #      endif
-#      ifndef __BMI2__
-#        error "AVX2 builds require -mbmi2 as well."
-#      endif
-#      ifndef __LZCNT__
-#        error "AVX2 builds require -mlzcnt as well."
-#      endif
-#      define USE_AVX2
 #    endif
 #  endif
 #  define ALIGNV16 __attribute__ ((aligned (16)))
@@ -1108,29 +1104,17 @@ HEADER_INLINE VecI8 veci8_setzero() {
   return R_CAST(VecI8, _mm_setzero_si128());
 }
 
-HEADER_INLINE VecW vecw_srli(VecW vv, uint32_t ct) {
-  return R_CAST(VecW, _mm_srli_epi64(R_CAST(__m128i, vv), ct));
-}
+#define vecw_srli(vv, ct) R_CAST(VecW, _mm_srli_epi64(R_CAST(__m128i, vv), ct))
 
-HEADER_INLINE VecW vecw_slli(VecW vv, uint32_t ct) {
-  return R_CAST(VecW, _mm_slli_epi64(R_CAST(__m128i, vv), ct));
-}
+#define vecw_slli(vv, ct) R_CAST(VecW, _mm_slli_epi64(R_CAST(__m128i, vv), ct))
 
-HEADER_INLINE VecU32 vecu32_srli(VecU32 vv, uint32_t ct) {
-  return R_CAST(VecU32, _mm_srli_epi32(R_CAST(__m128i, vv), ct));
-}
+#define vecu32_srli(vv, ct) R_CAST(VecU32, _mm_srli_epi32(R_CAST(__m128i, vv), ct))
 
-HEADER_INLINE VecU32 vecu32_slli(VecU32 vv, uint32_t ct) {
-  return R_CAST(VecU32, _mm_slli_epi32(R_CAST(__m128i, vv), ct));
-}
+#define vecu32_slli(vv, ct) R_CAST(VecU32, _mm_slli_epi32(R_CAST(__m128i, vv), ct))
 
-HEADER_INLINE VecU16 vecu16_srli(VecU16 vv, uint32_t ct) {
-  return R_CAST(VecU16, _mm_srli_epi16(R_CAST(__m128i, vv), ct));
-}
+#define vecu16_srli(vv, ct) R_CAST(VecU16, _mm_srli_epi16(R_CAST(__m128i, vv), ct))
 
-HEADER_INLINE VecU16 vecu16_slli(VecU16 vv, uint32_t ct) {
-  return R_CAST(VecU16, _mm_slli_epi16(R_CAST(__m128i, vv), ct));
-}
+#define vecu16_slli(vv, ct) R_CAST(VecU16, _mm_slli_epi16(R_CAST(__m128i, vv), ct))
 
 HEADER_INLINE VecW vecw_and_notfirst(VecW excl, VecW main) {
   return R_CAST(VecW, _mm_andnot_si128(R_CAST(__m128i, excl), R_CAST(__m128i, main)));
@@ -1631,6 +1615,14 @@ CONSTI32(kPglFnamesize, 4096);
 static_assert(kPglFnamesize >= PATH_MAX, "plink2_base assumes PATH_MAX <= 4096.  (Safe to increase kPglFnamesize to address this, up to 131072.)");
 #endif
 
+// safe errstr_buf size for PgenInitPhase{1,2}(), PgrValidate(),
+// BitmapReaderInitPhase{1,2}()
+CONSTI32(kPglErrstrBufBlen, kPglFnamesize + 256);
+
+// shared between .pgen and plink-bitmap formats
+// currently must be power of 2, and multiple of (kBitsPerWord / 2)
+CONSTI32(kPglDifflistGroupSize, 64);
+
 
 #if __cplusplus >= 201103L
 // Main application of std::array in this codebase is enforcing length when
@@ -2042,6 +2034,11 @@ HEADER_INLINE BoolErr pgl_malloc(uintptr_t size, void* pp) {
 // OS X raw fwrite() doesn't work in that case.
 static_assert(sizeof(size_t) == sizeof(intptr_t), "plink2_base assumes size_t and intptr_t are synonymous.");
 BoolErr fwrite_checked(const void* buf, uintptr_t len, FILE* outfile);
+
+HEADER_INLINE IntErr putc_checked(int32_t ii, FILE* outfile) {
+  putc_unlocked(ii, outfile);
+  return ferror_unlocked(outfile);
+}
 
 // Only use this if loading < len bytes is not an error.
 // IntErr fread_checked2(void* buf, uintptr_t len, FILE* infile, uintptr_t* bytes_read_ptr);
@@ -2526,7 +2523,7 @@ HEADER_INLINE unsigned char* memcpyua(void* __restrict target, const void* __res
   return &(S_CAST(unsigned char*, target)[ct]);
 }
 
-HEADER_INLINE void AppendU16(uint32_t usii, unsigned char** targetp) {
+HEADER_INLINE void AppendU16(uint16_t usii, unsigned char** targetp) {
   memcpy(*targetp, &usii, sizeof(int16_t));
   *targetp += sizeof(int16_t);
 }
@@ -3015,6 +3012,86 @@ HEADER_INLINE uintptr_t DetectAllZeroBytes(uintptr_t ww) {
 
 HEADER_INLINE uintptr_t DetectAllZeroNybbles(uintptr_t ww) {
   return (kMask1111 * 8) & (~(ww | ((ww | (kMask1111 * 8)) - kMask1111)));
+}
+
+// This requires len >= 4.
+uintptr_t FirstUnequal4(const void* arr1, const void* arr2, uintptr_t nbytes);
+
+HEADER_INLINE uintptr_t FirstUnequal(const void* arr1, const void* arr2, uintptr_t nbytes) {
+  // Returns position of first byte mismatch, or nbytes if none was found.
+  if (nbytes >= 4) {
+    return FirstUnequal4(arr1, arr2, nbytes);
+  }
+  const char* s1 = S_CAST(const char*, arr1);
+  const char* s2 = S_CAST(const char*, arr2);
+  for (uintptr_t pos = 0; pos != nbytes; ++pos) {
+    if (s1[pos] != s2[pos]) {
+      return pos;
+    }
+  }
+  return nbytes;
+}
+
+HEADER_INLINE uintptr_t FirstUnequalFrom(const void* arr1, const void* arr2, uintptr_t start, uintptr_t nbytes) {
+  const char* s1 = S_CAST(const char*, arr1);
+  const char* s2 = S_CAST(const char*, arr2);
+  return start + FirstUnequal(&(s1[start]), &(s2[start]), nbytes - start);
+}
+
+
+HEADER_INLINE void* arena_alloc_raw(uintptr_t size, unsigned char** arena_bottom_ptr) {
+  assert(!(size % kCacheline));
+  unsigned char* alloc_ptr = *arena_bottom_ptr;
+  *arena_bottom_ptr = &(alloc_ptr[size]);
+  return alloc_ptr;
+}
+
+HEADER_INLINE void* arena_alloc_raw_rd(uintptr_t size, unsigned char** arena_bottom_ptr) {
+  unsigned char* alloc_ptr = *arena_bottom_ptr;
+  *arena_bottom_ptr = &(alloc_ptr[RoundUpPow2(size, kCacheline)]);
+  return alloc_ptr;
+}
+
+// A VINT is a sequence of bytes where each byte stores just 7 bits of an
+// an integer, and the high bit is set when the integer has more nonzero bits.
+// See e.g.
+//   https://developers.google.com/protocol-buffers/docs/encoding#varints
+// (Note that protocol buffers used "group varints" at one point, but then
+// abandoned them.  I suspect they'd be simultaneously slower and less
+// compact here.)
+
+HEADER_INLINE unsigned char* Vint32Append(uint32_t uii, unsigned char* buf) {
+  while (uii > 127) {
+    *buf++ = (uii & 127) + 128;
+    uii >>= 7;
+  }
+  *buf++ = uii;
+  return buf;
+}
+
+// Returns 0x80000000U on read-past-end instead of UINT32_MAX so overflow check
+// works properly in 32-bit build.  Named "GetVint31" to make it more obvious
+// that a 2^31 return value can't be legitimate.
+HEADER_INLINE uint32_t GetVint31(const unsigned char* buf_end, const unsigned char** buf_iterp) {
+  if (likely(buf_end > (*buf_iterp))) {
+    uint32_t vint32 = *((*buf_iterp)++);
+    if (vint32 <= 127) {
+      return vint32;
+    }
+    vint32 &= 127;
+    uint32_t shift = 7;
+    while (likely(buf_end > (*buf_iterp))) {
+      uint32_t uii = *((*buf_iterp)++);
+      vint32 |= (uii & 127) << shift;
+      if (uii <= 127) {
+        return vint32;
+      }
+      shift += 7;
+      // currently don't check for shift >= 32 (that's what ValidateVint31()
+      // is for).
+    }
+  }
+  return 0x80000000U;
 }
 
 // Flagset conventions:

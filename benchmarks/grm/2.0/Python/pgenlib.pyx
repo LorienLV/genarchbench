@@ -167,7 +167,7 @@ cdef extern from "../include/pgenlib_write.h" namespace "plink2":
 
     uint32_t SpgwGetVidx(STPgenWriter* spgwp)
 
-    PglErr SpgwInitPhase1(const char* fname, uintptr_t* allele_idx_offsets, uintptr_t* explicit_nonref_flags, uint32_t variant_ct, uint32_t sample_ct, PgenGlobalFlags phase_dosage_gflags, uint32_t nonref_flags_storage, STPgenWriter* spgwp, uintptr_t* alloc_cacheline_ct_ptr, uint32_t* max_vrec_len_ptr)
+    PglErr SpgwInitPhase1(const char* fname, uintptr_t* allele_idx_offsets, uintptr_t* explicit_nonref_flags, uint32_t variant_ct, uint32_t sample_ct, uint32_t optional_max_allele_ct, PgenGlobalFlags phase_dosage_gflags, uint32_t nonref_flags_storage, STPgenWriter* spgwp, uintptr_t* alloc_cacheline_ct_ptr, uint32_t* max_vrec_len_ptr)
 
     void SpgwInitPhase2(uint32_t max_vrec_len, STPgenWriter* spgwp, unsigned char* spgw_alloc)
 
@@ -1130,12 +1130,12 @@ cdef class PgenReader:
             CleanupPgfi(self._info_ptr, &reterr)
             if self._info_ptr[0].vrtypes:
                 aligned_free(self._info_ptr[0].vrtypes)
-                if self._state_ptr:
-                    CleanupPgr(self._state_ptr, &reterr)
-                    if PgrGetFreadBuf(self._state_ptr):
-                        aligned_free(PgrGetFreadBuf(self._state_ptr))
-                    PyMem_Free(self._state_ptr)
-                    self._state_ptr = NULL
+            if self._state_ptr:
+                CleanupPgr(self._state_ptr, &reterr)
+                if PgrGetFreadBuf(self._state_ptr):
+                    aligned_free(PgrGetFreadBuf(self._state_ptr))
+                PyMem_Free(self._state_ptr)
+                self._state_ptr = NULL
             PyMem_Free(self._info_ptr)
             self._info_ptr = NULL
             if reterr != kPglRetSuccess:
@@ -1154,11 +1154,11 @@ cdef class PgenReader:
             CleanupPgfi(self._info_ptr, &reterr)
             if self._info_ptr[0].vrtypes:
                 aligned_free(self._info_ptr[0].vrtypes)
-                if self._state_ptr:
-                    CleanupPgr(self._state_ptr, &reterr)
-                    if PgrGetFreadBuf(self._state_ptr):
-                        aligned_free(PgrGetFreadBuf(self._state_ptr))
-                    PyMem_Free(self._state_ptr)
+            if self._state_ptr:
+                CleanupPgr(self._state_ptr, &reterr)
+                if PgrGetFreadBuf(self._state_ptr):
+                    aligned_free(PgrGetFreadBuf(self._state_ptr))
+                PyMem_Free(self._state_ptr)
             PyMem_Free(self._info_ptr)
         return
 
@@ -1170,6 +1170,7 @@ cdef bytes_to_bits_internal(np.ndarray[np.uint8_t,mode="c",cast=True] boolbytes,
 cdef class PgenWriter:
     cdef STPgenWriter* _state_ptr
     cdef uintptr_t* _nonref_flags
+    cdef PgenGlobalFlags _phase_dosage_gflags
     # preallocate buffers we'll use repeatedly
     cdef uintptr_t* _genovec
     cdef uintptr_t* _phasepresent
@@ -1214,10 +1215,11 @@ cdef class PgenWriter:
             phase_dosage_gflags |= kfPgenGlobalHardcallPhasePresent
         if dosage_present:
             phase_dosage_gflags |= kfPgenGlobalDosagePresent
+        self._phase_dosage_gflags = phase_dosage_gflags
         assert not dosage_phase_present
         cdef uintptr_t alloc_cacheline_ct
         cdef uint32_t max_vrec_len
-        cdef PglErr reterr = SpgwInitPhase1(fname, NULL, self._nonref_flags, variant_ct, sample_ct, phase_dosage_gflags, nonref_flags_storage, self._state_ptr, &alloc_cacheline_ct, &max_vrec_len)
+        cdef PglErr reterr = SpgwInitPhase1(fname, NULL, self._nonref_flags, variant_ct, sample_ct, 0, phase_dosage_gflags, nonref_flags_storage, self._state_ptr, &alloc_cacheline_ct, &max_vrec_len)
         if reterr != kPglRetSuccess:
             raise RuntimeError("SpgwInitPhase1() error " + str(reterr))
         cdef uint32_t genovec_cacheline_ct = DivUp(sample_ct, kNypsPerCacheline)
@@ -1255,14 +1257,18 @@ cdef class PgenWriter:
             AlleleCodesToGenoarrUnsafe(allele_codes, NULL, SpgwGetSampleCt(self._state_ptr), genovec, NULL, NULL)
             reterr = SpgwAppendBiallelicGenovec(genovec, self._state_ptr)
         else:
-            AlleleCodesToGenoarrUnsafe(allele_codes, NULL, SpgwGetSampleCt(self._state_ptr), genovec, self._phasepresent, self._phaseinfo)
-            reterr = SpgwAppendBiallelicGenovecHphase(genovec, self._phasepresent, self._phaseinfo, self._state_ptr)
+            if (self._phase_dosage_gflags & kfPgenGlobalHardcallPhasePresent) == 0:
+                raise RuntimeError("append_alleles called with all_phased True, but PgenWriter was constructed with hardcall_phase_present False")
+            AlleleCodesToGenoarrUnsafe(allele_codes, NULL, SpgwGetSampleCt(self._state_ptr), genovec, NULL, self._phaseinfo)
+            reterr = SpgwAppendBiallelicGenovecHphase(genovec, NULL, self._phaseinfo, self._state_ptr)
         if reterr != kPglRetSuccess:
             raise RuntimeError("append_alleles() error " + str(reterr))
         return
 
 
     cpdef append_partially_phased(self, np.ndarray[np.int32_t,mode="c"] allele_int32, np.ndarray[np.uint8_t,cast=True] phasepresent):
+        if (self._phase_dosage_gflags & kfPgenGlobalHardcallPhasePresent) == 0:
+            raise RuntimeError("append_partially_phased cannot be called when PgenWriter was constructed with hardcall_phase_present False")
         cdef int32_t* allele_codes = <int32_t*>(&(allele_int32[0]))
         cdef unsigned char* phasepresent_bytes = <unsigned char*>(&(phasepresent[0]))
         cdef uintptr_t* genovec = self._genovec
@@ -1298,6 +1304,8 @@ cdef class PgenWriter:
         return
 
     cpdef append_dosages(self, np.ndarray floatarr):
+        if (self._phase_dosage_gflags & kfPgenGlobalDosagePresent) == 0:
+            raise RuntimeError("append_dosages cannot be called when PgenWriter was constructed with dosage_present False")
         if floatarr.dtype == np.float32:
             self.append_dosages_internal32(floatarr)
         elif floatarr.dtype == np.float64:
@@ -1335,16 +1343,20 @@ cdef class PgenWriter:
                 if reterr != kPglRetSuccess:
                     raise RuntimeError("append_alleles_batch() error " + str(reterr))
         else:
+            if (self._phase_dosage_gflags & kfPgenGlobalHardcallPhasePresent) == 0:
+                raise RuntimeError("append_alleles_batch called with all_phased True, but PgenWriter was constructed with hardcall_phase_present False")
             for uii in range(batch_size):
                 allele_codes = <int32_t*>(&(allele_int32_batch[uii, 0]))
-                AlleleCodesToGenoarrUnsafe(allele_codes, NULL, SpgwGetSampleCt(self._state_ptr), genovec, self._phasepresent, self._phaseinfo)
-                reterr = SpgwAppendBiallelicGenovecHphase(genovec, self._phasepresent, self._phaseinfo, self._state_ptr)
+                AlleleCodesToGenoarrUnsafe(allele_codes, NULL, SpgwGetSampleCt(self._state_ptr), genovec, NULL, self._phaseinfo)
+                reterr = SpgwAppendBiallelicGenovecHphase(genovec, NULL, self._phaseinfo, self._state_ptr)
                 if reterr != kPglRetSuccess:
                     raise RuntimeError("append_alleles_batch() error " + str(reterr))
         return
 
 
     cpdef append_partially_phased_batch(self, np.ndarray[np.int32_t,mode="c",ndim=2] allele_int32_batch, np.ndarray[np.uint8_t,mode="c",cast=True,ndim=2] phasepresent_batch):
+        if (self._phase_dosage_gflags & kfPgenGlobalHardcallPhasePresent) == 0:
+            raise RuntimeError("append_partially_phased_batch cannot be called when PgenWriter was constructed with hardcall_phase_present False")
         cdef uint32_t batch_size = <uint32_t>allele_int32_batch.shape[0]
         cdef uintptr_t* genovec = self._genovec
         cdef uintptr_t* phasepresent_buf = self._phasepresent
@@ -1394,6 +1406,8 @@ cdef class PgenWriter:
         return
 
     cpdef append_dosages_batch(self, np.ndarray floatarr_batch):
+        if (self._phase_dosage_gflags & kfPgenGlobalDosagePresent) == 0:
+            raise RuntimeError("append_dosages_batch cannot be called when PgenWriter was constructed with dosage_present False")
         if floatarr_batch.dtype == np.float32:
             self.append_dosages_batch_internal32(floatarr_batch)
         elif floatarr_batch.dtype == np.float64:

@@ -1,7 +1,7 @@
 #ifndef __PLINK_COMMON_H__
 #define __PLINK_COMMON_H__
 
-// This file is part of PLINK 1.90, copyright (C) 2005-2020 Shaun Purcell,
+// This file is part of PLINK 1.90, copyright (C) 2005-2022 Shaun Purcell,
 // Christopher Chang.
 //
 // This program is free software: you can redistribute it and/or modify
@@ -187,14 +187,12 @@
 // http://esr.ibiblio.org/?p=5095 ).
 
 #ifdef __LP64__
-  #ifndef __SSE2__
-    // It's obviously possible to support this by writing 64-bit non-SSE2 code
-    // shadowing each SSE2 intrinsic, but this almost certainly isn't worth the
-    // development/testing effort until regular PLINK 2.0 development is
-    // complete.  No researcher has ever asked me for this feature.
-    #error "64-bit builds currently require SSE2.  Try producing a 32-bit build instead."
+  #ifdef __SSE2__
+    #include <emmintrin.h>
+  #else
+    #define SIMDE_ENABLE_NATIVE_ALIASES
+    #include "x86/sse2.h"
   #endif
-  #include <emmintrin.h>
 
   #define VECFTYPE __m128
   #define VECITYPE __m128i
@@ -2394,6 +2392,10 @@ int32_t double_cmp_decr(const void* aa, const void* bb);
 int32_t double_cmp_deref(const void* aa, const void* bb);
 
 int32_t char_cmp_deref(const void* aa, const void* bb);
+
+// For use with qsort_ext(), when we need to use original-index as a secondary
+// sort key
+int32_t double_cmp_deref_tiebreak(const void* aa, const void* bb);
 
 int32_t intcmp(const void* aa, const void* bb);
 

@@ -1,4 +1,4 @@
-// This file is part of PLINK 1.90, copyright (C) 2005-2020 Shaun Purcell,
+// This file is part of PLINK 1.90, copyright (C) 2005-2022 Shaun Purcell,
 // Christopher Chang.
 //
 // This program is free software: you can redistribute it and/or modify
@@ -328,11 +328,11 @@ int32_t multcomp(char* outname, char* outname_end, uint32_t* marker_uidxs, uintp
     logprint("Zero valid tests; --adjust skipped.\n");
     goto multcomp_ret_1;
   }
-  if (qsort_ext((char*)sp, chi_ct, sizeof(double), double_cmp_deref, (char*)new_order, sizeof(int32_t))) {
+  if (qsort_ext((char*)sp, chi_ct, sizeof(double), double_cmp_deref_tiebreak, (char*)new_order, sizeof(int32_t))) {
     goto multcomp_ret_NOMEM;
   }
   if (tcnt) {
-    if (qsort_ext((char*)schi, chi_ct, sizeof(double), double_cmp_deref, (char*)new_tcnt, sizeof(int32_t))) {
+    if (qsort_ext((char*)schi, chi_ct, sizeof(double), double_cmp_deref_tiebreak, (char*)new_tcnt, sizeof(int32_t))) {
       goto multcomp_ret_NOMEM;
     }
   } else {
@@ -11181,7 +11181,16 @@ int32_t cmh_assoc(pthread_t* threads, FILE* bedfile, uintptr_t bed_offset, char*
       }
     }
     cmh_stat *= cmh_stat / cmh_denom;
+    // Possible for cmh_stat to be a tiny positive value instead of zero due to
+    // floating point imprecision; this makes the --bd test unreliable.
+    if (cmh_stat < 1e-28) {
+      cmh_stat = 0.0;
+    }
     odds_ratio = rtot / stot;
+    // Similar imprecision issue with this odds ratio.
+    if (fabs(1 - odds_ratio) < 1e-14) {
+      odds_ratio = 1.0;
+    }
     se = sqrt(v1 / (2 * rtot * rtot) + v2 / (2 * stot * stot) + v3 / (2 * rtot * stot));
     log_or = log(odds_ratio);
     pval = chiprob_p(cmh_stat, 1);

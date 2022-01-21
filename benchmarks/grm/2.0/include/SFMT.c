@@ -48,12 +48,12 @@ extern "C" {
 #include <assert.h>
 #include "SFMT.h"
 
-#if (! defined __LP64__ || ! defined __SSE2__)
+#ifndef __LP64__
 inline static void do_recursion(w128_t * r, w128_t * a, w128_t * b,
 				w128_t * c, w128_t * d);
 #endif
 
-#if (! defined __LP64__ || ! defined __SSE2__)
+#ifndef __LP64__
   inline static void rshift128(w128_t *out,  w128_t const *in, int shift);
   inline static void lshift128(w128_t *out,  w128_t const *in, int shift);
   
@@ -135,7 +135,7 @@ inline static void do_recursion(w128_t *r, w128_t *a, w128_t *b,
 /**
  * parameters used by sse2.
  */
-#if (defined __LP64__ && defined __SSE2__)
+#ifdef __LP64__
 static const w128_t sse2_param_mask = {{SFMT_MSK1, SFMT_MSK2,
 					SFMT_MSK3, SFMT_MSK4}};
 #endif
@@ -148,7 +148,7 @@ inline static uint32_t func1(uint32_t x);
 inline static uint32_t func2(uint32_t x);
 static void period_certification(sfmt_t * sfmt);
 
-#if (defined __LP64__ && defined __SSE2__)
+#ifdef __LP64__
 inline static void mm_recursion(__m128i * r, __m128i a, __m128i b,
 				__m128i c, __m128i d);
 
@@ -259,7 +259,7 @@ inline static int idxof(int i) {
     return i;
 }
 
-#if (! defined __LP64__ || ! defined __SSE2__)
+#ifndef __LP64__
 /**
  * This function fills the user-specified array with pseudorandom
  * integers.
@@ -395,7 +395,7 @@ int sfmt_get_min_array_size64(sfmt_t * sfmt) {
     return SFMT_N64;
 }
 
-#if (! defined __LP64__ || ! defined __SSE2__)
+#ifndef __LP64__
 /**
  * This function fills the internal state array with pseudorandom
  * integers.

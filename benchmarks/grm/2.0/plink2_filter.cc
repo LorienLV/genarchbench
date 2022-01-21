@@ -1,4 +1,4 @@
-// This file is part of PLINK 2.00, copyright (C) 2005-2020 Shaun Purcell,
+// This file is part of PLINK 2.00, copyright (C) 2005-2022 Shaun Purcell,
 // Christopher Chang.
 //
 // This program is free software: you can redistribute it and/or modify it
@@ -460,9 +460,8 @@ PglErr ExtractColCond(const char* const* variant_ids, const uint32_t* variant_id
     const uint32_t raw_variant_ctl = BitCtToWordCt(raw_variant_ct);
     uintptr_t* variant_include_new;
     uintptr_t* already_seen;
-    if (unlikely(
-            bigstack_calloc_w(raw_variant_ctl, &variant_include_new) ||
-            bigstack_calloc_w(raw_variant_ctl, &already_seen))) {
+    if (unlikely(bigstack_calloc_w(raw_variant_ctl, &variant_include_new) ||
+                 bigstack_calloc_w(raw_variant_ctl, &already_seen))) {
       goto ExtractColCond_ret_NOMEM;
     }
     char* match_strbox = nullptr;
@@ -555,7 +554,7 @@ PglErr ExtractColCond(const char* const* variant_ids, const uint32_t* variant_id
       if (mismatch_str_ct) {
         char* token_end = CurTokenEnd(colval_ptr);
         if (!match_substr) {
-          const int32_t ii = bsearch_str(colval_ptr, mismatch_strbox, token_end - colval_ptr, max_mismatch_blen, mismatch_str_ct);
+          const int32_t ii = bsearch_strbox(colval_ptr, mismatch_strbox, token_end - colval_ptr, max_mismatch_blen, mismatch_str_ct);
           if (ii != -1) {
             continue;
           }
@@ -586,7 +585,7 @@ PglErr ExtractColCond(const char* const* variant_ids, const uint32_t* variant_id
         // --extract-col-cond-match
         char* token_end = CurTokenEnd(colval_ptr);
         if (!match_substr) {
-          const int32_t ii = bsearch_str(colval_ptr, match_strbox, token_end - colval_ptr, max_match_blen, match_str_ct);
+          const int32_t ii = bsearch_strbox(colval_ptr, match_strbox, token_end - colval_ptr, max_match_blen, match_str_ct);
           if (ii == -1) {
             continue;
           }
@@ -666,9 +665,8 @@ PglErr RmDup(const uintptr_t* sample_include, const ChrInfo* cip, const uint32_t
     const uint32_t raw_variant_ctl = BitCtToWordCt(raw_variant_ct);
     uintptr_t* orig_dups;
     uintptr_t* already_seen;
-    if (unlikely(
-            bigstack_calloc_w(raw_variant_ctl, &orig_dups) ||
-            bigstack_calloc_w(raw_variant_ctl, &already_seen))) {
+    if (unlikely(bigstack_calloc_w(raw_variant_ctl, &orig_dups) ||
+                 bigstack_calloc_w(raw_variant_ctl, &already_seen))) {
       goto RmDup_ret_NOMEM;
     }
     // variant_id_htable + htable_dup_base is structured as follows:
@@ -712,9 +710,8 @@ PglErr RmDup(const uintptr_t* sample_include, const ChrInfo* cip, const uint32_t
     // perform out-of-order lookups.
     const char** dup_info_strs = nullptr;
     if (pvar_info_reload && (rmdup_mode < kRmDupExcludeAll)) {
-      if (unlikely(
-              bigstack_alloc_u32(raw_variant_ctl, &orig_dups_cumulative_popcounts) ||
-              bigstack_alloc_kcp(orig_dup_ct, &dup_info_strs))) {
+      if (unlikely(bigstack_alloc_u32(raw_variant_ctl, &orig_dups_cumulative_popcounts) ||
+                   bigstack_alloc_kcp(orig_dup_ct, &dup_info_strs))) {
         goto RmDup_ret_NOMEM;
       }
       FillCumulativePopcounts(orig_dups, raw_variant_ctl, orig_dups_cumulative_popcounts);
@@ -785,8 +782,7 @@ PglErr RmDup(const uintptr_t* sample_include, const ChrInfo* cip, const uint32_t
     char* mismatch_write_iter = nullptr;
     char* mismatch_flush = nullptr;
     if (rmdup_mode < kRmDupExcludeMismatch) {
-      if (unlikely(
-              bigstack_alloc_c(kMaxMediumLine + kMaxIdBlen, &mismatch_write_iter))) {
+      if (unlikely(bigstack_alloc_c(kMaxMediumLine + kMaxIdBlen, &mismatch_write_iter))) {
         goto RmDup_ret_NOMEM;
       }
       mismatch_flush = &(mismatch_write_iter[kMaxMediumLine]);
@@ -815,10 +811,9 @@ PglErr RmDup(const uintptr_t* sample_include, const ChrInfo* cip, const uint32_t
     if (simple_pgrp && (rmdup_mode < kRmDupExcludeAll)) {
       const uint32_t raw_sample_ctl = BitCtToWordCt(raw_sample_ct);
       uint32_t* sample_include_cumulative_popcounts;
-      if (unlikely(
-              bigstack_alloc_u32(raw_sample_ctl, &sample_include_cumulative_popcounts) ||
-              BigstackAllocPgv(sample_ct, allele_idx_offsets != nullptr, PgrGetGflags(simple_pgrp), &first_pgv) ||
-              BigstackAllocPgv(sample_ct, allele_idx_offsets != nullptr, PgrGetGflags(simple_pgrp), &cur_pgv))) {
+      if (unlikely(bigstack_alloc_u32(raw_sample_ctl, &sample_include_cumulative_popcounts) ||
+                   BigstackAllocPgv(sample_ct, allele_idx_offsets != nullptr, PgrGetGflags(simple_pgrp), &first_pgv) ||
+                   BigstackAllocPgv(sample_ct, allele_idx_offsets != nullptr, PgrGetGflags(simple_pgrp), &cur_pgv))) {
         goto RmDup_ret_NOMEM;
       }
       FillCumulativePopcounts(sample_include, raw_sample_ctl, sample_include_cumulative_popcounts);
@@ -995,7 +990,8 @@ PglErr RmDup(const uintptr_t* sample_include, const ChrInfo* cip, const uint32_t
         // Avoid loading genotypes when possible.
         reterr = PgrGetMDp(sample_include, pssi, sample_ct, variant_uidx, simple_pgrp, &first_pgv);
         if (unlikely(reterr)) {
-          goto RmDup_ret_PGR_FAIL;
+          PgenErrPrintNV(reterr, variant_uidx);
+          goto RmDup_ret_1;
         }
         ZeroTrailingNyps(sample_ct, first_pgv.genovec);
         if (first_pgv.phasepresent_ct) {
@@ -1007,7 +1003,8 @@ PglErr RmDup(const uintptr_t* sample_include, const ChrInfo* cip, const uint32_t
           if ((variant_uidx != ll_variant_uidx) && IsSet(orig_dups, ll_variant_uidx)) {
             reterr = PgrGetMDp(sample_include, pssi, sample_ct, ll_variant_uidx, simple_pgrp, &cur_pgv);
             if (unlikely(reterr)) {
-              goto RmDup_ret_PGR_FAIL;
+              PgenErrPrintNV(reterr, ll_variant_uidx);
+              goto RmDup_ret_1;
             }
             // todo: multidosage, multidphase
             if ((first_pgv.patch_01_ct != cur_pgv.patch_01_ct) ||
@@ -1119,9 +1116,6 @@ PglErr RmDup(const uintptr_t* sample_include, const ChrInfo* cip, const uint32_t
   RmDup_ret_OPEN_FAIL:
     reterr = kPglRetOpenFail;
     break;
-  RmDup_ret_PGR_FAIL:
-    PgenErrPrintN(reterr);
-    break;
   RmDup_ret_TSTREAM_FAIL:
     TextStreamErrPrint(pvar_info_reload, &pvar_txs);
     break;
@@ -1173,9 +1167,8 @@ PglErr RandomThinCt(const char* flagname_p, const char* unitname, uint32_t thin_
     const uint32_t raw_item_ctl = BitCtToWordCt(raw_item_ct);
     uintptr_t* perm_buf;
     uintptr_t* new_item_include;
-    if (unlikely(
-            bigstack_alloc_w(BitCtToWordCt(orig_item_ct), &perm_buf) ||
-            bigstack_alloc_w(raw_item_ctl, &new_item_include))) {
+    if (unlikely(bigstack_alloc_w(BitCtToWordCt(orig_item_ct), &perm_buf) ||
+                 bigstack_alloc_w(raw_item_ctl, &new_item_include))) {
       goto RandomThinCt_ret_NOMEM;
     }
     // no actual interleaving here, but may as well use this function
@@ -1226,9 +1219,8 @@ PglErr KeepOrRemove(const char* fnames, const SampleIdInfo* siip, uint32_t raw_s
     uintptr_t max_xid_blen = max_sample_id_blen - 1;
     if (families_only) {
       // only need to do this once
-      if (unlikely(
-              bigstack_alloc_u32(orig_sample_ct, &xid_map) ||
-              bigstack_alloc_c(orig_sample_ct * max_xid_blen, &sorted_xidbox))) {
+      if (unlikely(bigstack_alloc_u32(orig_sample_ct, &xid_map) ||
+                   bigstack_alloc_c(orig_sample_ct * max_xid_blen, &sorted_xidbox))) {
         goto KeepOrRemove_ret_NOMEM;
       }
       uintptr_t sample_uidx_base = 0;
@@ -1238,7 +1230,7 @@ PglErr KeepOrRemove(const char* fnames, const SampleIdInfo* siip, uint32_t raw_s
         const char* fidt_ptr = &(sample_ids[sample_uidx * max_sample_id_blen]);
         const char* fidt_end = AdvPastDelim(fidt_ptr, '\t');
         const uint32_t cur_fidt_slen = fidt_end - fidt_ptr;
-        // include trailing tab, to simplify bsearch_str_lb() usage
+        // include trailing tab, to simplify bsearch_strbox_lb() usage
         memcpyx(&(sorted_xidbox[sample_idx * max_xid_blen]), fidt_ptr, cur_fidt_slen, '\0');
         xid_map[sample_idx] = sample_uidx;
       }
@@ -1271,7 +1263,7 @@ PglErr KeepOrRemove(const char* fnames, const SampleIdInfo* siip, uint32_t raw_s
       if (families_only) {
         skip_header = 1;
       } else {
-        reterr = LoadXidHeader(flag_name, (siip->sids || (siip->flags & kfSampleIdStrictSid0))? kfXidHeader0 : kfXidHeaderIgnoreSid, &line_idx, &txs, &xid_mode, &line_start, nullptr);
+        reterr = LoadXidHeader(flag_name, (siip->sids || (siip->flags & kfSampleIdStrictSid0))? kfXidHeader0 : kfXidHeaderIgnoreSid, &line_idx, &txs, &xid_mode, &line_start);
         if (reterr) {
           if (likely(reterr == kPglRetEof)) {
             reterr = kPglRetSuccess;
@@ -1322,9 +1314,9 @@ PglErr KeepOrRemove(const char* fnames, const SampleIdInfo* siip, uint32_t raw_s
           // const char orig_token_end_char = *token_end;
           *token_end = '\t';
           const uint32_t slen = 1 + S_CAST(uintptr_t, token_end - line_start);
-          uint32_t lb_idx = bsearch_str_lb(line_start, sorted_xidbox, slen, max_xid_blen, orig_sample_ct);
+          uint32_t lb_idx = bsearch_strbox_lb(line_start, sorted_xidbox, slen, max_xid_blen, orig_sample_ct);
           *token_end = ' ';
-          const uint32_t ub_idx = bsearch_str_lb(line_start, sorted_xidbox, slen, max_xid_blen, orig_sample_ct);
+          const uint32_t ub_idx = bsearch_strbox_lb(line_start, sorted_xidbox, slen, max_xid_blen, orig_sample_ct);
           if (ub_idx != lb_idx) {
             uint32_t sample_uidx = xid_map[lb_idx];
             if (IsSet(seen_uidxs, sample_uidx)) {
@@ -1391,7 +1383,7 @@ PglErr KeepOrRemove(const char* fnames, const SampleIdInfo* siip, uint32_t raw_s
 
 // Minor extension of PLINK 1.x --filter.  (Renamed since --filter is not
 // sufficiently self-describing; PLINK has lots of other filters on both
-// samples and variants.  --filter is automatically be converted to
+// samples and variants.  --filter is automatically converted to
 // --keep-col-match for backward compatibility, though.)
 PglErr KeepColMatch(const char* fname, const SampleIdInfo* siip, const char* strs_flattened, const char* col_name, uint32_t raw_sample_ct, uint32_t col_num, uintptr_t* sample_include, uint32_t* sample_ct_ptr) {
   unsigned char* bigstack_mark = g_bigstack_base;
@@ -1407,9 +1399,8 @@ PglErr KeepColMatch(const char* fname, const SampleIdInfo* siip, const char* str
     const uint32_t raw_sample_ctl = BitCtToWordCt(raw_sample_ct);
     uintptr_t* seen_xid_idxs;
     uintptr_t* keep_uidxs;
-    if (unlikely(
-            bigstack_calloc_w(BitCtToWordCt(orig_sample_ct), &seen_xid_idxs) ||
-            bigstack_calloc_w(raw_sample_ctl, &keep_uidxs))) {
+    if (unlikely(bigstack_calloc_w(BitCtToWordCt(orig_sample_ct), &seen_xid_idxs) ||
+                 bigstack_calloc_w(raw_sample_ctl, &keep_uidxs))) {
       goto KeepColMatch_ret_NOMEM;
     }
 
@@ -1426,7 +1417,7 @@ PglErr KeepColMatch(const char* fname, const SampleIdInfo* siip, const char* str
     }
     char* line_start;
     XidMode xid_mode;
-    reterr = LoadXidHeader("keep-col-match", (siip->sids || (siip->flags & kfSampleIdStrictSid0))? kfXidHeaderFixedWidth : kfXidHeaderFixedWidthIgnoreSid, &line_idx, &txs, &xid_mode, &line_start, nullptr);
+    reterr = LoadXidHeader("keep-col-match", (siip->sids || (siip->flags & kfSampleIdStrictSid0))? kfXidHeaderFixedWidth : kfXidHeaderFixedWidthIgnoreSid, &line_idx, &txs, &xid_mode, &line_start);
     if (unlikely(reterr)) {
       if (reterr == kPglRetEof) {
         logerrputs("Error: Empty --keep-col-match file.\n");
@@ -1514,7 +1505,7 @@ PglErr KeepColMatch(const char* fname, const SampleIdInfo* siip, const char* str
         goto KeepColMatch_ret_MISSING_TOKENS;
       }
       const char* token_end = CurTokenEnd(linebuf_iter);
-      const int32_t ii = bsearch_str(linebuf_iter, sorted_strbox, token_end - linebuf_iter, max_str_blen, str_ct);
+      const int32_t ii = bsearch_strbox(linebuf_iter, sorted_strbox, token_end - linebuf_iter, max_str_blen, str_ct);
       if (ii != -1) {
         for (; xid_idx_start != xid_idx_end; ++xid_idx_start) {
           const uint32_t sample_uidx = xid_map[xid_idx_start];
@@ -1590,7 +1581,7 @@ PglErr RequirePheno(const PhenoCol* pheno_cols, const char* pheno_names, const c
     for (uint32_t pheno_idx = 0; pheno_idx != pheno_ct; ++pheno_idx) {
       if (sorted_required_pheno_names) {
         const char* cur_pheno_name = &(pheno_names[pheno_idx * max_pheno_name_blen]);
-        const int32_t ii = bsearch_str(cur_pheno_name, sorted_required_pheno_names, strlen(cur_pheno_name), max_required_pheno_blen, required_pheno_ct);
+        const int32_t ii = bsearch_strbox(cur_pheno_name, sorted_required_pheno_names, strlen(cur_pheno_name), max_required_pheno_blen, required_pheno_ct);
         if (ii == -1) {
           continue;
         }
@@ -1771,13 +1762,8 @@ PglErr KeepRemoveIf(const CmpExpr* cmp_expr, const PhenoCol* pheno_cols, const c
       } else {
         assert(cur_pheno_col->type_code == kPhenoDtypeCat);
         const uint32_t nonnull_cat_ct = cur_pheno_col->nonnull_category_ct;
-        uint32_t cat_idx = 1;
-        for (; cat_idx <= nonnull_cat_ct; ++cat_idx) {
-          if (!strcmp(cur_val_str, cur_pheno_col->category_names[cat_idx])) {
-            break;
-          }
-        }
-        if (cat_idx == nonnull_cat_ct + 1) {
+        const uint32_t cat_idx = 1 + bsearch_strptr_natural(cur_val_str, &(cur_pheno_col->category_names[1]), nonnull_cat_ct);
+        if (!cat_idx) {
           double dxx;
           if (unlikely(ScanadvDouble(cur_val_str, &dxx))) {
             snprintf(g_logbuf, kLogbufSize, "Error: Invalid --%s-if value (category name expected).\n", is_remove? "remove" : "keep");
@@ -1854,9 +1840,8 @@ PglErr KeepRemoveCatsInternal(const PhenoCol* cur_pheno_col, const char* cats_fn
     const uint32_t cat_ctl = BitCtToWordCt(cat_ct);
     uintptr_t* affected_samples;
     uintptr_t* cat_include;
-    if (unlikely(
-            bigstack_calloc_w(raw_sample_ctl, &affected_samples) ||
-            bigstack_alloc_w(cat_ctl, &cat_include))) {
+    if (unlikely(bigstack_calloc_w(raw_sample_ctl, &affected_samples) ||
+                 bigstack_alloc_w(cat_ctl, &cat_include))) {
       goto KeepRemoveCatsInternal_ret_NOMEM;
     }
     SetAllBits(cat_ct, cat_include);
@@ -2214,13 +2199,12 @@ PglErr ReadAlleleFreqs(const uintptr_t* variant_include, const char* const* vari
     uintptr_t* matched_internal_alleles;
     uint32_t* loaded_to_internal_allele_idx;
     uintptr_t* already_seen;
-    if (unlikely(
-            bigstack_calloc_w(raw_variant_ctl, variant_afreqcalcp) ||
-            bigstack_calloc_d(kMaxReadFreqAlleles, &cur_allele_freqs) ||
-            bigstack_alloc_w(BitCtToWordCt(kMaxReadFreqAlleles), &matched_loaded_alleles) ||
-            bigstack_alloc_w(BitCtToWordCt(max_allele_ct), &matched_internal_alleles) ||
-            bigstack_alloc_u32(kMaxReadFreqAlleles, &loaded_to_internal_allele_idx) ||
-            bigstack_calloc_w(raw_variant_ctl, &already_seen))) {
+    if (unlikely(bigstack_calloc_w(raw_variant_ctl, variant_afreqcalcp) ||
+                 bigstack_calloc_d(kMaxReadFreqAlleles, &cur_allele_freqs) ||
+                 bigstack_alloc_w(BitCtToWordCt(kMaxReadFreqAlleles), &matched_loaded_alleles) ||
+                 bigstack_alloc_w(BitCtToWordCt(max_allele_ct), &matched_internal_alleles) ||
+                 bigstack_alloc_u32(kMaxReadFreqAlleles, &loaded_to_internal_allele_idx) ||
+                 bigstack_calloc_w(raw_variant_ctl, &already_seen))) {
       goto ReadAlleleFreqs_ret_NOMEM;
     }
     bigstack_mark = R_CAST(unsigned char*, cur_allele_freqs);
@@ -2704,6 +2688,8 @@ PglErr ReadAlleleFreqs(const uintptr_t* variant_include, const char* const* vari
           uint32_t cur_loaded_allele_code_slen = token_slens[kfReadFreqColRefAllele];
           uint32_t unmatched_allele_ct = cur_allele_ct;
           char* cur_loaded_allele_code = token_ptrs[kfReadFreqColRefAllele];
+          // No special handling of missing allele code needed (if the fileset
+          // is valid).
           cur_loaded_allele_code[cur_loaded_allele_code_slen] = '\0';
           char* loaded_allele_code_iter;
           char* loaded_allele_code_end;
@@ -3388,20 +3374,22 @@ THREAD_FUNC_DECL LoadSampleMissingCtsThread(void* raw_arg) {
         }
       }
     }
-    while (0) {
-    LoadSampleMissingCtsThread_err:
-      UpdateU64IfSmaller(new_err_info, &ctx->err_info);
-      break;
-    }
   } while (!THREAD_BLOCK_FINISH(arg));
-  VcountIncr4To8(missing_hc_acc4, acc4_vec_ct, missing_hc_acc8);
-  VcountIncr8To32(missing_hc_acc8, acc8_vec_ct, missing_hc_acc32);
-  if (missing_dosage_acc1) {
-    VcountIncr4To8(missing_dosage_acc4, acc4_vec_ct, missing_dosage_acc8);
-    VcountIncr8To32(missing_dosage_acc8, acc8_vec_ct, missing_dosage_acc32);
+  {
+    VcountIncr4To8(missing_hc_acc4, acc4_vec_ct, missing_hc_acc8);
+    VcountIncr8To32(missing_hc_acc8, acc8_vec_ct, missing_hc_acc32);
+    if (missing_dosage_acc1) {
+      VcountIncr4To8(missing_dosage_acc4, acc4_vec_ct, missing_dosage_acc8);
+      VcountIncr8To32(missing_dosage_acc8, acc8_vec_ct, missing_dosage_acc32);
+    }
+    VcountIncr4To8(hethap_acc4, acc4_vec_ct, hethap_acc8);
+    VcountIncr8To32(hethap_acc8, acc8_vec_ct, hethap_acc32);
   }
-  VcountIncr4To8(hethap_acc4, acc4_vec_ct, hethap_acc8);
-  VcountIncr8To32(hethap_acc8, acc8_vec_ct, hethap_acc32);
+  while (0) {
+  LoadSampleMissingCtsThread_err:
+    UpdateU64IfSmaller(new_err_info, &ctx->err_info);
+    break;
+  }
   THREAD_RETURN;
 }
 
@@ -3434,9 +3422,8 @@ PglErr LoadSampleMissingCts(const uintptr_t* sex_male, const uintptr_t* variant_
       }
       thread_alloc_cacheline_ct += acc1_alloc_cacheline_ct;
     }
-    if (unlikely(
-            bigstack_alloc_wp(calc_thread_ct, &ctx.missing_hc_acc1) ||
-            bigstack_alloc_wp(calc_thread_ct, &ctx.hethap_acc1))) {
+    if (unlikely(bigstack_alloc_wp(calc_thread_ct, &ctx.missing_hc_acc1) ||
+                 bigstack_alloc_wp(calc_thread_ct, &ctx.hethap_acc1))) {
       goto LoadSampleMissingCts_ret_NOMEM;
     }
     STD_ARRAY_DECL(unsigned char*, 2, main_loadbufs);
@@ -3479,7 +3466,8 @@ PglErr LoadSampleMissingCts(const uintptr_t* sex_male, const uintptr_t* variant_
         JoinThreads(&tg);
         reterr = S_CAST(PglErr, ctx.err_info);
         if (unlikely(reterr)) {
-          goto LoadSampleMissingCts_ret_PGR_FAIL;
+          PgenErrPrintNV(reterr, ctx.err_info >> 32);
+          goto LoadSampleMissingCts_ret_1;
         }
       }
       if (!IsLastBlock(&tg)) {

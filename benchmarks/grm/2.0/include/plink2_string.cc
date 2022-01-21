@@ -1,4 +1,4 @@
-// This library is part of PLINK 2.00, copyright (C) 2005-2020 Shaun Purcell,
+// This library is part of PLINK 2.00, copyright (C) 2005-2022 Shaun Purcell,
 // Christopher Chang.
 //
 // This library is free software: you can redistribute it and/or modify it
@@ -219,131 +219,43 @@ void WordWrap(uint32_t suffix_len, char* strbuf) {
 }
 
 
-static const uint32_t kPow10[] = {1, 10, 100, 1000, 10000, 100000, 1000000, 10000000, 100000000, 1000000000};
+// This implementation is from Kendall Willets.  See
+//   https://lemire.me/blog/2021/06/03/computing-the-number-of-digits-of-an-integer-even-faster/
 
 #ifdef USE_AVX2
-static const unsigned char kLzUintSlenBase[] =
-{9, 9, 9, 8,
- 8, 8, 7, 7,
- 7, 6, 6, 6,
- 6, 5, 5, 5,
- 4, 4, 4, 3,
- 3, 3, 3, 2,
- 2, 2, 1, 1,
- 1, 0, 0, 0,
- 1};  // UintSlen(0) needs to be 1, not zero
+static const uint64_t kLzcntUintSlenTable[] =
+  {42949672960LL, 42949672960LL, 41949672960LL, 41949672960LL, 41949672960LL,
+   38554705664LL, 38554705664LL, 38554705664LL, 34349738368LL, 34349738368LL,
+   34349738368LL, 34349738368LL, 30063771072LL, 30063771072LL, 30063771072LL,
+   25769703776LL, 25769703776LL, 25769703776LL, 21474826480LL, 21474826480LL,
+   21474826480LL, 21474826480LL, 17179868184LL, 17179868184LL, 17179868184LL,
+   12884901788LL, 12884901788LL, 12884901788LL,  8589934582LL,  8589934582LL,
+    8589934582LL,  4294967296LL};
 
 uint32_t UintSlen(uint32_t num) {
   const uint32_t lz_ct = _lzcnt_u32(num);
-  const uint32_t slen_base = kLzUintSlenBase[lz_ct];
-  return slen_base + (num >= kPow10[slen_base]);
+  return (num + kLzcntUintSlenTable[lz_ct]) >> 32;
 }
 #else
-// could also use something like ((32 - lz_ct) * 77) >> 8, since 77/256 is a
-// sufficiently good approximation of ln(2)/ln(10), but that's a bit slower and
-// this table doesn't take much space
-//
-// bugfix (29 Mar 2018): this table was totally wrong, ugh
-static const unsigned char kBsrUintSlenBase[] =
-{1, 1, 1, 1,
- 2, 2, 2, 3,
- 3, 3, 4, 4,
- 4, 4, 5, 5,
- 5, 6, 6, 6,
- 7, 7, 7, 7,
- 8, 8, 8, 9,
- 9, 9, 9, 9};
+static const uint64_t kBsrUintSlenTable[] =
+  {4294967296LL,  8589934582LL,  8589934582LL,  8589934582LL,  12884901788LL,
+   12884901788LL, 12884901788LL, 17179868184LL, 17179868184LL, 17179868184LL,
+   21474826480LL, 21474826480LL, 21474826480LL, 21474826480LL, 25769703776LL,
+   25769703776LL, 25769703776LL, 30063771072LL, 30063771072LL, 30063771072LL,
+   34349738368LL, 34349738368LL, 34349738368LL, 34349738368LL, 38554705664LL,
+   38554705664LL, 38554705664LL, 41949672960LL, 41949672960LL, 41949672960LL,
+   42949672960LL, 42949672960LL};
 
 uint32_t UintSlen(uint32_t num) {
   // tried divide-by-10 and divide-by-100 loops, they were slower
   // also tried a hardcoded binary tree, it was better but still slower
 
   // bsru32(0) is undefined
-  if (num < 10) {
-    return 1;
-  }
+  num |= 1;
   const uint32_t top_bit_pos = bsru32(num);
-  const uint32_t slen_base = kBsrUintSlenBase[top_bit_pos];
-  return slen_base + (num >= kPow10[slen_base]);
+  return (num + kBsrUintSlenTable[top_bit_pos]) >> 32;
 }
 #endif
-
-uintptr_t FirstUnequal4(const char* s1, const char* s2, uintptr_t slen) {
-  // See memequal() in plink2_base.
-#ifdef __LP64__
-  if (slen < kBytesPerVec) {
-    if (slen < kBytesPerWord) {
-      uint32_t xor_result = (*R_CAST(const uint32_t*, s1)) ^ (*R_CAST(const uint32_t*, s2));
-      if (xor_result) {
-        return ctzu32(xor_result) / CHAR_BIT;
-      }
-      if (slen > 4) {
-        const uintptr_t final_offset = slen - 4;
-        xor_result = (*R_CAST(const uint32_t*, &(s1[final_offset]))) ^ (*R_CAST(const uint32_t*, &(s2[final_offset])));
-        if (xor_result) {
-          return final_offset + ctzu32(xor_result) / CHAR_BIT;
-        }
-      }
-      return slen;
-    }
-    const uintptr_t* s1_alias = R_CAST(const uintptr_t*, s1);
-    const uintptr_t* s2_alias = R_CAST(const uintptr_t*, s2);
-    const uintptr_t word_ct = slen / kBytesPerWord;
-    for (uint32_t widx = 0; widx != word_ct; ++widx) {
-      const uintptr_t xor_result = s1_alias[widx] ^ s2_alias[widx];
-      if (xor_result) {
-        return widx * kBytesPerWord + ctzw(xor_result) / CHAR_BIT;
-      }
-    }
-    if (slen % kBytesPerWord) {
-      const uintptr_t final_offset = slen - kBytesPerWord;
-      const uintptr_t xor_result = (*R_CAST(const uintptr_t*, &(s1[final_offset]))) ^ (*R_CAST(const uintptr_t*, &(s2[final_offset])));
-      if (xor_result) {
-        return final_offset + ctzw(xor_result) / CHAR_BIT;
-      }
-    }
-    return slen;
-  }
-  const VecUc* s1_alias = R_CAST(const VecUc*, s1);
-  const VecUc* s2_alias = R_CAST(const VecUc*, s2);
-  const uintptr_t vec_ct = slen / kBytesPerVec;
-  for (uintptr_t vidx = 0; vidx != vec_ct; ++vidx) {
-    const VecUc v1 = vecuc_loadu(&(s1_alias[vidx]));
-    const VecUc v2 = vecuc_loadu(&(s2_alias[vidx]));
-    const uint32_t eq_result = vecw_movemask(v1 == v2);
-    if (eq_result != kVec8thUintMax) {
-      return vidx * kBytesPerVec + ctzu32(~eq_result);
-    }
-  }
-  if (slen % kBytesPerVec) {
-    const uintptr_t final_offset = slen - kBytesPerVec;
-    const VecW v1 = vecw_loadu(&(s1[final_offset]));
-    const VecW v2 = vecw_loadu(&(s2[final_offset]));
-    const uint32_t eq_result = vecw_movemask(v1 == v2);
-    if (eq_result != kVec8thUintMax) {
-      return final_offset + ctzu32(~eq_result);
-    }
-  }
-#else  // !__LP64__
-  const uintptr_t* s1_alias = R_CAST(const uintptr_t*, s1);
-  const uintptr_t* s2_alias = R_CAST(const uintptr_t*, s2);
-  const uintptr_t word_ct = slen / kBytesPerWord;
-  for (uintptr_t widx = 0; widx != word_ct; ++widx) {
-    const uintptr_t xor_result = s1_alias[widx] ^ s2_alias[widx];
-    if (xor_result) {
-      return widx * kBytesPerWord + ctzw(xor_result) / CHAR_BIT;
-    }
-  }
-  if (slen % kBytesPerWord) {
-    const uintptr_t final_offset = slen - kBytesPerWord;
-    const uintptr_t xor_result = (*R_CAST(const uintptr_t*, &(s1[final_offset]))) ^ (*R_CAST(const uintptr_t*, &(s2[final_offset])));
-    if (xor_result) {
-      return final_offset + ctzw(xor_result) / CHAR_BIT;
-    }
-  }
-#endif
-  return slen;
-}
 
 // May read (kBytesPerWord - 1) bytes past the end of each string.
 // This can be quite a bit faster than stock strcmp on x86 for sorting, though
@@ -3046,7 +2958,7 @@ uint32_t CollapseDuplicateIds(uintptr_t id_ct, uintptr_t max_id_blen, char* sort
 }
 
 
-int32_t bsearch_str(const char* idbuf, const char* sorted_strbox, uintptr_t cur_id_slen, uintptr_t max_id_blen, uintptr_t end_idx) {
+int32_t bsearch_strbox(const char* idbuf, const char* sorted_strbox, uintptr_t cur_id_slen, uintptr_t max_id_blen, uintptr_t end_idx) {
   // does not assume null-terminated idbuf, or nonempty array.
   if (cur_id_slen >= max_id_blen) {
     return -1;
@@ -3066,9 +2978,9 @@ int32_t bsearch_str(const char* idbuf, const char* sorted_strbox, uintptr_t cur_
   return -1;
 }
 
-int32_t bsearch_str_natural(const char* idbuf, const char* sorted_strbox, uintptr_t max_id_blen, uintptr_t end_idx) {
-  // unlike bsearch_str(), caller is responsible for slen >= max_id_blen check
-  // if appropriate here
+int32_t bsearch_strbox_natural(const char* idbuf, const char* sorted_strbox, uintptr_t max_id_blen, uintptr_t end_idx) {
+  // unlike bsearch_strbox(), caller is responsible for slen >= max_id_blen
+  // check if appropriate here
   uintptr_t start_idx = 0;
   while (start_idx < end_idx) {
     const uintptr_t mid_idx = (start_idx + end_idx) / 2;
@@ -3084,7 +2996,23 @@ int32_t bsearch_str_natural(const char* idbuf, const char* sorted_strbox, uintpt
   return -1;
 }
 
-uintptr_t bsearch_str_lb(const char* idbuf, const char* sorted_strbox, uintptr_t cur_id_slen, uintptr_t max_id_blen, uintptr_t end_idx) {
+int32_t bsearch_strptr_natural(const char* idbuf, const char* const* sorted_strptrs, uintptr_t end_idx) {
+  uintptr_t start_idx = 0;
+  while (start_idx < end_idx) {
+    const uintptr_t mid_idx = (start_idx + end_idx) / 2;
+    const int32_t ii = strcmp_natural(idbuf, sorted_strptrs[mid_idx]);
+    if (ii > 0) {
+      start_idx = mid_idx + 1;
+    } else if (ii < 0) {
+      end_idx = mid_idx;
+    } else {
+      return S_CAST(uint32_t, mid_idx);
+    }
+  }
+  return -1;
+}
+
+uintptr_t bsearch_strbox_lb(const char* idbuf, const char* sorted_strbox, uintptr_t cur_id_slen, uintptr_t max_id_blen, uintptr_t end_idx) {
   // returns number of elements in sorted_strbox[] less than idbuf.
   if (cur_id_slen > max_id_blen) {
     cur_id_slen = max_id_blen;

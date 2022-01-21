@@ -1,7 +1,7 @@
 #ifndef __PLINK2_COMMON_H__
 #define __PLINK2_COMMON_H__
 
-// This library is part of PLINK 2.00, copyright (C) 2005-2020 Shaun Purcell,
+// This library is part of PLINK 2.00, copyright (C) 2005-2022 Shaun Purcell,
 // Christopher Chang.
 //
 // This program is free software: you can redistribute it and/or modify it
@@ -87,7 +87,7 @@ CONSTI32(kMaxPhenoCt, 524287);
 
 // maximum number of usable cluster computers, this is arbitrary though it
 // shouldn't be larger than 2^32 - 1
-// (actually, there's an overflow danger: [work units] * parallel_idx may not
+// (actually, there's an overflow danger: <work units> * parallel_idx may not
 // fit in a uint64 if parallel_tot is too high.)
 CONSTI32(kParallelMax, 32768);
 
@@ -171,18 +171,21 @@ FLAGSET64_DEF_START()
   kfExportfLgenRef = (1 << 25),
   kfExportfList = (1 << 26),
   kfExportfRlist = (1 << 27),
-  kfExportfOxGen = (1 << 28),
-  kfExportfPed = (1 << 29),
-  kfExportfCompound = (1 << 30),
-  kfExportfStructure = (1U << 31),
-  kfExportfTranspose = (1LLU << 32),
-  kfExportfVcf42 = (1LLU << 33),
-  kfExportfVcf43 = (1LLU << 34),
+  kfExportfOxGenV1 = (1 << 28),
+  kfExportfOxGenV2 = (1 << 29),
+  kfExportfOxGen = kfExportfOxGenV1 | kfExportfOxGenV2,
+  kfExportfPed = (1 << 30),
+  kfExportfCompound = (1U << 31),
+  kfExportfStructure = (1LLU << 32),
+  kfExportfTranspose = (1LLU << 33),
+  kfExportfVcf42 = (1LLU << 34),
+  kfExportfVcf43 = (1LLU << 35),
   kfExportfVcf = kfExportfVcf42 | kfExportfVcf43,
   kfExportfTypemask = (2LLU * kfExportfVcf43) - kfExportf23,
-  kfExportfIncludeAlt = (1LLU << 35),
-  kfExportfBgz = (1LLU << 36),
-  kfExportfOmitNonmaleY = (1LLU << 37)
+  kfExportfIncludeAlt = (1LLU << 36),
+  kfExportfBgz = (1LLU << 37),
+  kfExportfOmitNonmaleY = (1LLU << 38),
+  kfExportfSampleV2 = (1LLU << 39)
 FLAGSET64_DEF_END(ExportfFlags);
 
 FLAGSET_DEF_START()
@@ -225,6 +228,7 @@ FLAGSET_DEF_START()
   kfPsamColAll = ((kfPsamColPhenos * 2) - kfPsamColMaybefid)
 FLAGSET_DEF_END(PvarPsamFlags);
 
+// may want to rename FidPresent to FidMayBePresent
 FLAGSET_DEF_START()
   kfSampleId0,
   kfSampleIdFidPresent = (1 << 0),
@@ -378,6 +382,7 @@ HEADER_INLINE void SetAllDosageArr(uintptr_t entry_ct, Dosage* dosage_arr) {
   memset(dosage_arr, 255, entry_ct * sizeof(Dosage));
 }
 
+// Assumes dense_dosage is allocated up to vector boundary.
 void PopulateDenseDosage(const uintptr_t* genoarr, const uintptr_t* dosage_present, const Dosage* dosage_main, uint32_t sample_ct, uint32_t dosage_ct, Dosage* dense_dosage);
 
 void PopulateRescaledDosage(const uintptr_t* genoarr, const uintptr_t* dosage_present, const Dosage* dosage_main, double slope, double intercept, double missing_val, uint32_t sample_ct, uint32_t dosage_ct, double* expanded_dosages);
@@ -386,7 +391,7 @@ void PopulateRescaledDosageF(const uintptr_t* genoarr, const uintptr_t* dosage_p
 
 // assumes trailing bits of genoarr are zeroed out
 HEADER_INLINE uint32_t AtLeastOneHetUnsafe(const uintptr_t* genoarr, uint32_t sample_ct) {
-  const uint32_t sample_ctl2 = DivUp(sample_ct, kBitsPerWordD2);
+  const uint32_t sample_ctl2 = NypCtToWordCt(sample_ct);
   for (uint32_t uii = 0; uii != sample_ctl2; ++uii) {
     const uintptr_t geno_word = genoarr[uii];
     if (Word01(geno_word)) {
@@ -491,27 +496,35 @@ HEADER_INLINE double GetAlleleFreq(const double* cur_allele_freqs, uint32_t alle
 // FidIidSidOrIidSid.
 // With a header line, all four {FID present/absent, SID present/absent}
 // combinations are allowed.
+// bugfix (26 Dec 2020): XidRead() now skips the SID column when appropriate,
+// and GetXidColCt() counts it.
 FLAGSET_DEF_START()
   kfXidMode0,
 
-  kfXidModeFlagOneTokenOk = (1 << 0),
+  kfXidModeFlagOneCoreTokenOk = (1 << 0),
   kfXidModeFlagNeverFid = (1 << 1),
   kfXidModeFlagSid = (1 << 2),
 
+  kfXidModeFlagSkipSid = (1 << 3),
+
   kfXidModeFidIid = 0,
-  kfXidModeFidIidOrIid = kfXidModeFlagOneTokenOk,
-  kfXidModeIid = (kfXidModeFlagOneTokenOk | kfXidModeFlagNeverFid),
+  kfXidModeFidIidOrIid = kfXidModeFlagOneCoreTokenOk,
+  kfXidModeIid = (kfXidModeFlagOneCoreTokenOk | kfXidModeFlagNeverFid),
   kfXidModeFidIidSid = kfXidModeFlagSid,
-  kfXidModeIidSid = (kfXidModeFlagNeverFid | kfXidModeFlagSid)
+  kfXidModeIidSid = (kfXidModeFlagNeverFid | kfXidModeFlagSid),
+  kfXidModeCoreMask = kfXidModeFlagSkipSid - 1
 FLAGSET_DEF_END(XidMode);
 
-// Assumes fixed-width.
+// Assumes fixed-width.  Includes skipped SID column if there is one.
 HEADER_INLINE uint32_t GetXidColCt(XidMode xid_mode) {
-  return 2 + (xid_mode == kfXidModeFidIidSid) - (xid_mode == kfXidModeIid);
+  const XidMode xid_mode_core = xid_mode & kfXidModeCoreMask;
+  return 2 + ((xid_mode >> 3) & 1) + (xid_mode_core == kfXidModeFidIidSid) - (xid_mode_core == kfXidModeIid);
 }
 
 // sample_xid_map allocated on bottom, to play well with --indiv-sort
 PglErr SortedXidboxInitAlloc(const uintptr_t* sample_include, const SampleIdInfo* siip, uint32_t sample_ct, uint32_t allow_dups, XidMode xid_mode, uint32_t use_nsort, char** sorted_xidbox_ptr, uint32_t** xid_map_ptr, uintptr_t* max_xid_blen_ptr);
+
+PglErr SortedXidboxInitAllocEnd(const uintptr_t* sample_include, const SampleIdInfo* siip, uint32_t sample_ct, uint32_t allow_dups, XidMode xid_mode, uint32_t use_nsort, char** sorted_xidbox_ptr, uint32_t** xid_map_ptr, uintptr_t* max_xid_blen_ptr);
 
 // returns slen for ID, or 0 on guaranteed mismatch (longer than max_xid_blen)
 // or parse failure (*readpp set to nullptr in latter case).
@@ -525,6 +538,7 @@ uint32_t XidRead(uintptr_t max_xid_blen, uint32_t comma_delim, XidMode xid_mode,
 // of the next token; this is a change from plink 1.9.
 HEADER_INLINE BoolErr SortedXidboxReadFind(const char* __restrict sorted_xidbox, const uint32_t* __restrict xid_map, uintptr_t max_xid_blen, uintptr_t xid_ct, uint32_t comma_delim, XidMode xid_mode, const char** read_pp, uint32_t* sample_uidx_ptr, char* __restrict idbuf) {
   const uint32_t slen_final = XidRead(max_xid_blen, comma_delim, xid_mode, read_pp, idbuf);
+  idbuf[slen_final] = '\0'; // needed for some error messages
   if (!slen_final) {
     return 1;
   }
@@ -549,20 +563,27 @@ FLAGSET_DEF_END(XidHeaderFlags);
 // - May return kPglRetEof, or other TextStream errors.
 // - line_startp can be nullptr.  If it isn't, it's set to the (lstripped)
 //   beginning of the current line.
-// - line_iterp can be nullptr.  If it isn't, it's set to the beginning of the
-//   first unparsed (i.e. not FID/IID/SID) token in the header line, or
-//   line_start if there's no header line.
 // - line_idx must be zero unless initial lines were skipped.
 // - If no header line is present, xid_mode will be set to kfXidModeFidIid if
 //   kfXidHeaderFixedWidth is set, and kfXidModeFidIidOrIid (which tolerates a
 //   mix of single-token and multitoken lines) otherwise.
 // - TSTREAM_FAIL errors are not printed, but other errors are.
-PglErr LoadXidHeader(const char* flag_name, XidHeaderFlags xid_header_flags, uintptr_t* line_idx_ptr, TextStream* txsp, XidMode* xid_mode_ptr, char** line_startp, char** line_iterp);
+PglErr LoadXidHeader(const char* flag_name, XidHeaderFlags xid_header_flags, uintptr_t* line_idx_ptr, TextStream* txsp, XidMode* xid_mode_ptr, char** line_startp);
 
-PglErr OpenAndLoadXidHeader(const char* fname, const char* flag_name, XidHeaderFlags xid_header_flags, uint32_t max_line_blen, TextStream* txsp, XidMode* xid_mode_ptr, uintptr_t* line_idx_ptr, char** line_startp, char** line_iterp);
+PglErr OpenAndLoadXidHeader(const char* fname, const char* flag_name, XidHeaderFlags xid_header_flags, uint32_t max_line_blen, TextStream* txsp, XidMode* xid_mode_ptr, uintptr_t* line_idx_ptr, char** line_startp);
 
 // header line expected to start with FID1, ID1, or IID1
 PglErr LoadXidHeaderPair(const char* flag_name, uint32_t sid_over_fid, uintptr_t* line_idx_ptr, TextStream* txsp, XidMode* xid_mode_ptr, char** line_startp, char** line_iterp);
+
+void InitXidHtable(const SampleIdInfo* siip, uint32_t sample_ct, uint32_t xid_htable_size, uint32_t* xid_htable, char* idbuf);
+
+BoolErr LookupXidHtable(const char* line_start, const SampleIdInfo* siip, const uint32_t* xid_htable, uint32_t xid_htable_size, uint32_t fid_present, uint32_t sid_present, uint32_t* sample_idxp, char* idbuf);
+
+extern const unsigned char g_char_to_sex[256];
+
+HEADER_INLINE uint32_t CharToSex(char cc) {
+  return g_char_to_sex[S_CAST(unsigned char, cc)];
+}
 
 
 // note that this is no longer divisible by 64
@@ -576,7 +597,7 @@ typedef uint16_t ChrIdx;
 // compiler support is available)
 // (not get_htable_fast_size since, an overwhelming majority of the time, we'll
 // have far fewer than 2^16 codes)
-CONSTI32(kChrHtableSize, 130579);
+CONSTI32(kChrHtableSize, 130560);
 
 // (note that n+1, n+2, n+3, and n+4 are reserved for X/Y/XY/MT)
 CONSTI32(kMaxChrTextnum, 95);
@@ -618,10 +639,13 @@ CONSTI32(kChrExcludeWords, 4);
 #endif
 static_assert(kChrExcludeWords * kBitsPerWord >= kMaxChrTextnum + 2 * kChrOffsetCt + 1, "kChrExcludeWords must be updated.");
 
+// AnotherFile is for .pvar merge (chrSets must be consistent across all .pvar
+// files in that case)
 ENUM_U31_DEF_START()
   kChrsetSourceDefault,
   kChrsetSourceCmdline,
-  kChrsetSourceFile
+  kChrsetSourceFile,
+  kChrsetSourceAnotherFile
 ENUM_U31_DEF_END(ChrsetSource);
 
 FLAGSET_DEF_START()
@@ -640,9 +664,11 @@ typedef struct ChrInfoStruct {
 
   uintptr_t* chr_mask;  // which chromosomes aren't known to be absent?
 
-  // This includes chrX.  As of alpha 2, it also includes MT again (like plink
-  // 1.07, and unlike 1.9 and 2.0a1), now that enough dosage functionality is
-  // in place.
+  // This normally includes chrX.  However, library function implementations
+  // cannot assume that: e.g. --glm now temporarily clears the chrX bit when
+  // all samples are female.
+  // As of alpha 2, it also includes MT again (like plink 1.07, and unlike 1.9
+  // and 2.0a1), now that enough dosage functionality is in place.
   uintptr_t* haploid_mask;
 
   // order of chromosomes in input files
@@ -895,6 +921,9 @@ uint32_t CountNonAutosomalVariants(const uintptr_t* variant_include, const ChrIn
 
 void ExcludeNonAutosomalVariants(const ChrInfo* cip, uintptr_t* variant_include);
 
+// If calc_descrip == nullptr, no logging occurs when some variants are
+// removed, and no error occurs if all variants are removed.  (Might decouple
+// these two later.)
 PglErr ConditionalAllocateNonAutosomalVariants(const ChrInfo* cip, const char* calc_descrip, uint32_t raw_variant_ct, const uintptr_t** variant_include_ptr, uint32_t* variant_ct_ptr);
 
 void FillSubsetChrFoVidxStart(const uintptr_t* variant_include, const ChrInfo* cip, uint32_t* subset_chr_fo_vidx_start);
@@ -972,8 +1001,11 @@ typedef struct PhenoColStruct {
   //   [2], etc. point to category names.  These are part of the same
   //   allocation as nonmiss, so no separate free is needed.
   //   Otherwise, this is nullptr.
-  // * When .sample categorical variables are imported, 'P' is added in front
-  //   of the integers.
+  // * When .sample non-V2 categorical variables are imported, 'C' is added in
+  //   front of the integers.
+  // * category_names[1..(n-1)] is guaranteed to be in natural-sorted order.
+  // (MergePsams() has slightly different behavior since its pheno_cols
+  // instance is only used for a one-time internal write.)
   const char** category_names;
 
   uintptr_t* nonmiss;  // bitvector
@@ -1006,6 +1038,8 @@ uint32_t IdentifyRemainingCatsAndMostCommon(const uintptr_t* sample_include, con
 
 uint32_t GetCatSamples(const uintptr_t* sample_include_base, const PhenoCol* cat_pheno_col, uint32_t raw_sample_ctl, uint32_t sample_ct, uint32_t cat_uidx, uintptr_t* cur_cat_samples);
 
+uint32_t RemoveExcludedCats(const uint32_t* data_cat, const uintptr_t* cat_keep_bitarr, uint32_t raw_sample_ct, uint32_t in_sample_ct, uintptr_t* sample_include);
+
 // pheno_names is also allocated on the heap, but it can be handled with a
 // simple free_cond().
 void CleanupPhenoCols(uint32_t pheno_ct, PhenoCol* pheno_cols);
@@ -1034,6 +1068,8 @@ PglErr PgenMtLoadInit(const uintptr_t* variant_include, uint32_t sample_ct, uint
 
 // Returns number of variants in current block.  Increases read_block_idx as
 // necessary (to get to a nonempty block).
+// reterr can be ReadFail but not MalformedInput, since this function just
+// reads the raw bytes, it does not perform any unpacking.
 uint32_t MultireadNonempty(const uintptr_t* variant_include, const ThreadGroup* tgp, uint32_t raw_variant_ct, uint32_t read_block_size, PgenFileInfo* pgfip, uint32_t* read_block_idxp, PglErr* reterrp);
 
 // Assumes mhc != nullptr, and is vector-aligned.
@@ -1096,8 +1132,25 @@ HEADER_INLINE BoolErr StoreStringAndPrecharAtEnd(unsigned char* arena_bottom, co
   return 0;
 }
 
+// Memory layout:
+//   [       strset       ][packed strings]
+//                                         ^
+//                                         |
+//                                   arena_bottom
+// strset pointers do not remain valid after resize.
+
+// returns 1 if resize needed, 2 if OOM
+// uint32_t StrsetAdd(unsigned char* arena_top, const char* src, uint32_t slen, uint32_t strset_table_size, char** strset, uint32_t* str_ctp, unsigned char** arena_bottom_ptr);
+
+// uint32_t StrsetAddEnd(unsigned char* arena_bottom, const char* src, uint32_t slen, uint32_t strset_table_size, char** strset, uint32_t* str_ctp, unsigned char** arena_top_ptr);
+
+BoolErr StrsetAddResize(unsigned char* arena_top, const char* src, uint32_t slen, uint32_t strset_table_size_max, char** strset, uint32_t* strset_table_sizep, uint32_t* str_ctp, unsigned char** arena_bottom_ptr);
+
+BoolErr StrsetAddEndResize(unsigned char* arena_bottom, const char* src, uint32_t slen, uint32_t strset_table_size_max, char*** strsetp, uint32_t* strset_table_sizep, uint32_t* str_ctp, unsigned char** arena_top_ptr);
+
 // These use g_textbuf.
 PglErr WriteSampleIdsOverride(const uintptr_t* sample_include, const SampleIdInfo* siip, const char* outname, uint32_t sample_ct, SampleIdFlags override_flags);
+
 HEADER_INLINE PglErr WriteSampleIds(const uintptr_t* sample_include, const SampleIdInfo* siip, const char* outname, uint32_t sample_ct) {
   return WriteSampleIdsOverride(sample_include, siip, outname, sample_ct, siip->flags);
 }
@@ -1105,7 +1158,26 @@ HEADER_INLINE PglErr WriteSampleIds(const uintptr_t* sample_include, const Sampl
 // read_realpath must be a buffer of size >= kPglFnamesize bytes
 uint32_t RealpathIdentical(const char* outname, const char* read_realpath, char* write_realpath_buf);
 
-char* PrintHaploidNonintDosage(uint32_t rawval, char* start);
+// assumes rawval is in [1, 32767]
+static_assert(kDosageMax == 32768, "PrintHaploidNonintDosage() needs to be updated.");
+HEADER_INLINE char* PrintHaploidNonintDosage(uint32_t rawval, char* start) {
+  // Instead of constant 5-digit precision, we print fewer digits whenever that
+  // doesn't interfere with proper round-tripping.  I.e. we search for the
+  // shortest string in
+  //   ((n - 0.5)/32768, (n + 0.5)/32768).
+  assert(rawval - 1 < 32767);
+  *start++ = '0';
+  return PrintDdosageDecimal(rawval, start);
+}
+
+HEADER_INLINE char* PrintHaploidDosage(uint32_t rawval, char* start) {
+  *start++ = '0' + (rawval / kDosageMax);
+  const uint32_t remainder = rawval % kDosageMax;
+  if (!remainder) {
+    return start;
+  }
+  return PrintDdosageDecimal(remainder, start);
+}
 
 char* PrintMultiallelicHcAsDs(uint32_t hc1, uint32_t hc2, uint32_t allele_ct, char* start);
 
@@ -1145,30 +1217,22 @@ HEADER_INLINE BoolErr CleanupPgr2(const char* file_descrip, PgenReader* pgrp, Pg
   return 0;
 }
 
-HEADER_INLINE void PgenErrPrintNEx(const char* file_descrip, PglErr reterr) {
-  if (reterr == kPglRetReadFail) {
-    logputs("\n");
-    logerrprintfww(kErrprintfFread, file_descrip, rstrerror(errno));
-  } else if (reterr == kPglRetMalformedInput) {
-    logputs("\n");
-    logerrprintfww("Error: Malformed %s.\n", file_descrip);
-  }
-}
+void PgenErrPrintEx(const char* file_descrip, uint32_t prepend_lf, PglErr reterr, uint32_t variant_uidx);
 
 HEADER_INLINE void PgenErrPrintN(PglErr reterr) {
-  PgenErrPrintNEx(".pgen file", reterr);
+  PgenErrPrintEx(".pgen file", 1, reterr, UINT32_MAX);
 }
 
-HEADER_INLINE void PgenErrPrintEx(const char* file_descrip, PglErr reterr) {
-  if (reterr == kPglRetReadFail) {
-    logerrprintfww(kErrprintfFread, file_descrip, rstrerror(errno));
-  } else if (reterr == kPglRetMalformedInput) {
-    logerrprintfww("Error: Malformed %s.\n", file_descrip);
-  }
+HEADER_INLINE void PgenErrPrintNV(PglErr reterr, uint32_t variant_uidx) {
+  PgenErrPrintEx(".pgen file", 1, reterr, variant_uidx);
 }
 
 HEADER_INLINE void PgenErrPrint(PglErr reterr) {
-  PgenErrPrintEx(".pgen file", reterr);
+  PgenErrPrintEx(".pgen file", 0, reterr, UINT32_MAX);
+}
+
+HEADER_INLINE void PgenErrPrintV(PglErr reterr, uint32_t variant_uidx) {
+  PgenErrPrintEx(".pgen file", 0, reterr, variant_uidx);
 }
 
 #ifdef __cplusplus

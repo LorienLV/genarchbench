@@ -1,4 +1,4 @@
-// This file is part of PLINK 2.00, copyright (C) 2005-2020 Shaun Purcell,
+// This file is part of PLINK 2.00, copyright (C) 2005-2022 Shaun Purcell,
 // Christopher Chang.
 //
 // This program is free software: you can redistribute it and/or modify it
@@ -920,25 +920,24 @@ PglErr IndepPairwise(const uintptr_t* variant_include, const ChrInfo* cip, const
     uint32_t* thread_subcontig_start_tvidx;
     uint32_t* thread_last_tvidx;
     uint32_t* thread_last_uidx;
-    if (unlikely(
-            bigstack_alloc_w(NypCtToWordCt(raw_sample_ct), &tmp_genovec) ||
-            bigstack_calloc_u32(calc_thread_ct, &ctx.tvidx_end) ||
-            bigstack_calloc_u32(calc_thread_ct, &thread_last_subcontig) ||
-            bigstack_calloc_u32(calc_thread_ct, &thread_subcontig_start_tvidx) ||
-            bigstack_calloc_u32(calc_thread_ct, &thread_last_tvidx) ||
-            bigstack_calloc_u32(calc_thread_ct, &thread_last_uidx) ||
-            bigstack_alloc_wp(calc_thread_ct, &ctx.genobufs) ||
-            bigstack_alloc_wp(calc_thread_ct, &ctx.occupied_window_slots) ||
-            bigstack_alloc_wp(calc_thread_ct, &ctx.cur_window_removed) ||
-            bigstack_alloc_dp(calc_thread_ct, &ctx.cur_maj_freqs) ||
-            bigstack_alloc_wp(calc_thread_ct, &ctx.removed_variants_write) ||
-            BIGSTACK_ALLOC_X(VariantAggs*, calc_thread_ct, &ctx.vaggs) ||
-            BIGSTACK_ALLOC_X(VariantAggs*, calc_thread_ct, &ctx.nonmale_vaggs) ||
-            bigstack_alloc_u32p(calc_thread_ct, &ctx.winpos_to_slot_idx) ||
-            bigstack_alloc_u32p(calc_thread_ct, &ctx.tvidxs) ||
-            bigstack_alloc_u32p(calc_thread_ct, &ctx.first_unchecked_tvidx) ||
-            bigstack_alloc_wp(calc_thread_ct, &(ctx.raw_tgenovecs[0])) ||
-            bigstack_alloc_wp(calc_thread_ct, &(ctx.raw_tgenovecs[1])))) {
+    if (unlikely(bigstack_alloc_w(NypCtToWordCt(raw_sample_ct), &tmp_genovec) ||
+                 bigstack_calloc_u32(calc_thread_ct, &ctx.tvidx_end) ||
+                 bigstack_calloc_u32(calc_thread_ct, &thread_last_subcontig) ||
+                 bigstack_calloc_u32(calc_thread_ct, &thread_subcontig_start_tvidx) ||
+                 bigstack_calloc_u32(calc_thread_ct, &thread_last_tvidx) ||
+                 bigstack_calloc_u32(calc_thread_ct, &thread_last_uidx) ||
+                 bigstack_alloc_wp(calc_thread_ct, &ctx.genobufs) ||
+                 bigstack_alloc_wp(calc_thread_ct, &ctx.occupied_window_slots) ||
+                 bigstack_alloc_wp(calc_thread_ct, &ctx.cur_window_removed) ||
+                 bigstack_alloc_dp(calc_thread_ct, &ctx.cur_maj_freqs) ||
+                 bigstack_alloc_wp(calc_thread_ct, &ctx.removed_variants_write) ||
+                 BIGSTACK_ALLOC_X(VariantAggs*, calc_thread_ct, &ctx.vaggs) ||
+                 BIGSTACK_ALLOC_X(VariantAggs*, calc_thread_ct, &ctx.nonmale_vaggs) ||
+                 bigstack_alloc_u32p(calc_thread_ct, &ctx.winpos_to_slot_idx) ||
+                 bigstack_alloc_u32p(calc_thread_ct, &ctx.tvidxs) ||
+                 bigstack_alloc_u32p(calc_thread_ct, &ctx.first_unchecked_tvidx) ||
+                 bigstack_alloc_wp(calc_thread_ct, &(ctx.raw_tgenovecs[0])) ||
+                 bigstack_alloc_wp(calc_thread_ct, &(ctx.raw_tgenovecs[1])))) {
       goto IndepPairwise_ret_NOMEM;
     }
     for (uint32_t subcontig_idx = 0; subcontig_idx != subcontig_ct; ++subcontig_idx) {
@@ -1133,7 +1132,8 @@ PglErr IndepPairwise(const uintptr_t* variant_include, const ChrInfo* cip, const
               }
             }
             if (unlikely(reterr)) {
-              goto IndepPairwise_ret_PGR_FAIL;
+              PgenErrPrintNV(reterr, variant_uidx);
+              goto IndepPairwise_ret_1;
             }
           }
           thread_last_tvidx[cur_thread_idx] = tvidx_end;
@@ -1181,9 +1181,6 @@ PglErr IndepPairwise(const uintptr_t* variant_include, const ChrInfo* cip, const
   IndepPairwise_ret_NOMEM:
     reterr = kPglRetNomem;
     break;
-  IndepPairwise_ret_PGR_FAIL:
-    PgenErrPrintN(reterr);
-    break;
   IndepPairwise_ret_THREAD_CREATE_FAIL:
     reterr = kPglRetThreadCreateFail;
     break;
@@ -1191,6 +1188,7 @@ PglErr IndepPairwise(const uintptr_t* variant_include, const ChrInfo* cip, const
     reterr = kPglRetNotYetSupported;
     break;
   }
+ IndepPairwise_ret_1:
   CleanupThreads(&tg);
   // caller will free memory
   return reterr;
@@ -1658,12 +1656,11 @@ PglErr LdPrune(const uintptr_t* orig_variant_include, const ChrInfo* cip, const 
     uintptr_t* founder_male_collapsed;
     uintptr_t* removed_variants_collapsed;
     uint32_t* subcontig_thread_assignments;
-    if (unlikely(
-            bigstack_alloc_u32(raw_sample_ctl, &founder_info_cumulative_popcounts) ||
-            bigstack_alloc_w(founder_ctl, &founder_nonmale_collapsed) ||
-            bigstack_alloc_w(founder_ctl, &founder_male_collapsed) ||
-            bigstack_calloc_w(variant_ctl, &removed_variants_collapsed) ||
-            bigstack_alloc_u32(subcontig_ct, &subcontig_thread_assignments))) {
+    if (unlikely(bigstack_alloc_u32(raw_sample_ctl, &founder_info_cumulative_popcounts) ||
+                 bigstack_alloc_w(founder_ctl, &founder_nonmale_collapsed) ||
+                 bigstack_alloc_w(founder_ctl, &founder_male_collapsed) ||
+                 bigstack_calloc_w(variant_ctl, &removed_variants_collapsed) ||
+                 bigstack_alloc_u32(subcontig_ct, &subcontig_thread_assignments))) {
       goto LdPrune_ret_NOMEM;
     }
     FillCumulativePopcounts(founder_info, raw_sample_ctl, founder_info_cumulative_popcounts);
@@ -2159,11 +2156,11 @@ static_assert(sizeof(Dosage) == 2, "plink2_ld dosage-handling routines must be u
 void FillDosageUhet(const Dosage* dosage_vec, uint32_t dosagev_ct, Dosage* dosage_uhet) {
   const __m256i* dosage_vvec_iter = R_CAST(const __m256i*, dosage_vec);
 #    if defined(__APPLE__) && ((!defined(__cplusplus)) || (__cplusplus < 201103L))
-  const __m256i all_n32768 = {0x8000800080008000LLU, 0x8000800080008000LLU, 0x8000800080008000LLU, 0x8000800080008000LLU};
-  const __m256i all_n16384 = {0xc000c000c000c000LLU, 0xc000c000c000c000LLU, 0xc000c000c000c000LLU, 0xc000c000c000c000LLU};
+  const __m256i all_n32768 = _mm256_set1_epi16(0x8000);
+  const __m256i all_n16384 = _mm256_set1_epi16(0xc000);
 #    else
-  const __m256i all_n32768 = {-0x7fff7fff7fff8000LL, -0x7fff7fff7fff8000LL, -0x7fff7fff7fff8000LL, -0x7fff7fff7fff8000LL};
-  const __m256i all_n16384 = {-0x3fff3fff3fff4000LL, -0x3fff3fff3fff4000LL, -0x3fff3fff3fff4000LL, -0x3fff3fff3fff4000LL};
+  const __m256i all_n32768 = _mm256_set1_epi64x(-0x7fff7fff7fff8000LL);
+  const __m256i all_n16384 = _mm256_set1_epi64x(-0x3fff3fff3fff4000LL);
 #    endif
   const __m256i all0 = _mm256_setzero_si256();
   const __m256i all1 = _mm256_cmpeq_epi16(all0, all0);
@@ -2197,7 +2194,7 @@ void FillDosageUhet(const Dosage* dosage_vec, uint32_t dosagev_ct, Dosage* dosag
 uint64_t DenseDosageSum(const Dosage* dosage_vec, uint32_t vec_ct) {
   // end of dosage_vec assumed to be missing-padded (0-padded also ok)
   const __m256i* dosage_vvec_iter = R_CAST(const __m256i*, dosage_vec);
-  const __m256i m16 = {kMask0000FFFF, kMask0000FFFF, kMask0000FFFF, kMask0000FFFF};
+  const __m256i m16 = _mm256_set1_epi64x(kMask0000FFFF);
   const __m256i all1 = _mm256_cmpeq_epi16(m16, m16);
   uint64_t sum = 0;
   for (uint32_t vecs_left = vec_ct; ; ) {
@@ -2233,7 +2230,7 @@ uint64_t DenseDosageSumSubset(const Dosage* dosage_vec, const Dosage* dosage_mas
   // end of dosage_vec assumed to be missing-padded (0-padded also ok)
   const __m256i* dosage_vvec_iter = R_CAST(const __m256i*, dosage_vec);
   const __m256i* dosage_mask_vvec_iter = R_CAST(const __m256i*, dosage_mask_vec);
-  const __m256i m16 = {kMask0000FFFF, kMask0000FFFF, kMask0000FFFF, kMask0000FFFF};
+  const __m256i m16 = _mm256_set1_epi64x(kMask0000FFFF);
   const __m256i all1 = _mm256_cmpeq_epi16(m16, m16);
   uint64_t sum = 0;
   for (uint32_t vecs_left = vec_ct; ; ) {
@@ -2269,7 +2266,7 @@ uint64_t DenseDosageSumSubset(const Dosage* dosage_vec, const Dosage* dosage_mas
 uint64_t DosageUnsignedDotprod(const Dosage* dosage_vec0, const Dosage* dosage_vec1, uint32_t vec_ct) {
   const __m256i* dosage_vvec0_iter = R_CAST(const __m256i*, dosage_vec0);
   const __m256i* dosage_vvec1_iter = R_CAST(const __m256i*, dosage_vec1);
-  const __m256i m16 = {kMask0000FFFF, kMask0000FFFF, kMask0000FFFF, kMask0000FFFF};
+  const __m256i m16 = _mm256_set1_epi64x(kMask0000FFFF);
   const __m256i all1 = _mm256_cmpeq_epi16(m16, m16);
   uint64_t dotprod = 0;
   for (uint32_t vecs_left = vec_ct; ; ) {
@@ -2314,7 +2311,7 @@ uint64_t DosageUnsignedDotprod(const Dosage* dosage_vec0, const Dosage* dosage_v
 uint64_t DosageUnsignedNomissDotprod(const Dosage* dosage_vec0, const Dosage* dosage_vec1, uint32_t vec_ct) {
   const __m256i* dosage_vvec0_iter = R_CAST(const __m256i*, dosage_vec0);
   const __m256i* dosage_vvec1_iter = R_CAST(const __m256i*, dosage_vec1);
-  const __m256i m16 = {kMask0000FFFF, kMask0000FFFF, kMask0000FFFF, kMask0000FFFF};
+  const __m256i m16 = _mm256_set1_epi64x(kMask0000FFFF);
   uint64_t dotprod = 0;
   for (uint32_t vecs_left = vec_ct; ; ) {
     __m256i dotprod_lo = _mm256_setzero_si256();
@@ -2352,8 +2349,8 @@ uint64_t DosageUnsignedNomissDotprod(const Dosage* dosage_vec0, const Dosage* do
 int64_t DosageSignedDotprod(const SDosage* dphase_delta0, const SDosage* dphase_delta1, uint32_t vec_ct) {
   const __m256i* dphase_delta0_iter = R_CAST(const __m256i*, dphase_delta0);
   const __m256i* dphase_delta1_iter = R_CAST(const __m256i*, dphase_delta1);
-  const __m256i m16 = {kMask0000FFFF, kMask0000FFFF, kMask0000FFFF, kMask0000FFFF};
-  const __m256i all_4096 = {0x1000100010001000LLU, 0x1000100010001000LLU, 0x1000100010001000LLU, 0x1000100010001000LLU};
+  const __m256i m16 = _mm256_set1_epi64x(kMask0000FFFF);
+  const __m256i all_4096 = _mm256_set1_epi16(0x1000);
   uint64_t dotprod = 0;
   for (uint32_t vecs_left = vec_ct; ; ) {
     __m256i dotprod_lo = _mm256_setzero_si256();
@@ -2402,11 +2399,11 @@ int64_t DosageSignedDotprod(const SDosage* dphase_delta0, const SDosage* dphase_
 void FillDosageUhet(const Dosage* dosage_vec, uint32_t dosagev_ct, Dosage* dosage_uhet) {
   const __m128i* dosage_vvec_iter = R_CAST(const __m128i*, dosage_vec);
 #    if defined(__APPLE__) && ((!defined(__cplusplus)) || (__cplusplus < 201103L))
-  const __m128i all_n32768 = {0x8000800080008000LLU, 0x8000800080008000LLU};
-  const __m128i all_n16384 = {0xc000c000c000c000LLU, 0xc000c000c000c000LLU};
+  const __m128i all_n32768 = _mm_set1_epi16(0x8000);
+  const __m128i all_n16384 = _mm_set1_epi16(0xc000);
 #    else
-  const __m128i all_n32768 = {-0x7fff7fff7fff8000LL, -0x7fff7fff7fff8000LL};
-  const __m128i all_n16384 = {-0x3fff3fff3fff4000LL, -0x3fff3fff3fff4000LL};
+  const __m128i all_n32768 = _mm_set1_epi64x(-0x7fff7fff7fff8000LL);
+  const __m128i all_n16384 = _mm_set1_epi64x(-0x3fff3fff3fff4000LL);
 #    endif
   const __m128i all0 = _mm_setzero_si128();
   const __m128i all1 = _mm_cmpeq_epi16(all0, all0);
@@ -2437,7 +2434,7 @@ void FillDosageUhet(const Dosage* dosage_vec, uint32_t dosagev_ct, Dosage* dosag
 uint64_t DenseDosageSum(const Dosage* dosage_vec, uint32_t vec_ct) {
   // end of dosage_vec assumed to be missing-padded (0-padded also ok)
   const __m128i* dosage_vvec_iter = R_CAST(const __m128i*, dosage_vec);
-  const __m128i m16 = {kMask0000FFFF, kMask0000FFFF};
+  const __m128i m16 = _mm_set1_epi64x(kMask0000FFFF);
   const __m128i all1 = _mm_cmpeq_epi16(m16, m16);
   uint64_t sum = 0;
   for (uint32_t vecs_left = vec_ct; ; ) {
@@ -2473,7 +2470,7 @@ uint64_t DenseDosageSumSubset(const Dosage* dosage_vec, const Dosage* dosage_mas
   // end of dosage_vec assumed to be missing-padded (0-padded also ok)
   const __m128i* dosage_vvec_iter = R_CAST(const __m128i*, dosage_vec);
   const __m128i* dosage_mask_vvec_iter = R_CAST(const __m128i*, dosage_mask_vec);
-  const __m128i m16 = {kMask0000FFFF, kMask0000FFFF};
+  const __m128i m16 = _mm_set1_epi64x(kMask0000FFFF);
   const __m128i all1 = _mm_cmpeq_epi16(m16, m16);
   uint64_t sum = 0;
   for (uint32_t vecs_left = vec_ct; ; ) {
@@ -2509,7 +2506,7 @@ uint64_t DenseDosageSumSubset(const Dosage* dosage_vec, const Dosage* dosage_mas
 uint64_t DosageUnsignedDotprod(const Dosage* dosage_vec0, const Dosage* dosage_vec1, uint32_t vec_ct) {
   const __m128i* dosage_vvec0_iter = R_CAST(const __m128i*, dosage_vec0);
   const __m128i* dosage_vvec1_iter = R_CAST(const __m128i*, dosage_vec1);
-  const __m128i m16 = {kMask0000FFFF, kMask0000FFFF};
+  const __m128i m16 = _mm_set1_epi64x(kMask0000FFFF);
   const __m128i all1 = _mm_cmpeq_epi16(m16, m16);
   uint64_t dotprod = 0;
   for (uint32_t vecs_left = vec_ct; ; ) {
@@ -2552,7 +2549,7 @@ uint64_t DosageUnsignedDotprod(const Dosage* dosage_vec0, const Dosage* dosage_v
 uint64_t DosageUnsignedNomissDotprod(const Dosage* dosage_vec0, const Dosage* dosage_vec1, uint32_t vec_ct) {
   const __m128i* dosage_vvec0_iter = R_CAST(const __m128i*, dosage_vec0);
   const __m128i* dosage_vvec1_iter = R_CAST(const __m128i*, dosage_vec1);
-  const __m128i m16 = {kMask0000FFFF, kMask0000FFFF};
+  const __m128i m16 = _mm_set1_epi64x(kMask0000FFFF);
   uint64_t dotprod = 0;
   for (uint32_t vecs_left = vec_ct; ; ) {
     __m128i dotprod_lo = _mm_setzero_si128();
@@ -2590,8 +2587,8 @@ uint64_t DosageUnsignedNomissDotprod(const Dosage* dosage_vec0, const Dosage* do
 int64_t DosageSignedDotprod(const SDosage* dphase_delta0, const SDosage* dphase_delta1, uint32_t vec_ct) {
   const __m128i* dphase_delta0_iter = R_CAST(const __m128i*, dphase_delta0);
   const __m128i* dphase_delta1_iter = R_CAST(const __m128i*, dphase_delta1);
-  const __m128i m16 = {kMask0000FFFF, kMask0000FFFF};
-  const __m128i all_4096 = {0x1000100010001000LLU, 0x1000100010001000LLU};
+  const __m128i m16 = _mm_set1_epi64x(kMask0000FFFF);
+  const __m128i all_4096 = _mm_set1_epi16(0x1000);
   uint64_t dotprod = 0;
   for (uint32_t vecs_left = vec_ct; ; ) {
     __m128i dotprod_lo = _mm_setzero_si128();
@@ -2865,10 +2862,9 @@ PglErr LdConsole(const uintptr_t* variant_include, const ChrInfo* cip, const cha
     PgenVariant pgvs[2];
     PreinitPgv(&(pgvs[0]));
     PreinitPgv(&(pgvs[1]));
-    if (unlikely(
-            bigstack_alloc_u32(founder_ctl, &founder_info_cumulative_popcounts) ||
-            BigstackAllocPgv(founder_ct, 0, kfPgenGlobalHardcallPhasePresent | kfPgenGlobalDosagePresent | kfPgenGlobalDosagePhasePresent, &(pgvs[0])) ||
-            BigstackAllocPgv(founder_ct, 0, kfPgenGlobalHardcallPhasePresent | kfPgenGlobalDosagePresent | kfPgenGlobalDosagePhasePresent, &(pgvs[1])))) {
+    if (unlikely(bigstack_alloc_u32(founder_ctl, &founder_info_cumulative_popcounts) ||
+                 BigstackAllocPgv(founder_ct, 0, kfPgenGlobalHardcallPhasePresent | kfPgenGlobalDosagePresent | kfPgenGlobalDosagePhasePresent, &(pgvs[0])) ||
+                 BigstackAllocPgv(founder_ct, 0, kfPgenGlobalHardcallPhasePresent | kfPgenGlobalDosagePresent | kfPgenGlobalDosagePhasePresent, &(pgvs[1])))) {
       goto LdConsole_ret_NOMEM;
     }
 
@@ -2879,9 +2875,8 @@ PglErr LdConsole(const uintptr_t* variant_include, const ChrInfo* cip, const cha
     uintptr_t* sex_male_collapsed_interleaved = nullptr;
     uint32_t x_male_ct = 0;
     if (x_present) {
-      if (unlikely(
-              bigstack_alloc_w(founder_ctaw, &sex_male_collapsed) ||
-              bigstack_alloc_w(founder_ctaw, &sex_male_collapsed_interleaved))) {
+      if (unlikely(bigstack_alloc_w(founder_ctaw, &sex_male_collapsed) ||
+                   bigstack_alloc_w(founder_ctaw, &sex_male_collapsed_interleaved))) {
         goto LdConsole_ret_NOMEM;
       }
       CopyBitarrSubset(sex_male, founder_info, founder_ct, sex_male_collapsed);
@@ -2904,7 +2899,8 @@ PglErr LdConsole(const uintptr_t* variant_include, const ChrInfo* cip, const cha
       PgenVariant* pgvp = &(pgvs[var_idx]);
       reterr = PgrGetInv1Dp(founder_info, pssi, founder_ct, variant_uidx, maj_alleles[variant_uidx], simple_pgrp, pgvp);
       if (unlikely(reterr)) {
-        goto LdConsole_ret_PGR_FAIL;
+        PgenErrPrintNV(reterr, variant_uidx);
+        goto LdConsole_ret_1;
       }
       ZeroTrailingNyps(founder_ct, pgvp->genovec);
       if (is_nonx_haploids[var_idx]) {
@@ -2957,13 +2953,12 @@ PglErr LdConsole(const uintptr_t* variant_include, const ChrInfo* cip, const cha
       uintptr_t* one_bitvecs[2];
       uintptr_t* two_bitvecs[2];
       uintptr_t* nm_bitvecs[2];
-      if (unlikely(
-              bigstack_alloc_w(founder_ctaw, &one_bitvecs[0]) ||
-              bigstack_alloc_w(founder_ctaw, &two_bitvecs[0]) ||
-              bigstack_alloc_w(founder_ctaw, &nm_bitvecs[0]) ||
-              bigstack_alloc_w(founder_ctaw, &one_bitvecs[1]) ||
-              bigstack_alloc_w(founder_ctaw, &two_bitvecs[1]) ||
-              bigstack_alloc_w(founder_ctaw, &nm_bitvecs[1]))) {
+      if (unlikely(bigstack_alloc_w(founder_ctaw, &one_bitvecs[0]) ||
+                   bigstack_alloc_w(founder_ctaw, &two_bitvecs[0]) ||
+                   bigstack_alloc_w(founder_ctaw, &nm_bitvecs[0]) ||
+                   bigstack_alloc_w(founder_ctaw, &one_bitvecs[1]) ||
+                   bigstack_alloc_w(founder_ctaw, &two_bitvecs[1]) ||
+                   bigstack_alloc_w(founder_ctaw, &nm_bitvecs[1]))) {
         goto LdConsole_ret_NOMEM;
       }
       uint32_t nmaj_cts[2];
@@ -3029,13 +3024,12 @@ PglErr LdConsole(const uintptr_t* variant_include, const ChrInfo* cip, const cha
       Dosage* dosage_uhets[2];
       uintptr_t* nm_bitvecs[2];
       // founder_ct automatically rounded up as necessary
-      if (unlikely(
-              bigstack_alloc_dosage(founder_ct, &dosage_vecs[0]) ||
-              bigstack_alloc_dosage(founder_ct, &dosage_vecs[1]) ||
-              bigstack_alloc_dosage(founder_ct, &dosage_uhets[0]) ||
-              bigstack_alloc_dosage(founder_ct, &dosage_uhets[1]) ||
-              bigstack_alloc_w(founder_ctl, &nm_bitvecs[0]) ||
-              bigstack_alloc_w(founder_ctl, &nm_bitvecs[1]))) {
+      if (unlikely(bigstack_alloc_dosage(founder_ct, &dosage_vecs[0]) ||
+                   bigstack_alloc_dosage(founder_ct, &dosage_vecs[1]) ||
+                   bigstack_alloc_dosage(founder_ct, &dosage_uhets[0]) ||
+                   bigstack_alloc_dosage(founder_ct, &dosage_uhets[1]) ||
+                   bigstack_alloc_w(founder_ctl, &nm_bitvecs[0]) ||
+                   bigstack_alloc_w(founder_ctl, &nm_bitvecs[1]))) {
         goto LdConsole_ret_NOMEM;
       }
       uint64_t nmaj_dosages[2];
@@ -3053,9 +3047,8 @@ PglErr LdConsole(const uintptr_t* variant_include, const ChrInfo* cip, const cha
       main_dphase_deltas[0] = nullptr;
       main_dphase_deltas[1] = nullptr;
       if (use_phase) {
-        if (unlikely(
-                bigstack_alloc_dphase(founder_ct, &main_dphase_deltas[0]) ||
-                bigstack_alloc_dphase(founder_ct, &main_dphase_deltas[1]))) {
+        if (unlikely(bigstack_alloc_dphase(founder_ct, &main_dphase_deltas[0]) ||
+                     bigstack_alloc_dphase(founder_ct, &main_dphase_deltas[1]))) {
           goto LdConsole_ret_NOMEM;
         }
         for (uint32_t var_idx = 0; var_idx != 2; ++var_idx) {
@@ -3553,9 +3546,6 @@ PglErr LdConsole(const uintptr_t* variant_include, const ChrInfo* cip, const cha
   while (0) {
   LdConsole_ret_NOMEM:
     reterr = kPglRetNomem;
-    break;
-  LdConsole_ret_PGR_FAIL:
-    PgenErrPrintN(reterr);
     break;
   LdConsole_ret_INCONSISTENT_INPUT_WW:
     WordWrapB(0);

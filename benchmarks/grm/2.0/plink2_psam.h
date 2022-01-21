@@ -1,7 +1,7 @@
 #ifndef __PLINK2_PSAM_H__
 #define __PLINK2_PSAM_H__
 
-// This library is part of PLINK 2.00, copyright (C) 2005-2020 Shaun Purcell,
+// This library is part of PLINK 2.00, copyright (C) 2005-2022 Shaun Purcell,
 // Christopher Chang.
 //
 // This library is free software: you can redistribute it and/or modify it
@@ -35,8 +35,8 @@ namespace plink2 {
 // by a leading '#'.  All lines which don't start with '#FID' or '#IID' are
 // currently ignored.  The #FID/IID line specifies the columns in the .psam
 // file; the following column headers are recognized:
-//   IID (required)
-//   SID
+//   IID (required, must be first or second)
+//   SID (must immediately follow IID if present)
 //   PAT
 //   MAT
 //   SEX
@@ -78,7 +78,7 @@ HEADER_INLINE BoolErr IsReservedPhenoName(const char* pheno_name, uint32_t pheno
 }
 
 // also for loading covariates.  set affection_01 to 2 to prohibit case/control
-PglErr LoadPhenos(const char* pheno_fname, const RangeList* pheno_range_list_ptr, const uintptr_t* sample_include, const char* sample_ids, uint32_t raw_sample_ct, uint32_t sample_ct, uintptr_t max_sample_id_blen, int32_t missing_pheno, uint32_t affection_01, uint32_t iid_only, uint32_t numeric_ranges, uint32_t max_thread_ct, PhenoCol** pheno_cols_ptr, char** pheno_names_ptr, uint32_t* pheno_ct_ptr, uintptr_t* max_pheno_name_blen_ptr);
+PglErr LoadPhenos(const char* pheno_fname, const RangeList* pheno_range_list_ptr, const uintptr_t* sample_include, const SampleIdInfo* siip, uint32_t raw_sample_ct, uint32_t sample_ct, int32_t missing_pheno, uint32_t affection_01, uint32_t iid_only, uint32_t numeric_ranges, uint32_t max_thread_ct, PhenoCol** pheno_cols_ptr, char** pheno_names_ptr, uint32_t* pheno_ct_ptr, uintptr_t* max_pheno_name_blen_ptr);
 
 #ifdef __cplusplus
 }  // namespace plink2

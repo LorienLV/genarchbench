@@ -1,7 +1,7 @@
 #ifndef __PLINK2_CMDLINE_H__
 #define __PLINK2_CMDLINE_H__
 
-// This library is part of PLINK 2.00, copyright (C) 2005-2020 Shaun Purcell,
+// This library is part of PLINK 2.00, copyright (C) 2005-2022 Shaun Purcell,
 // Christopher Chang.
 //
 // This program is free software: you can redistribute it and/or modify it
@@ -241,11 +241,6 @@ PglErr ForceNonFifo(const char* fname);
 
 BoolErr fopen_checked(const char* fname, const char* mode, FILE** target_ptr);
 
-HEADER_INLINE IntErr putc_checked(int32_t ii, FILE* outfile) {
-  putc_unlocked(ii, outfile);
-  return ferror_unlocked(outfile);
-}
-
 HEADER_INLINE IntErr fputs_checked(const char* str, FILE* outfile) {
   fputs(str, outfile);
   return ferror_unlocked(outfile);
@@ -359,11 +354,11 @@ double DestructiveMedianD(uintptr_t len, double* unsorted_arr);
 // Results may technically vary between runs when duplicate elements are
 // present; it's assumed that this doesn't matter because all duplicates will
 // be handled in the same manner.
+// id_map is new_to_old_idx.
 BoolErr SortStrboxIndexed(uintptr_t str_ct, uintptr_t max_str_blen, uint32_t use_nsort, char* strbox, uint32_t* id_map);
 
-
 // This makes a temporary g_bigstack allocation.
-// BoolErr strptr_arr_indexed_sort(const char* const* unsorted_strptrs, uint32_t str_ct, uint32_t use_nsort, uint32_t* id_map);
+BoolErr SortStrptrArrIndexed(uint32_t str_ct, uint32_t leave_first_alone, uint32_t overread_ok, uint32_t use_nsort, const char** strptrs, uint32_t* new_to_old_idx, uint32_t* old_to_new_idx);
 
 // Offset of std::lower_bound.
 // Requires 0 < arr_length < 2^31.
@@ -604,6 +599,11 @@ HEADER_INLINE BoolErr bigstack_alloc_wpp(uintptr_t ct, uintptr_t**** wpp_arr_ptr
   return !(*wpp_arr_ptr);
 }
 
+HEADER_INLINE BoolErr bigstack_alloc_cpp(uintptr_t ct, char**** cpp_arr_ptr) {
+  *cpp_arr_ptr = S_CAST(char***, bigstack_alloc(ct * sizeof(intptr_t)));
+  return !(*cpp_arr_ptr);
+}
+
 HEADER_INLINE BoolErr bigstack_alloc_u32pp(uintptr_t ct, uint32_t**** u32pp_arr_ptr) {
   *u32pp_arr_ptr = S_CAST(uint32_t***, bigstack_alloc(ct * sizeof(intptr_t)));
   return !(*u32pp_arr_ptr);
@@ -628,9 +628,15 @@ BoolErr bigstack_calloc_w(uintptr_t ct, uintptr_t** w_arr_ptr);
 
 BoolErr bigstack_calloc_u64(uintptr_t ct, uint64_t** u64_arr_ptr);
 
+BoolErr bigstack_calloc_v(uintptr_t ct, VecW** v_arr_ptr);
+
+BoolErr bigstack_calloc_wp(uintptr_t ct, uintptr_t*** wp_arr_ptr);
+
 BoolErr bigstack_calloc_cp(uintptr_t ct, char*** cp_arr_ptr);
 
 BoolErr bigstack_calloc_kcp(uintptr_t ct, const char*** kcp_arr_ptr);
+
+BoolErr bigstack_calloc_cpp(uintptr_t ct, char**** cpp_arr_ptr);
 
 HEADER_INLINE BoolErr bigstack_calloc_c(uintptr_t ct, char** c_arr_ptr) {
   return bigstack_calloc_uc(ct, R_CAST(unsigned char**, c_arr_ptr));
@@ -646,6 +652,10 @@ HEADER_INLINE BoolErr bigstack_calloc_i32(uintptr_t ct, int32_t** i32_arr_ptr) {
 
 HEADER_INLINE BoolErr bigstack_calloc_i64(uintptr_t ct, int64_t** i64_arr_ptr) {
   return bigstack_calloc_u64(ct, R_CAST(uint64_t**, i64_arr_ptr));
+}
+
+HEADER_INLINE BoolErr bigstack_calloc_u32p(uintptr_t ct, uint32_t*** u32p_arr_ptr) {
+  return bigstack_calloc_w(ct, R_CAST(uintptr_t**, u32p_arr_ptr));
 }
 
 #if __cplusplus >= 201103L
@@ -718,6 +728,19 @@ HEADER_INLINE void BigstackFinalizeCp(__maybe_unused const char* const* cpptr, u
 
 HEADER_INLINE void BigstackBaseSet(const void* unaligned_base) {
   g_bigstack_base = R_CAST(unsigned char*, RoundUpPow2(R_CAST(uintptr_t, unaligned_base), kCacheline));
+}
+
+// When using BigstackBaseSet() after a loop where tmp_alloc_end is fixed, the
+// latter should be initialized with BigstackEndRoundedDown().
+// If tmp_alloc_end is not fixed, BigstackBaseSetChecked() should be called
+// instead.
+HEADER_INLINE BoolErr BigstackBaseSetChecked(const void* unaligned_base) {
+  g_bigstack_base = R_CAST(unsigned char*, RoundUpPow2(R_CAST(uintptr_t, unaligned_base), kCacheline));
+  return (g_bigstack_base > g_bigstack_end);
+}
+
+HEADER_INLINE unsigned char* BigstackEndRoundedDown() {
+  return R_CAST(unsigned char*, RoundDownPow2(R_CAST(uintptr_t, g_bigstack_end), kCacheline));
 }
 
 HEADER_INLINE void BigstackShrinkTop(const void* rebase, uintptr_t new_size) {
@@ -846,6 +869,8 @@ BoolErr bigstack_end_calloc_w(uintptr_t ct, uintptr_t** w_arr_ptr);
 
 BoolErr bigstack_end_calloc_u64(uintptr_t ct, uint64_t** u64_arr_ptr);
 
+BoolErr bigstack_end_calloc_wp(uintptr_t ct, uintptr_t*** wp_arr_ptr);
+
 BoolErr bigstack_end_calloc_cp(uintptr_t ct, char*** cp_arr_ptr);
 
 HEADER_INLINE BoolErr bigstack_end_calloc_c(uintptr_t ct, char** c_arr_ptr) {
@@ -866,19 +891,7 @@ HEADER_INLINE BoolErr bigstack_end_calloc_kcp(uintptr_t ct, const char*** kcp_ar
 
 // and here's the interface for a non-global arena (necessary for some
 // multithreaded code).
-HEADER_INLINE void* arena_alloc_raw(uintptr_t size, unsigned char** arena_bottom_ptr) {
-  assert(!(size % kCacheline));
-  unsigned char* alloc_ptr = *arena_bottom_ptr;
-  *arena_bottom_ptr = &(alloc_ptr[size]);
-  return alloc_ptr;
-}
-
-HEADER_INLINE void* arena_alloc_raw_rd(uintptr_t size, unsigned char** arena_bottom_ptr) {
-  unsigned char* alloc_ptr = *arena_bottom_ptr;
-  *arena_bottom_ptr = &(alloc_ptr[RoundUpPow2(size, kCacheline)]);
-  return alloc_ptr;
-}
-
+// arena_alloc_raw and arena_alloc_raw_rd are now in plink2_base
 HEADER_INLINE void* arena_alloc(unsigned char* arena_top, uintptr_t size, unsigned char** arena_bottom_ptr) {
   size = RoundUpPow2(size, kCacheline);
   if (S_CAST(uintptr_t, arena_top - (*arena_bottom_ptr)) < size) {
@@ -938,8 +951,17 @@ HEADER_INLINE BoolErr arena_alloc_cp(unsigned char* arena_top, uintptr_t ct, uns
   return !(*cp_arr_ptr);
 }
 
+HEADER_INLINE BoolErr arena_alloc_kcp(unsigned char* arena_top, uintptr_t ct, unsigned char** arena_bottom_ptr, const char*** kcp_arr_ptr) {
+  *kcp_arr_ptr = S_CAST(const char**, arena_alloc(arena_top, ct * sizeof(intptr_t), arena_bottom_ptr));
+  return !(*kcp_arr_ptr);
+}
+
 HEADER_INLINE void ArenaBaseSet(const void* unaligned_base, unsigned char** arena_bottom_ptr) {
   *arena_bottom_ptr = R_CAST(unsigned char*, RoundUpPow2(R_CAST(uintptr_t, unaligned_base), kCacheline));
+}
+
+HEADER_INLINE void ArenaEndSet(const void* unaligned_end, unsigned char** arena_top_ptr) {
+  *arena_top_ptr = R_CAST(unsigned char*, RoundDownPow2(R_CAST(uintptr_t, unaligned_end), kEndAllocAlign));
 }
 
 HEADER_INLINE void* arena_end_alloc_raw(uintptr_t size, unsigned char** arena_top_ptr) {
@@ -1007,6 +1029,11 @@ HEADER_INLINE BoolErr arena_end_alloc_u64(unsigned char* arena_bottom, uintptr_t
 HEADER_INLINE BoolErr arena_end_alloc_cp(unsigned char* arena_bottom, uintptr_t ct, unsigned char** arena_top_ptr, char*** cp_arr_ptr) {
   *cp_arr_ptr = S_CAST(char**, arena_end_alloc(arena_bottom, ct * sizeof(intptr_t), arena_top_ptr));
   return !(*cp_arr_ptr);
+}
+
+HEADER_INLINE BoolErr arena_end_alloc_kcp(unsigned char* arena_bottom, uintptr_t ct, unsigned char** arena_top_ptr, const char*** kcp_arr_ptr) {
+  *kcp_arr_ptr = S_CAST(const char**, arena_end_alloc(arena_bottom, ct * sizeof(intptr_t), arena_top_ptr));
+  return !(*kcp_arr_ptr);
 }
 
 
@@ -1085,7 +1112,8 @@ HEADER_INLINE void ZeromovFArr(uintptr_t entry_ct, float** farr_ptr) {
 
 
 // SetAllBits, IsSet, SetBit, ClearBit, AdvTo1Bit, AdvTo0Bit, AdvBoundedTo1Bit,
-// FindLast1BitBefore, AllWordsAreZero defined in plink2_base.h
+// FindLast1BitBefore, AllWordsAreZero, FillBitsNz, ClearBitsNz defined in
+// plink2_bits.h
 
 // Useful when we don't want to think about the signedness of a 32-bit int.
 HEADER_INLINE void SetBitI(int32_t loc, uintptr_t* bitarr) {
@@ -1095,10 +1123,6 @@ HEADER_INLINE void SetBitI(int32_t loc, uintptr_t* bitarr) {
 HEADER_INLINE void FlipBit(uintptr_t loc, uintptr_t* bitarr) {
   bitarr[loc / kBitsPerWord] ^= k1LU << (loc % kBitsPerWord);
 }
-
-// "Nz" added to names to make it obvious these require positive len
-void FillBitsNz(uintptr_t start_idx, uintptr_t end_idx, uintptr_t* bitarr);
-void ClearBitsNz(uintptr_t start_idx, uintptr_t end_idx, uintptr_t* bitarr);
 
 // floor permitted to be -1, though not smaller than that.
 int32_t FindLast1BitBeforeBounded(const uintptr_t* bitarr, uint32_t loc, int32_t floor);
@@ -1111,36 +1135,15 @@ HEADER_INLINE uint32_t wordsequal(const uintptr_t* word_arr1, const uintptr_t* w
 }
 
 
-// BitvecAnd(), BitvecInvmask(), BitvecOr(), BitvecInvert() in plink2_base.h
+// BitvecAnd(), BitvecInvmask(), BitvecOr(), BitvecInvert(), BitvecXorCopy(),
+// BitvecInvertCopy(), AlignedBitarrInvert(), and AlignedBitarrInvertCopy() in
+// plink2_bits.h
 
 void BitvecAndCopy(const uintptr_t* __restrict source1_bitvec, const uintptr_t* __restrict source2_bitvec, uintptr_t word_ct, uintptr_t* target_bitvec);
 
 void BitvecInvmaskCopy(const uintptr_t* __restrict source_bitvec, const uintptr_t* __restrict exclude_bitvec, uintptr_t word_ct, uintptr_t* target_bitvec);
 
-void BitvecInvertCopy(const uintptr_t* __restrict source_bitvec, uintptr_t word_ct, uintptr_t* __restrict target_bitvec);
-
-// These ensure the trailing bits are zeroed out.
-// 'AlignedBitarr' instead of Bitvec since this takes bit_ct instead of word_ct
-// as the size argument, and zeroes trailing bits.
-HEADER_INLINE void AlignedBitarrInvert(uintptr_t bit_ct, uintptr_t* main_bitvec) {
-  const uintptr_t fullword_ct = bit_ct / kBitsPerWord;
-  BitvecInvert(fullword_ct, main_bitvec);
-  const uint32_t trail_ct = bit_ct % kBitsPerWord;
-  if (trail_ct) {
-    main_bitvec[fullword_ct] = bzhi(~main_bitvec[fullword_ct], trail_ct);
-  }
-}
-
-HEADER_INLINE void AlignedBitarrInvertCopy(const uintptr_t* __restrict source_bitvec, uintptr_t bit_ct, uintptr_t* __restrict target_bitvec) {
-  const uintptr_t fullword_ct = bit_ct / kBitsPerWord;
-  BitvecInvertCopy(source_bitvec, fullword_ct, target_bitvec);
-  const uint32_t trail_ct = bit_ct % kBitsPerWord;
-  if (trail_ct) {
-    target_bitvec[fullword_ct] = bzhi(~source_bitvec[fullword_ct], trail_ct);
-  }
-}
-
-// void BitvecXor(const uintptr_t* __restrict arg_bitvec, uintptr_t word_ct, uintptr_t* main_bitvec);
+void BitvecXor(const uintptr_t* __restrict arg_bitvec, uintptr_t word_ct, uintptr_t* main_bitvec);
 
 void BitvecInvertAndMask(const uintptr_t* __restrict include_bitvec, uintptr_t word_ct, uintptr_t* __restrict main_bitvec);
 
@@ -1318,6 +1321,29 @@ HEADER_INLINE uint32_t Hashceil(const char* idstr, uint32_t idlen, uint32_t htab
   return (S_CAST(uint64_t, Hash32(idstr, idlen)) * htable_size) >> 32;
 }
 
+// In most cases, plink2 represents an array of strings in one of the following
+// two ways:
+//   (const char* strbox, uint32_t str_ct, uintptr_t max_str_blen):
+//     null-terminated string #x starts at &(strbox[x * max_str_blen)), where
+//     x is a 0-based index.
+//   (const char* const* item_ids, uint32_t str_ct):
+//     null-terminated string #x starts at item_ids[x].
+// When we need to perform string -> string-index lookups into the array, we
+// construct a hashmap as follows:
+// - Allocate a uint32_t array of htable_size >= 2 * str_ct, and initialize all
+//   entries to UINT32_MAX to mark them empty.
+// - Iterate through the array, computing hashval := Hashceil(str, strlen(str),
+//   htable_size) for each string, and then setting htable[hashval] :=
+//   string-index whenever that htable entry is empty.  When there is a
+//   conflict, use linear probing (increment hashval until an empty table cell
+//   is found, wrapping around from (htable_size - 1) to 0).
+//   - PLINK 1.9 used quadratic probing, but that's been scrapped since
+//     benchmark results suggest that it has no meaningful advantage.  We
+//     aren't dealing with adversarial input...
+// The "StrboxHtable" functions below work with the const char* strbox
+// string-array representation, while "IdHtable" functions work with the const
+// char* const* item_ids representation.
+
 // uintptr_t geqprime(uintptr_t floor);
 
 // assumes ceil is odd and greater than 4.  Returns the first prime <= ceil.
@@ -1339,10 +1365,6 @@ HEADER_INLINE uint32_t GetHtableFastSize(uint32_t item_ct) {
 
 BoolErr HtableGoodSizeAlloc(uint32_t item_ct, uintptr_t bytes_avail, uint32_t** htable_ptr, uint32_t* htable_size_ptr);
 
-// useful for duplicate detection: returns 0 on no duplicates, a positive index
-// of a duplicate pair if they're present
-uint32_t PopulateStrboxHtable(const char* strbox, uintptr_t str_ct, uintptr_t max_str_blen, uint32_t str_htable_size, uint32_t* str_htable);
-
 // returned index in duplicate-pair case is unfiltered
 // uint32_t populate_strbox_subset_htable(const uintptr_t* __restrict subset_mask, const char* strbox, uintptr_t raw_str_ct, uintptr_t str_ct, uintptr_t max_str_blen, uint32_t str_htable_size, uint32_t* str_htable);
 
@@ -1353,9 +1375,42 @@ uint32_t IdHtableFind(const char* cur_id, const char* const* item_ids, const uin
 // null-terminated any more.
 uint32_t IdHtableFindNnt(const char* cur_id, const char* const* item_ids, const uint32_t* id_htable, uint32_t cur_id_slen, uint32_t id_htable_size);
 
+HEADER_INLINE void HtableAddNondup(const char* cur_id, uint32_t cur_id_slen, uint32_t id_htable_size, uint32_t value, uint32_t* id_htable) {
+  for (uint32_t hashval = Hashceil(cur_id, cur_id_slen, id_htable_size); ; ) {
+    const uint32_t cur_htable_entry = id_htable[hashval];
+    if (cur_htable_entry == UINT32_MAX) {
+      id_htable[hashval] = value;
+      return;
+    }
+    if (++hashval == id_htable_size) {
+      hashval = 0;
+    }
+  }
+}
+
+// Assumes cur_id is null-terminated.
+// item_ids overread must be ok.
+// Returns string-index if cur_id is already in the table, UINT32_MAX if it was
+// added.
+uint32_t IdHtableAdd(const char* cur_id, const char* const* item_ids, uint32_t cur_id_slen, uint32_t id_htable_size, uint32_t value, uint32_t* id_htable);
+
+// Does not require cur_id to be null-terminated.
+uint32_t IdHtableAddNnt(const char* cur_id, const char* const* item_ids, uint32_t cur_id_slen, uint32_t id_htable_size, uint32_t value, uint32_t* id_htable);
+
 // assumes cur_id_slen < max_str_blen.
 // requires cur_id to be null-terminated.
 uint32_t StrboxHtableFind(const char* cur_id, const char* strbox, const uint32_t* id_htable, uintptr_t max_str_blen, uint32_t cur_id_slen, uint32_t id_htable_size);
+
+uint32_t StrboxHtableFindNnt(const char* cur_id, const char* strbox, const uint32_t* id_htable, uintptr_t max_str_blen, uint32_t cur_id_slen, uint32_t id_htable_size);
+
+// Assumes cur_id is null-terminated.
+// Returns string-index if cur_id is already in the table, UINT32_MAX if it was
+// added.
+uint32_t StrboxHtableAdd(const char* cur_id, const char* strbox, uintptr_t max_str_blen, uint32_t cur_id_slen, uint32_t id_htable_size, uint32_t value, uint32_t* id_htable);
+
+// useful for duplicate detection: returns 0 on no duplicates, a positive index
+// of a duplicate pair if they're present
+uint32_t PopulateStrboxHtable(const char* strbox, uint32_t str_ct, uintptr_t max_str_blen, uint32_t str_htable_size, uint32_t* str_htable);
 
 // last variant_ids entry must be at least kMaxIdBlen bytes before end of
 // bigstack
@@ -1470,7 +1525,7 @@ HEADER_INLINE uint32_t UnionIsFull(const uintptr_t* bitarr1, const uintptr_t* bi
   return 1;
 }
 
-// PopcountWordsIntersect moved to plink2_base
+// PopcountWordsIntersect moved to plink2_bits
 
 void PopcountWordsIntersect3val(const uintptr_t* __restrict bitvec1, const uintptr_t* __restrict bitvec2, uint32_t word_ct, uint32_t* __restrict popcount1_ptr, uint32_t* __restrict popcount2_ptr, uint32_t* __restrict popcount_intersect_ptr);
 
@@ -1635,6 +1690,8 @@ HEADER_INLINE void Vcount0Incr8To32(uint32_t acc8_vec_ct, VecW* acc8_iter, VecW*
   }
 }
 
+void VerticalCounterUpdate(const uintptr_t* acc1, uint32_t acc1_vec_ct, uint32_t* rem15_and_255d15, VecW* acc4_8_32);
+
 
 // forward_ct must be positive.  Stays put if forward_ct == 1 and current bit
 // is set.
@@ -1681,7 +1738,6 @@ PglErr CheckIdUniqueness(unsigned char* arena_bottom, unsigned char* arena_top, 
 // order (briefly made that nondeterministic on 11 Oct 2019 and broke --rm-dup,
 // not doing that again).
 PglErr AllocAndPopulateIdHtableMt(const uintptr_t* subset_mask, const char* const* item_ids, uintptr_t item_ct, uintptr_t fast_size_min_extra_bytes, uint32_t max_thread_ct, uint32_t** id_htable_ptr, uint32_t** htable_dup_base_ptr, uint32_t* id_htable_size_ptr, uint32_t* dup_ct_ptr);
-
 
 typedef struct HelpCtrlStruct {
   NONCOPYABLE(HelpCtrlStruct);

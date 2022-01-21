@@ -29,8 +29,8 @@ endif
 BIN ?=		plink
 CC ?=		gcc
 CXX ?=		g++
-CFLAGS ?=	-Wall -O2
-CXXFLAGS ?=	-Wall -O2
+CFLAGS ?=	-Wall -O2 -g -I../2.0/simde
+CXXFLAGS ?=	-Wall -O2 -g -I../2.0/simde
 MACFLAGS ?=	-mmacosx-version-min=10.9
 
 PREFIX ?=	/usr/local
@@ -47,7 +47,7 @@ ifeq ($(SYS), MAC)
   CXXFLAGS += $(MACFLAGS)
   BLASFLAGS ?= -framework Accelerate
   LDFLAGS ?= -ldl
-  ZLIB ?= ../zlib-1.2.11/libz.1.2.11.dylib
+  ZLIB ?= -L. ../zlib-1.2.11/libz.a
 endif
 
 ifeq ($(SYS), WIN)
@@ -58,13 +58,13 @@ ifeq ($(SYS), WIN)
 # NO_LAPACK.
   BLASFLAGS ?= -L. lapack/liblapack.a -L. lapack/librefblas.a
   LDFLAGS ?= -lm -static-libgcc
-  ZLIB ?= ../zlib-1.2.11/libz.a
+  ZLIB ?= -L. ../zlib-1.2.11/libz.a
 endif
 
 # These must appear after the MAC/WIN-specific ?= statements.
 BLASFLAGS ?=	-L/usr/lib64/atlas -llapack -lblas -lcblas -latlas
 LDFLAGS ?=	-lm -lpthread -ldl
-ZLIB ?=		../zlib-1.2.11/libz.so.1.2.11
+ZLIB ?=		-L. ../zlib-1.2.11/libz.so.1.2.11
 
 ifdef NO_LAPACK
   BLASFLAGS=
@@ -78,10 +78,10 @@ OBJS = plink.o plink_assoc.o plink_calc.o plink_cluster.o plink_cnv.o plink_comm
 all:	$(BIN)
 
 plink: $(OBJS)
-	$(CXX) $(OBJS) $(LDFLAGS_EXTRA) $(BLASFLAGS) $(LDFLAGS) -L. $(ZLIB) -o $@
+	$(CXX) $(OBJS) $(LDFLAGS_EXTRA) $(BLASFLAGS) $(LDFLAGS) $(ZLIB) -o $@
 
 plinkw: $(OBJS)
-	gfortran -O2 $(OBJS) $(LDFLAGS_EXTRA) -Wl,-Bstatic $(BLASFLAGS) $(LDFLAGS) -L. $(ZLIB) -o $@
+	gfortran -O2 $(OBJS) $(LDFLAGS_EXTRA) -Wl,-Bstatic $(BLASFLAGS) $(LDFLAGS) $(ZLIB) -o $@
 
 install:
 	$(INSTALL) -d $(DESTDIR)$(PREFIX)/bin
@@ -101,7 +101,7 @@ clean:
 # includes a C++ header and exposed functions will need to be declared with
 # extern "C".
 %.o: %.c
-	$(CXX) -c $(CPPFLAGS) $(CFLAGS) $< -o $@
+	$(CXX) -c $(CFLAGS) $< -o $@
 
 %.o: %.cc
-	$(CXX) -x c++ -c $(CPPFLAGS) $(CXXFLAGS) $< -o $@
+	$(CXX) -x c++ -c $(CXXFLAGS) $< -o $@

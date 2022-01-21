@@ -1,7 +1,7 @@
 #ifndef __PLINK2_STRING_H__
 #define __PLINK2_STRING_H__
 
-// This library is part of PLINK 2.00, copyright (C) 2005-2020 Shaun Purcell,
+// This library is part of PLINK 2.00, copyright (C) 2005-2022 Shaun Purcell,
 // Christopher Chang.
 //
 // This program is free software: you can redistribute it and/or modify it
@@ -28,7 +28,7 @@
 
 #ifdef __cplusplus
 #  include <algorithm>
-#  if __cplusplus >= 201902L
+#  if __cplusplus >= 201902L && defined(__GNUC__) && !defined(__clang__)
 #    include <execution>
 #  endif
 #  ifdef _WIN32
@@ -96,7 +96,7 @@ static const double kExactTestBias = 0.00000000000000000000000010339757656912845
 
 #ifdef __cplusplus
 #  define STD_SORT(ct, fallback_cmp, arr) std::sort(&((arr)[0]), (&((arr)[ct])))
-#  if __cplusplus >= 201902L
+#  if __cplusplus >= 201902L && defined(__GNUC__) && !defined(__clang__)
 // this should only be used for arrays of length >= variant_ct or sample_ct
 // (sample_ct is cutting it close).
 // macro should still be used in e.g. non-__cplusplus blocks, so that we have
@@ -386,6 +386,13 @@ HEADER_INLINE char* strcpya_k(char* __restrict dst, const void* __restrict src) 
 }
 #endif
 
+// Must be safe to read first slen bytes of unknown_len_str.
+// Note that it's better to call memequal(unknown_len_str, known_len_tok, slen
+// + 1) when known_len_tok is null-terminated.
+HEADER_INLINE int32_t strequal_unsafe(const char* unknown_len_str, const char* known_len_tok, uint32_t slen) {
+  return memequal(unknown_len_str, known_len_tok, slen) && (!unknown_len_str[slen]);
+}
+
 #if defined(__cplusplus)
 #  if __cplusplus >= 201103L
 HEADER_INLINE bool isfinite_f(float fxx) {
@@ -441,24 +448,6 @@ HEADER_INLINE int32_t StrStartsWithUnsafe(const char* s_read, const char* s_pref
 HEADER_INLINE int32_t StrEndsWith(const char* s_read, const char* s_suffix_const, uint32_t s_read_slen) {
   const uint32_t s_const_slen = strlen(s_suffix_const);
   return (s_read_slen > s_const_slen) && memequal(&(s_read[s_read_slen - s_const_slen]), s_suffix_const, s_const_slen);
-}
-
-// These are likely to be revised to take const void* parameters, and moved to
-// plink2_base.
-// This requires len >= 4.
-uintptr_t FirstUnequal4(const char* s1, const char* s2, uintptr_t slen);
-
-HEADER_INLINE uintptr_t FirstUnequal(const char* s1, const char* s2, uintptr_t slen) {
-  // Returns position of first mismatch, or slen if none was found.
-  if (slen >= 4) {
-    return FirstUnequal4(s1, s2, slen);
-  }
-  for (uintptr_t pos = 0; pos != slen; ++pos) {
-    if (s1[pos] != s2[pos]) {
-      return pos;
-    }
-  }
-  return slen;
 }
 
 // May read (kBytesPerWord - 1) bytes past the end of each string.
@@ -606,6 +595,11 @@ HEADER_INLINE void StrptrArrSortOverread(uintptr_t ct, const char** strptr_arr) 
 HEADER_INLINE void StrptrArrNsort(uintptr_t ct, const char** strptr_arr) {
   std::sort(R_CAST(StrNsortDeref*, strptr_arr), &(R_CAST(StrNsortDeref*, strptr_arr)[ct]));
 }
+
+// Considered adding stable-sort variants of StrptrArrSort, but looks like it's
+// usually better to define a more sophisticated comparator that removes the
+// need for the explicit stable-sort.  (Note that std::stable_sort can throw
+// std::bad_alloc, etc.)
 
 // need to expose these for plink2_cmdline bigstack-allocating
 // SortStrboxIndexed()'s use
@@ -1483,16 +1477,18 @@ uint32_t CollapseDuplicateIds(uintptr_t id_ct, uintptr_t max_id_blen, char* sort
 
 
 // returns position of string, or -1 if not found.
-int32_t bsearch_str(const char* idbuf, const char* sorted_strbox, uintptr_t cur_id_slen, uintptr_t max_id_blen, uintptr_t end_idx);
+int32_t bsearch_strbox(const char* idbuf, const char* sorted_strbox, uintptr_t cur_id_slen, uintptr_t max_id_blen, uintptr_t end_idx);
 
 // requires null-terminated string
-int32_t bsearch_str_natural(const char* idbuf, const char* sorted_strbox, uintptr_t max_id_blen, uintptr_t end_idx);
+int32_t bsearch_strbox_natural(const char* idbuf, const char* sorted_strbox, uintptr_t max_id_blen, uintptr_t end_idx);
+
+int32_t bsearch_strptr_natural(const char* idbuf, const char* const* sorted_strptrs, uintptr_t end_idx);
 
 
 // returns number of elements in sorted_strbox[] less than idbuf.
-uintptr_t bsearch_str_lb(const char* idbuf, const char* sorted_strbox, uintptr_t cur_id_slen, uintptr_t max_id_blen, uintptr_t end_idx);
+uintptr_t bsearch_strbox_lb(const char* idbuf, const char* sorted_strbox, uintptr_t cur_id_slen, uintptr_t max_id_blen, uintptr_t end_idx);
 
-// same result as bsearch_str_lb(), but checks against [cur_idx],
+// same result as bsearch_strbox_lb(), but checks against [cur_idx],
 // [cur_idx + 1], [cur_idx + 3], [cur_idx + 7], etc. before finishing with a
 // binary search, and assumes cur_id_slen <= max_id_blen and end_idx > 0.
 uintptr_t ExpsearchStrLb(const char* idbuf, const char* sorted_strbox, uintptr_t cur_id_slen, uintptr_t max_id_blen, uintptr_t end_idx, uintptr_t cur_idx);
@@ -1500,12 +1496,12 @@ uintptr_t ExpsearchStrLb(const char* idbuf, const char* sorted_strbox, uintptr_t
 // Null-terminated string required.
 uintptr_t ExpsearchNsortStrLb(const char* idbuf, const char* nsorted_strbox, uintptr_t max_id_blen, uintptr_t end_idx, uintptr_t cur_idx);
 
-// this is frequently preferable to bsearch_str(), since it's way too easy to
-// forget to convert the sorted-stringbox index to the final index
+// this is frequently preferable to bsearch_strbox(), since it's way too easy
+// to forget to convert the sorted-stringbox index to the final index
 // sample_id_map == nullptr is permitted; in this case id will be an index into
 // the sorted array
 HEADER_INLINE BoolErr SortedIdboxFind(const char* idbuf, const char* sorted_idbox, const uint32_t* id_map, uintptr_t cur_id_slen, uintptr_t max_id_blen, uintptr_t end_idx, uint32_t* id_ptr) {
-  const int32_t ii = bsearch_str(idbuf, sorted_idbox, cur_id_slen, max_id_blen, end_idx);
+  const int32_t ii = bsearch_strbox(idbuf, sorted_idbox, cur_id_slen, max_id_blen, end_idx);
   if (ii == -1) {
     return 1;
   }
@@ -1513,7 +1509,7 @@ HEADER_INLINE BoolErr SortedIdboxFind(const char* idbuf, const char* sorted_idbo
   return 0;
 }
 
-#ifdef __arm__
+#ifdef NO_UNALIGNED
 #  error "Unaligned accesses in IsNanStr()."
 #endif
 // This returns 1 on any capitalization of 'na' or 'nan', 0 otherwise.

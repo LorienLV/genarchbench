@@ -1,4 +1,4 @@
-// This file is part of PLINK 1.90, copyright (C) 2005-2020 Shaun Purcell,
+// This file is part of PLINK 1.90, copyright (C) 2005-2022 Shaun Purcell,
 // Christopher Chang.
 //
 // This program is free software: you can redistribute it and/or modify
@@ -93,7 +93,7 @@
 
 static const char ver_str[] =
 #ifdef STABLE_BUILD
-  "PLINK v1.90b6.18"
+  "PLINK v1.90b6.24"
 #else
   "PLINK v1.90p"
 #endif
@@ -105,7 +105,7 @@ static const char ver_str[] =
 #else
   " 32-bit"
 #endif
-  " (16 Jun 2020)";
+  " (16 Jan 2022)";
 static const char ver_str2[] =
   // include leading space if day < 10, so character length stays the same
   ""
@@ -118,7 +118,7 @@ static const char ver_str2[] =
   "  "
 #endif
   "        www.cog-genomics.org/plink/1.9/\n"
-  "(C) 2005-2020 Shaun Purcell, Christopher Chang   GNU General Public License v3"
+  "(C) 2005-2022 Shaun Purcell, Christopher Chang   GNU General Public License v3"
 #if SPECIES_DEFAULT > 0
   "\nRecompiled with default species = "
   #if SPECIES_DEFAULT == SPECIES_COW
@@ -3327,6 +3327,9 @@ int32_t main(int32_t argc, char** argv) {
   uint32_t lasso_lambda_iters = 0;
   uint32_t testmiss_modifier = 0;
   uint32_t testmiss_mperm_val = 0;
+#ifdef USE_MKL
+  uint32_t mkl_native = 0;
+#endif
 
   // this default limit plays well with e.g. fbstring small-string optimization
   uint32_t new_id_max_allele_len = 23;
@@ -3783,6 +3786,12 @@ int32_t main(int32_t argc, char** argv) {
 	  break;
 	}
 	goto main_flag_copy;
+      case 'p':
+        if (!strcmp(argptr, "pedmap")) {
+          memcpy(flagptr, "file", 5);
+          break;
+        }
+        goto main_flag_copy;
       case 'r':
 	if ((ukk >= 8) && (!memcmp(argptr, "recode", 6))) {
 	  ujj = 0; // alias match?
@@ -6158,14 +6167,12 @@ int32_t main(int32_t argc, char** argv) {
 	  }
 	}
       } else if (!memcmp(argptr2, "istance-matrix", 15)) {
-	if (distance_exp != 0.0) {
-	  logerrprint("Error: --distance-matrix cannot be used with --distance-exp.\n");
+        if (calculation_type & CALC_DISTANCE) {
+          // not worth the maintenance burden of making a few of these subcases
+          // work
+          logerrprint("Error: --distance-matrix cannot be used with --distance.\n");
 	  goto main_ret_INVALID_CMDLINE;
-	}
-	if (dist_calc_type & DISTANCE_1_MINUS_IBS) {
-	  logerrprint("Error: --distance-matrix flag cannot be used with \"--distance 1-ibs\".\n");
-	  goto main_ret_INVALID_CMDLINE_A;
-	}
+        }
 	calculation_type |= CALC_PLINK1_DISTANCE_MATRIX;
 	goto main_param_zero;
       } else if (!memcmp(argptr2, "ummy", 5)) {
@@ -6850,7 +6857,7 @@ int32_t main(int32_t argc, char** argv) {
 	  sprintf(g_logbuf, "Error: Invalid --flip-scan-window size '%s'.\n", argv[cur_arg + 1]);
 	  goto main_ret_INVALID_CMDLINE_WWA;
 	}
-      } else if (!memcmp(argptr2, "lip-scan-window-kb", 22)) {
+      } else if (!memcmp(argptr2, "lip-scan-window-kb", 19)) {
         if (!(calculation_type & CALC_FLIPSCAN)) {
 	  logerrprint("Error: --flip-scan-window-kb must be used with --flip-scan.\n");
 	  goto main_ret_INVALID_CMDLINE;
@@ -7681,6 +7688,10 @@ int32_t main(int32_t argc, char** argv) {
 	glm_modifier |= GLM_INTERACTION;
 	goto main_param_zero;
       } else if (!memcmp(argptr2, "bs-matrix", 10)) {
+        if (calculation_type & CALC_DISTANCE) {
+          logerrprint("Error: --ibs-matrix cannot be used with --distance.\n");
+	  goto main_ret_INVALID_CMDLINE;
+        }
         calculation_type |= CALC_PLINK1_IBS_MATRIX;
         goto main_param_zero;
       } else if (!memcmp(argptr2, "d-delim", 8)) {
@@ -9716,6 +9727,11 @@ int32_t main(int32_t argc, char** argv) {
       } else if (!memcmp(argptr2, "oweb", 5)) {
         logprint("Note: --noweb has no effect since no web check is implemented yet.\n");
 	goto main_param_zero;
+      } else if (!memcmp(argptr2, "ative", 6)) {
+#ifdef USE_MKL
+        mkl_native = 1;
+#endif
+        goto main_param_zero;
       } else {
         goto main_ret_INVALID_CMDLINE_UNRECOGNIZED;
       }
@@ -10747,7 +10763,7 @@ int32_t main(int32_t argc, char** argv) {
 	if (retval) {
 	  goto main_ret_1;
 	}
-      } else if (!memcmp(argptr2, "ead-genome-list", 19)) {
+      } else if (!memcmp(argptr2, "ead-genome-list", 16)) {
 	logerrprint("Error: --read-genome-list flag retired.  Use --parallel + Unix cat instead.\n");
 	goto main_ret_INVALID_CMDLINE;
       } else if (!memcmp(argptr2, "ead-genome-minimal", 19)) {
@@ -13303,6 +13319,12 @@ int32_t main(int32_t argc, char** argv) {
     logerrprint("Error: No input dataset.\n");
     goto main_ret_INVALID_CMDLINE_A;
   }
+
+#ifdef USE_MKL
+  if (!mkl_native) {
+    mkl_cbwr_set(MKL_CBWR_COMPATIBLE);
+  }
+#endif
 
   free_cond(subst_argv);
   free_cond(script_buf);

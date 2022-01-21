@@ -1,4 +1,4 @@
-// This file is part of PLINK 1.90, copyright (C) 2005-2020 Shaun Purcell,
+// This file is part of PLINK 1.90, copyright (C) 2005-2022 Shaun Purcell,
 // Christopher Chang.
 //
 // This program is free software: you can redistribute it and/or modify
@@ -5359,6 +5359,16 @@ int32_t double_cmp_deref(const void* aa, const void* bb) {
 
 int32_t char_cmp_deref(const void* aa, const void* bb) {
   return (int32_t)(**((const char**)aa) - **((const char**)bb));
+}
+
+int32_t double_cmp_deref_tiebreak(const void* aa, const void* bb) {
+  double cc = **((const double**)aa) - **((const double**)bb);
+  if (cc > 0.0) {
+    return 1;
+  } else if (cc < 0.0) {
+    return -1;
+  }
+  return ((const int32_t*)aa)[BYTECT4] - ((const int32_t*)bb)[BYTECT4];
 }
 
 int32_t intcmp(const void* aa, const void* bb) {

@@ -1,4 +1,4 @@
-// This library is part of PLINK 2.00, copyright (C) 2005-2020 Shaun Purcell,
+// This library is part of PLINK 2.00, copyright (C) 2005-2022 Shaun Purcell,
 // Christopher Chang.
 //
 // This library is free software: you can redistribute it and/or modify it
@@ -41,23 +41,32 @@ PglErr ReadChrsetHeaderLine(const char* chrset_iter, const char* file_descrip, M
   // "##chrSet=<".
   PglErr reterr = kPglRetSuccess;
   {
-    uint32_t cmdline_autosome_ct = 0;
-    uint32_t cmdline_haploid = 0;
-    STD_ARRAY_DECL(uint32_t, kChrOffsetCt, cmdline_xymt_codes);
-    if (cip->chrset_source == kChrsetSourceCmdline) {
-      if (misc_flags & kfMiscChrOverrideCmdline) {
-        goto ReadChrsetHeaderLine_ret_1;
-      }
-      if (!(misc_flags & kfMiscChrOverrideFile)) {
-        // save off info we need for consistency check
-        cmdline_autosome_ct = cip->autosome_ct;
-        cmdline_haploid = cip->haploid_mask[0] & 1;
-        STD_ARRAY_COPY(cip->xymt_codes, kChrOffsetCt, cmdline_xymt_codes);
-      }
-      ZeroWArr(kChrMaskWords, cip->haploid_mask);
+    uint32_t prev_autosome_ct = 0;
+    uint32_t prev_haploid = 0;
+    STD_ARRAY_DECL(uint32_t, kChrOffsetCt, prev_xymt_codes);
+    if ((cip->chrset_source == kChrsetSourceCmdline) && (misc_flags & kfMiscChrOverrideCmdline)) {
+      goto ReadChrsetHeaderLine_ret_1;
     }
+    if (((cip->chrset_source == kChrsetSourceCmdline) && (!(misc_flags & kfMiscChrOverrideFile))) || (cip->chrset_source == kChrsetSourceAnotherFile)) {
+      // save off info we need for consistency check
+      prev_autosome_ct = cip->autosome_ct;
+      prev_haploid = cip->haploid_mask[0] & 1;
+      STD_ARRAY_COPY(cip->xymt_codes, kChrOffsetCt, prev_xymt_codes);
+    }
+    // bugfix (23 Jan 2021): forgot to zero this out in file-only case
+    ZeroWArr(kChrMaskWords, cip->haploid_mask);
     for (uint32_t uii = 0; uii != kChrOffsetCt; ++uii) {
       cip->xymt_codes[uii] = UINT32_MAXM1;
+    }
+    if (StrStartsWithUnsafe(chrset_iter, "ID=")) {
+      // Need this field to conform to VCFv4.3 specification.
+      // Just ignore the ID value.
+      chrset_iter = strchrnul_n(&(chrset_iter[strlen("ID=")]), ',');
+      if (*chrset_iter != ',') {
+        snprintf(g_logbuf, kLogbufSize, "Error: Header line %" PRIuPTR " of %s does not have expected ##chrSet format.\n", line_idx, file_descrip);
+        goto ReadChrsetHeaderLine_ret_MALFORMED_INPUT_WW;
+      }
+      ++chrset_iter;
     }
     if (StrStartsWithUnsafe(chrset_iter, "haploidAutosomeCt=")) {
       uint32_t explicit_haploid_ct;
@@ -66,13 +75,13 @@ PglErr ReadChrsetHeaderLine(const char* chrset_iter, const char* file_descrip, M
         goto ReadChrsetHeaderLine_ret_MALFORMED_INPUT_WW;
       }
       // could verify that X, Y, etc. are not present?
-      if (cmdline_autosome_ct) {
-        if (unlikely(!cmdline_haploid)) {
-          snprintf(g_logbuf, kLogbufSize, "Error: Header line %" PRIuPTR " of %s specifies a haploid genome, while a diploid genome was specified on the command line.\n", line_idx, file_descrip);
+      if (prev_autosome_ct) {
+        if (unlikely(!prev_haploid)) {
+          snprintf(g_logbuf, kLogbufSize, "Error: Header line %" PRIuPTR " of %s specifies a haploid genome, while a diploid genome was specified %s.\n", line_idx, file_descrip, (cip->chrset_source == kChrsetSourceCmdline)? "on the command line" : "in another .pvar");
           goto ReadChrsetHeaderLine_ret_INCONSISTENT_INPUT_WW;
         }
-        if (unlikely(explicit_haploid_ct != cmdline_autosome_ct)) {
-          snprintf(g_logbuf, kLogbufSize, "Error: Header line %" PRIuPTR " of %s specifies %u autosome%s, while the command line specified %u.\n", line_idx, file_descrip, explicit_haploid_ct, (explicit_haploid_ct == 1)? "" : "s", cmdline_autosome_ct);
+        if (unlikely(explicit_haploid_ct != prev_autosome_ct)) {
+          snprintf(g_logbuf, kLogbufSize, "Error: Header line %" PRIuPTR " of %s specifies %u autosome%s, while %s specified %u.\n", line_idx, file_descrip, explicit_haploid_ct, (explicit_haploid_ct == 1)? "" : "s", (cip->chrset_source == kChrsetSourceCmdline)? "the command line" : "another .pvar", prev_autosome_ct);
           goto ReadChrsetHeaderLine_ret_INCONSISTENT_INPUT_WW;
         }
       }
@@ -108,10 +117,12 @@ PglErr ReadChrsetHeaderLine(const char* chrset_iter, const char* file_descrip, M
             if (first_char_ui == 77) {
               // M
               cip->xymt_codes[kChrOffsetMT] = explicit_autosome_ct + 1 + kChrOffsetMT;
+              SetBit(explicit_autosome_ct + 1 + kChrOffsetMT, cip->haploid_mask);
             } else {
               first_char_ui -= 88;  // X = 0, Y = 1, everything else larger
               if (first_char_ui < 2) {
                 cip->xymt_codes[first_char_ui] = explicit_autosome_ct + 1 + first_char_ui;
+                SetBit(explicit_autosome_ct + 1 + first_char_ui, cip->haploid_mask);
               }
             }
           } else {
@@ -124,6 +135,7 @@ PglErr ReadChrsetHeaderLine(const char* chrset_iter, const char* file_descrip, M
               } else if ((first_char_ui == 77) && (second_char_ui == 84)) {
                 // MT
                 cip->xymt_codes[kChrOffsetMT] = explicit_autosome_ct + 1 + kChrOffsetMT;
+                SetBit(explicit_autosome_ct + 1 + kChrOffsetMT, cip->haploid_mask);
               }
             } else if ((first_char_ui == 80) && (second_char_ui == 65) && ((third_char_ui & 0xdf) == 82)) {
               // PAR1, PAR2
@@ -135,21 +147,21 @@ PglErr ReadChrsetHeaderLine(const char* chrset_iter, const char* file_descrip, M
           }
         } while (!strchrnul_n_mov(',', &chrset_iter));
       }
-      if (cmdline_autosome_ct) {
-        if (unlikely(cmdline_haploid)) {
-          snprintf(g_logbuf, kLogbufSize, "Error: Header line %" PRIuPTR " of %s specifies a diploid genome, while a haploid genome was specified on the command line.\n", line_idx, file_descrip);
+      if (prev_autosome_ct) {
+        if (unlikely(prev_haploid)) {
+          snprintf(g_logbuf, kLogbufSize, "Error: Header line %" PRIuPTR " of %s specifies a diploid genome, while a haploid genome was specified %s.\n", line_idx, file_descrip, (cip->chrset_source == kChrsetSourceCmdline)? "on the command line" : "in another .pvar");
           goto ReadChrsetHeaderLine_ret_INCONSISTENT_INPUT_WW;
         }
-        if (unlikely(explicit_autosome_ct != cmdline_autosome_ct)) {
-          snprintf(g_logbuf, kLogbufSize, "Error: Header line %" PRIuPTR " of %s specifies %u autosome%s, while the command line specified %u.\n", line_idx, file_descrip, explicit_autosome_ct, (explicit_autosome_ct == 1)? "" : "s", cmdline_autosome_ct);
+        if (unlikely(explicit_autosome_ct != prev_autosome_ct)) {
+          snprintf(g_logbuf, kLogbufSize, "Error: Header line %" PRIuPTR " of %s specifies %u autosome%s, while %s specified %u.\n", line_idx, file_descrip, explicit_autosome_ct, (explicit_autosome_ct == 1)? "" : "s", (cip->chrset_source == kChrsetSourceCmdline)? "the command line" : "another .pvar", prev_autosome_ct);
           goto ReadChrsetHeaderLine_ret_INCONSISTENT_INPUT_WW;
         }
         for (uint32_t xymt_idx = 0; xymt_idx != kChrOffsetPAR1; ++xymt_idx) {
           // it's okay if the command line doesn't explicitly exclude e.g. chrX
           // while for whatever reason it is excluded from ##chrSet; but the
           // reverse can create problems
-          if (unlikely(IsI32Neg(cmdline_xymt_codes[xymt_idx]) && (!IsI32Neg(cip->xymt_codes[xymt_idx])))) {
-            snprintf(g_logbuf, kLogbufSize, "Error: Header line %" PRIuPTR " of %s specifies a chromosome set including %s, while the command line excludes it.\n", line_idx, file_descrip, g_xymt_log_names[xymt_idx]);
+          if (unlikely(IsI32Neg(prev_xymt_codes[xymt_idx]) && (!IsI32Neg(cip->xymt_codes[xymt_idx])))) {
+            snprintf(g_logbuf, kLogbufSize, "Error: Header line %" PRIuPTR " of %s specifies a chromosome set including %s, while %s excludes it.\n", line_idx, file_descrip, g_xymt_log_names[xymt_idx], (cip->chrset_source == kChrsetSourceCmdline)? "the command line" : "another .pvar");
             goto ReadChrsetHeaderLine_ret_INCONSISTENT_INPUT_WW;
           }
         }
@@ -438,7 +450,19 @@ void BackfillChrIdxs(const ChrInfo* cip, uint32_t chrs_encountered_m1, uint32_t 
   }
 }
 
-char* PrInInfoToken(uint32_t info_slen, char* info_token) {
+uint32_t PrInInfo(uint32_t info_slen, char* info_token) {
+  if (memequal_k(info_token, "PR", 2) && ((info_slen == 2) || (info_token[2] == ';'))) {
+    return 1;
+  }
+  if (memequal_k(&(info_token[S_CAST(int32_t, info_slen) - 3]), ";PR", 3)) {
+    return 1;
+  }
+  info_token[info_slen] = '\0';
+  char* first_info_end = strchr(info_token, ';');
+  return first_info_end && (strstr(info_token, ";PR;") != nullptr);
+}
+
+char* InfoPrStart(uint32_t info_slen, char* info_token) {
   if (memequal_k(info_token, "PR", 2) && ((info_slen == 2) || (info_token[2] == ';'))) {
     return info_token;
   }
@@ -784,11 +808,11 @@ PglErr LoadPvar(const char* pvarname, const char* var_filter_exceptions_flattene
   // should handle raw_variant_ct == 0 properly
 
   // possible todo: optionally skip allele code loading
-  // probable todo: load INFO:END.  (does this allow the CNV module to be
+  // probable todo: load INFO/END.  (does this allow the CNV module to be
   //   unified with the rest of the program?)  but this will probably wait
   //   until I need to analyze some sort of CNV data, and that day keeps
   //   getting postponed... for now, the BCF exporter performs its own parsing
-  //   of INFO:END so that it can fill each variant's rlen field correctly.
+  //   of INFO/END so that it can fill each variant's rlen field correctly.
   // possible todo: require FILTER to only contain values declared in header,
   //   and modify its storage accordingly?  (pointless for now, but worthwhile
   //   to keep an eye on what typical VCF files look like.)
@@ -857,13 +881,13 @@ PglErr LoadPvar(const char* pvarname, const char* var_filter_exceptions_flattene
       }
       if (StrStartsWithUnsafe(line_start, "##INFO=<ID=PR,Number=")) {
         if (unlikely(info_pr_present || info_pr_nonflag_present)) {
-          snprintf(g_logbuf, kLogbufSize, "Error: Duplicate INFO:PR header line in %s.\n", pvarname);
+          snprintf(g_logbuf, kLogbufSize, "Error: Duplicate INFO/PR header line in %s.\n", pvarname);
           goto LoadPvar_ret_MALFORMED_INPUT_WW;
         }
         info_pr_nonflag_present = !StrStartsWithUnsafe(&(line_start[strlen("##INFO=<ID=PR,Number=")]), "0,Type=Flag,Description=");
         info_pr_present = 1 - info_pr_nonflag_present;
         if (info_pr_nonflag_present) {
-          logerrprintfww("Warning: Header line %" PRIuPTR " of %s has an unexpected definition of INFO:PR. This interferes with a few merge and liftover operations.\n", line_idx, pvarname);
+          logerrprintfww("Warning: Header line %" PRIuPTR " of %s has an unexpected definition of INFO/PR. This interferes with a few merge and liftover operations.\n", line_idx, pvarname);
         }
       } else if ((!info_nonpr_present) && StrStartsWithUnsafe(line_start, "##INFO=<ID=")) {
         info_nonpr_present = 1;
@@ -921,6 +945,7 @@ PglErr LoadPvar(const char* pvarname, const char* var_filter_exceptions_flattene
     uint32_t col_skips[8];
     uint32_t col_types[8];
     uint32_t relevant_postchr_col_ct = 5;
+    uint32_t no_multiallelic_allowed = 0;
     uint32_t alt_col_idx = 4;
     uint32_t load_qual_col = 0;
     uint32_t load_filter_col = 0;
@@ -1033,6 +1058,7 @@ PglErr LoadPvar(const char* pvarname, const char* var_filter_exceptions_flattene
       line_iter = K_CAST(char*, AdvToDelim(linebuf_iter, '\n'));
       line_start = line_iter;
     } else if (line_start[0] != '\n') {
+      no_multiallelic_allowed = 1;
       if (var_min_qual != -1) {
         logerrputs("Error: --var-min-qual used on a variant file with no QUAL column.\n");
         goto LoadPvar_ret_INCONSISTENT_INPUT;
@@ -1297,17 +1323,16 @@ PglErr LoadPvar(const char* pvarname, const char* var_filter_exceptions_flattene
 #endif
       const uint32_t variant_idx_lowbits = raw_variant_ct % kLoadPvarBlockSize;
       if (!variant_idx_lowbits) {
-        if (unlikely(
-                (S_CAST(uintptr_t, tmp_alloc_end - tmp_alloc_base) <=
-                  kLoadPvarBlockSize *
-                    (sizeof(int32_t) +
-                     2 * sizeof(intptr_t) +
-                     at_least_one_nzero_cm * sizeof(double)) +
-                  is_split_chr * sizeof(ChrIdx) +
-                  (1 + info_pr_present) * (kLoadPvarBlockSize / CHAR_BIT) +
-                  (load_qual_col? ((kLoadPvarBlockSize / CHAR_BIT) + kLoadPvarBlockSize * sizeof(float)) : 0) +
-                  (load_filter_col? (2 * (kLoadPvarBlockSize / CHAR_BIT) + kLoadPvarBlockSize * sizeof(intptr_t)) : 0)) ||
-                (allele_storage_iter >= allele_storage_limit))) {
+        if (unlikely((S_CAST(uintptr_t, tmp_alloc_end - tmp_alloc_base) <=
+                     kLoadPvarBlockSize *
+                      (sizeof(int32_t) +
+                       2 * sizeof(intptr_t) +
+                       at_least_one_nzero_cm * sizeof(double)) +
+                      is_split_chr * sizeof(ChrIdx) +
+                      (1 + info_pr_present) * (kLoadPvarBlockSize / CHAR_BIT) +
+                      (load_qual_col? ((kLoadPvarBlockSize / CHAR_BIT) + kLoadPvarBlockSize * sizeof(float)) : 0) +
+                      (load_filter_col? (2 * (kLoadPvarBlockSize / CHAR_BIT) + kLoadPvarBlockSize * sizeof(intptr_t)) : 0)) ||
+                     (allele_storage_iter >= allele_storage_limit))) {
           goto LoadPvar_ret_NOMEM;
         }
         cur_bps = R_CAST(uint32_t*, tmp_alloc_base);
@@ -1435,6 +1460,11 @@ PglErr LoadPvar(const char* pvarname, const char* var_filter_exceptions_flattene
 
         extra_alt_ct = CountByte(token_ptrs[3], ',', token_slens[3]);
         if (extra_alt_ct > max_extra_alt_ct) {
+          if (extra_alt_ct >= kPglMaxAltAlleleCt) {
+            logerrprintfww("Error: Too many ALT alleles on line %" PRIuPTR " of %s. (This " PROG_NAME_STR " build is limited to " PGL_MAX_ALT_ALLELE_CT_STR ".)\n", line_idx, pvarname);
+            reterr = kPglRetNotYetSupported;
+            goto LoadPvar_ret_1;
+          }
           max_extra_alt_ct = extra_alt_ct;
         }
 
@@ -1547,7 +1577,8 @@ PglErr LoadPvar(const char* pvarname, const char* var_filter_exceptions_flattene
           uint32_t allele_ct = extra_alt_ct + 2;
           if (!extra_alt_ct) {
             // allele_ct == 1 or 2 for filtering purposes, depending on
-            // whether ALT allele matches a missing code.
+            // whether ALT allele matches a missing code.  (Don't see a reason
+            // to subtract 1 for missing REF.)
             if ((remaining_alt_char_ct == 1) && ((linebuf_iter[0] == '.') || (linebuf_iter[0] == input_missing_geno_char))) {
               allele_ct = 1;
             }
@@ -1575,7 +1606,7 @@ PglErr LoadPvar(const char* pvarname, const char* var_filter_exceptions_flattene
                   // shouldn't coexist with other filters
                   // possible todo: maintain a dictionary of FILTER
                   // strings, analogous to what BCF2 does on disk
-                  if (bsearch_str(filter_token_iter, sorted_fexcepts, cur_slen, max_fexcept_blen, fexcept_ct) == -1) {
+                  if (bsearch_strbox(filter_token_iter, sorted_fexcepts, cur_slen, max_fexcept_blen, fexcept_ct) == -1) {
                     goto LoadPvar_skip_variant;
                   }
                   if (cur_filter_name_end == filter_token_end) {
@@ -1642,11 +1673,13 @@ PglErr LoadPvar(const char* pvarname, const char* var_filter_exceptions_flattene
 
         // REF
         const char* ref_allele = token_ptrs[2];
+        uint32_t missing_allele_ct = 0;
         if (ref_slen == 1) {
           char geno_char = ref_allele[0];
           if (geno_char == input_missing_geno_char) {
             geno_char = '.';
           }
+          missing_allele_ct += (geno_char == '.');
           *allele_storage_iter = &(g_one_char_strs[2 * ctou32(geno_char)]);
         } else {
           if (StoreStringAtEndK(tmp_alloc_base, ref_allele, ref_slen, &tmp_alloc_end, allele_storage_iter)) {
@@ -1669,8 +1702,8 @@ PglErr LoadPvar(const char* pvarname, const char* var_filter_exceptions_flattene
             const uint32_t cur_allele_slen = cur_alt_end - linebuf_iter;
             if (cur_allele_slen == 1) {
               char geno_char = linebuf_iter[0];
-              if (geno_char == input_missing_geno_char) {
-                geno_char = '.';
+              if (unlikely((geno_char == '.') || (geno_char == input_missing_geno_char))) {
+                goto LoadPvar_ret_MULTIALLELIC_MISSING_ALLELE_CODE;
               }
               *allele_storage_iter = &(g_one_char_strs[2 * ctou32(geno_char)]);
             } else {
@@ -1697,6 +1730,9 @@ PglErr LoadPvar(const char* pvarname, const char* var_filter_exceptions_flattene
           if (geno_char == input_missing_geno_char) {
             geno_char = '.';
           }
+          if (geno_char == '.') {
+            ++missing_allele_ct;
+          }
           *allele_storage_iter = &(g_one_char_strs[2 * ctou32(geno_char)]);
         } else {
           if (StoreStringAtEndK(tmp_alloc_base, linebuf_iter, remaining_alt_char_ct, &tmp_alloc_end, allele_storage_iter)) {
@@ -1705,6 +1741,9 @@ PglErr LoadPvar(const char* pvarname, const char* var_filter_exceptions_flattene
           if (remaining_alt_char_ct > max_allele_slen) {
             max_allele_slen = remaining_alt_char_ct;
           }
+        }
+        if (unlikely(missing_allele_ct && extra_alt_ct)) {
+          goto LoadPvar_ret_MULTIALLELIC_MISSING_ALLELE_CODE;
         }
         ++allele_storage_iter;
 
@@ -1836,18 +1875,16 @@ PglErr LoadPvar(const char* pvarname, const char* var_filter_exceptions_flattene
     // todo: determine whether we want variant_include to be guaranteed to be
     // terminated by a zero bit
     const uint32_t raw_variant_ctl = BitCtToWordCt(raw_variant_ct);
-    if (unlikely(
-            bigstack_alloc_w(raw_variant_ctl, variant_include_ptr) ||
-            bigstack_alloc_u32(raw_variant_ct, variant_bps_ptr) ||
-            bigstack_alloc_cp(raw_variant_ct, variant_ids_ptr))) {
+    if (unlikely(bigstack_alloc_w(raw_variant_ctl, variant_include_ptr) ||
+                 bigstack_alloc_u32(raw_variant_ct, variant_bps_ptr) ||
+                 bigstack_alloc_cp(raw_variant_ct, variant_ids_ptr))) {
       goto LoadPvar_ret_NOMEM;
     }
     uintptr_t* qual_present = nullptr;
     float* quals = nullptr;
     if (load_qual_col > 1) {
-      if (unlikely(
-              bigstack_alloc_w(raw_variant_ctl, qual_present_ptr) ||
-              bigstack_alloc_f(raw_variant_ct, quals_ptr))) {
+      if (unlikely(bigstack_alloc_w(raw_variant_ctl, qual_present_ptr) ||
+                   bigstack_alloc_f(raw_variant_ct, quals_ptr))) {
         goto LoadPvar_ret_NOMEM;
       }
       qual_present = *qual_present_ptr;
@@ -1857,9 +1894,8 @@ PglErr LoadPvar(const char* pvarname, const char* var_filter_exceptions_flattene
     uintptr_t* filter_npass = nullptr;
     char** filter_storage = nullptr;
     if (load_filter_col > 1) {
-      if (unlikely(
-              bigstack_alloc_w(raw_variant_ctl, filter_present_ptr) ||
-              bigstack_alloc_w(raw_variant_ctl, filter_npass_ptr))) {
+      if (unlikely(bigstack_alloc_w(raw_variant_ctl, filter_present_ptr) ||
+                   bigstack_alloc_w(raw_variant_ctl, filter_npass_ptr))) {
         goto LoadPvar_ret_NOMEM;
       }
       filter_present = *filter_present_ptr;
@@ -1954,8 +1990,10 @@ PglErr LoadPvar(const char* pvarname, const char* var_filter_exceptions_flattene
       read_iter = &(read_iter[kLoadPvarBlockSize / CHAR_BIT]);
       if (filter_storage) {
         memcpy(&(filter_storage[full_block_ct * kLoadPvarBlockSize]), read_iter, raw_variant_ct_lowbits * sizeof(intptr_t));
-        read_iter = &(read_iter[kLoadPvarBlockSize * sizeof(intptr_t)]);
       }
+      // bugfix (3 Feb 2021): temporary filter_storage space was allocated
+      // regardless of whether any non-PASS values were ultimately found
+      read_iter = &(read_iter[kLoadPvarBlockSize * sizeof(intptr_t)]);
     }
     if (info_pr_present) {
       memcpy(&(nonref_flags[full_block_ct * (kLoadPvarBlockSize / kBitsPerWord)]), read_iter, last_bitblock_size);
@@ -1964,6 +2002,10 @@ PglErr LoadPvar(const char* pvarname, const char* var_filter_exceptions_flattene
     }
     const uintptr_t read_iter_stride_base = kLoadPvarBlockSize * (sizeof(int32_t) + 2 * sizeof(intptr_t)) + (kLoadPvarBlockSize / CHAR_BIT) + (load_qual_col > 1) * ((kLoadPvarBlockSize / CHAR_BIT) + kLoadPvarBlockSize * sizeof(float)) + (load_filter_col > 1) * (2 * (kLoadPvarBlockSize / CHAR_BIT) + kLoadPvarBlockSize * sizeof(intptr_t)) + info_pr_present * (kLoadPvarBlockSize / CHAR_BIT);
     if (allele_idx_end > 2 * S_CAST(uintptr_t, raw_variant_ct)) {
+      if (no_multiallelic_allowed) {
+        snprintf(g_logbuf, kLogbufSize, "Error: %s contains multiallelic variant(s), despite having no #CHROM header line. Add that header line to make it obvious that this isn't a valid .bim.\n", pvarname);
+        goto LoadPvar_ret_MALFORMED_INPUT_WW;
+      }
       if (unlikely(bigstack_alloc_w(raw_variant_ct + 1, allele_idx_offsets_ptr))) {
         goto LoadPvar_ret_NOMEM;
       }
@@ -2049,7 +2091,7 @@ PglErr LoadPvar(const char* pvarname, const char* var_filter_exceptions_flattene
     *variant_ct_ptr = raw_variant_ct - exclude_ct;
     *vpos_sortstatus_ptr = vpos_sortstatus;
     *allele_storage_ptr = allele_storage;
-    // if only INFO:PR flag present, no need to reload
+    // if only INFO/PR flag present, no need to reload
     if (!(info_nonpr_present || info_pr_nonflag_present)) {
       info_reload_slen = 0;
     }
@@ -2079,6 +2121,12 @@ PglErr LoadPvar(const char* pvarname, const char* var_filter_exceptions_flattene
   LoadPvar_ret_MALFORMED_INPUT:
     reterr = kPglRetMalformedInput;
     break;
+  LoadPvar_ret_MULTIALLELIC_MISSING_ALLELE_CODE:
+    // Note that we must permit one or even both alleles to be missing in the
+    // biallelic case, for .ped data to be usable.
+    snprintf(g_logbuf, kLogbufSize, "Error: Missing allele code in multiallelic variant on line %" PRIuPTR " of %s.\n", line_idx, pvarname);
+    WordWrapB(0);
+    logerrputsb();
   LoadPvar_ret_INCONSISTENT_INPUT:
     reterr = kPglRetInconsistentInput;
     break;
@@ -2091,6 +2139,252 @@ PglErr LoadPvar(const char* pvarname, const char* var_filter_exceptions_flattene
   CleanupTextStream2(pvarname, &pvar_txs, &reterr);
   if (reterr) {
     BigstackDoubleReset(bigstack_mark, bigstack_end_mark);
+  }
+  return reterr;
+}
+
+// Useful when we need to read from multiple .pgens (possibly with multiallelic
+// variants) at once, and the usual LoadPvar() memory footprint is larger than
+// we want.
+// allele_idx_offsets is allocated at the bottom of bigstack.  It's assumed to
+// be initialized to nullptr.
+// max_allele_ct is assumed to be initialized to 2.
+// raw_variant_ctp, max_allele_slenp, and/or max_observed_line_blenp can be
+// nullptr if the caller is uninterested in them.  If they're all null, this
+// can exit immediately on .bim files.
+PglErr LoadAlleleIdxOffsetsFromPvar(const char* pvarname, const char* file_descrip, uint32_t max_thread_ct, uint32_t* raw_variant_ctp, uint32_t* max_allele_slenp, uint32_t* max_observed_line_blenp, uintptr_t** allele_idx_offsets_ptr, uint32_t* max_allele_ctp) {
+  unsigned char* bigstack_mark = g_bigstack_base;
+  unsigned char* bigstack_end_mark = g_bigstack_end;
+  uintptr_t line_idx = 0;
+  PglErr reterr = kPglRetSuccess;
+  TextStream txs;
+  PreinitTextStream(&txs);
+  {
+    uint32_t max_line_blen;
+    if (unlikely(StandardizeMaxLineBlen(bigstack_left() / 4, &max_line_blen))) {
+      goto LoadAlleleIdxOffsetsFromPvar_ret_NOMEM;
+    }
+    reterr = InitTextStreamEx(pvarname, 1, kMaxLongLine, max_line_blen, ClipU32(max_thread_ct - 1, 1, 4), &txs);
+    if (unlikely(reterr)) {
+      goto LoadAlleleIdxOffsetsFromPvar_ret_TSTREAM_FAIL;
+    }
+    uint32_t max_observed_line_blen = 0;
+    const char* line_start;
+    // Skip header.
+    do {
+      line_start = TextGet(&txs);
+      if (unlikely(!line_start)) {
+        if (!TextStreamErrcode2(&txs, &reterr)) {
+          snprintf(g_logbuf, kLogbufSize, "Error: %s is empty.\n", file_descrip);
+          goto LoadAlleleIdxOffsetsFromPvar_ret_MALFORMED_INPUT_WW;
+        }
+        goto LoadAlleleIdxOffsetsFromPvar_ret_TSTREAM_FAIL;
+      }
+      ++line_idx;
+      const char* line_end = TextLineEnd(&txs);
+      const uint32_t cur_line_blen = line_end - line_start;
+      if (cur_line_blen > max_observed_line_blen) {
+        max_observed_line_blen = cur_line_blen;
+      }
+    } while ((*line_start == '#') && (!tokequal_k(line_start, "#CHROM")));
+    // multiallelics prohibited in .bim files (and .bim lookalikes to reduce
+    // confusion)
+    const uint32_t no_multiallelic_allowed = (*line_start != '#');
+    uint32_t col_skips[2];
+    uint32_t col_types[2];
+    if (!no_multiallelic_allowed) {
+      // [0] = REF
+      // [1] = ALT
+      const char* token_end = &(line_start[6]);
+      uint32_t found_header_bitset = 0;
+      uint32_t relevant_col_uidx = 0;
+      for (uint32_t col_idx = 1; ; ++col_idx) {
+        const char* token_start = FirstNonTspace(token_end);
+        if (IsEolnKns(*token_start)) {
+          break;
+        }
+        token_end = CurTokenEnd(token_start);
+        const uint32_t token_slen = token_end - token_start;
+        uint32_t cur_col_type;
+        if (strequal_k(token_start, "REF", token_slen)) {
+          cur_col_type = 0;
+        } else if (strequal_k(token_start, "ALT", token_slen)) {
+          cur_col_type = 1;
+        } else {
+          continue;
+        }
+        const uint32_t cur_col_type_shifted = 1 << cur_col_type;
+        if (unlikely(found_header_bitset & cur_col_type_shifted)) {
+          char* write_iter = strcpya_k(g_logbuf, "Error: Duplicate column header '");
+          write_iter = memcpya(write_iter, token_start, token_slen);
+          write_iter = strcpya_k(write_iter, "' on line ");
+          write_iter = wtoa(line_idx, write_iter);
+          write_iter = strcpya_k(write_iter, " of ");
+          write_iter = strcpya(write_iter, file_descrip);
+          memcpy_k(write_iter, ".\n\0", 4);
+          goto LoadAlleleIdxOffsetsFromPvar_ret_MALFORMED_INPUT_WW;
+        }
+        found_header_bitset |= cur_col_type_shifted;
+        col_skips[relevant_col_uidx] = col_idx;
+        col_types[relevant_col_uidx++] = cur_col_type;
+      }
+      if (unlikely(found_header_bitset != 3)) {
+        snprintf(g_logbuf, kLogbufSize, "Error: Missing column header(s) on line %" PRIuPTR " of %s. (POS, ID, REF, and ALT are required.)\n", line_idx, file_descrip);
+        goto LoadAlleleIdxOffsetsFromPvar_ret_MALFORMED_INPUT_WW;
+      }
+      col_skips[1] -= col_skips[0];
+      line_start = TextGet(&txs);
+      if (unlikely(!line_start)) {
+        if (!TextStreamErrcode2(&txs, &reterr)) {
+          snprintf(g_logbuf, kLogbufSize, "Error: %s is empty.\n", file_descrip);
+          goto LoadAlleleIdxOffsetsFromPvar_ret_MALFORMED_INPUT_WW;
+        }
+        goto LoadAlleleIdxOffsetsFromPvar_ret_TSTREAM_FAIL;
+      }
+      ++line_idx;
+      const char* line_end = TextLineEnd(&txs);
+      const uint32_t cur_line_blen = line_end - line_start;
+      if (cur_line_blen > max_observed_line_blen) {
+        max_observed_line_blen = cur_line_blen;
+      }
+    } else {
+      const char* fifth_column_start = NextTokenMult(line_start, 4);
+      if (unlikely(!fifth_column_start)) {
+        snprintf(g_logbuf, kLogbufSize, "Error: Fewer columns than expected in %s.\n", file_descrip);
+        goto LoadAlleleIdxOffsetsFromPvar_ret_MALFORMED_INPUT_WW;
+      }
+      if ((!raw_variant_ctp) && (!max_allele_slenp) && (!max_observed_line_blenp)) {
+        goto LoadAlleleIdxOffsetsFromPvar_ret_1;
+      }
+      col_skips[1] = 1;
+      col_types[0] = 1;
+      col_types[1] = 0;
+      const char* sixth_column_start = NextToken(fifth_column_start);
+      if (sixth_column_start) {
+        // #CHROM ID CM POS ALT REF
+        col_skips[0] = 4;
+      } else {
+        // #CHROM ID POS ALT REF
+        col_skips[0] = 3;
+      }
+    }
+    uintptr_t* allele_idx_offsets = R_CAST(uintptr_t*, g_bigstack_base);
+    uintptr_t* allele_idx_offsets_limit = R_CAST(uintptr_t*, g_bigstack_end);
+    if (allele_idx_offsets_limit == allele_idx_offsets) {
+      goto LoadAlleleIdxOffsetsFromPvar_ret_NOMEM;
+    }
+#ifdef __LP64__
+    if (allele_idx_offsets_limit > &(allele_idx_offsets[0x7ffffffe])) {
+      allele_idx_offsets_limit = &(allele_idx_offsets[0x7ffffffe]);
+    }
+#endif
+    uintptr_t* allele_idx_offsets_iter = allele_idx_offsets;
+    uintptr_t allele_idx = 0;
+    *allele_idx_offsets_iter++ = allele_idx;
+    uint32_t max_allele_ct = 2;
+    uint32_t max_allele_slen = 1;
+    while (1) {
+      if (allele_idx_offsets_iter == allele_idx_offsets_limit) {
+#ifdef __LP64__
+        if (allele_idx_offsets_limit == &(allele_idx_offsets[0x7ffffffe])) {
+          logerrputs("Error: " PROG_NAME_STR " does not support more than 2^31 - 3 variants.  We recommend using\nother software for very deep studies of small numbers of genomes.\n");
+          goto LoadAlleleIdxOffsetsFromPvar_ret_MALFORMED_INPUT;
+        }
+#endif
+        goto LoadAlleleIdxOffsetsFromPvar_ret_NOMEM;
+      }
+      const char* token_ptrs[2];
+      uint32_t token_slens[2];
+      const char* last_token_end = TokenLexK(line_start, col_types, col_skips, 2, token_ptrs, token_slens);
+      if (unlikely(!last_token_end)) {
+        goto LoadAlleleIdxOffsetsFromPvar_ret_MISSING_TOKENS;
+      }
+      if (token_slens[0] > max_allele_slen) {
+        max_allele_slen = token_slens[0];
+      }
+      const uint32_t alt_col_slen = token_slens[1];
+      const char* alt_iter = token_ptrs[1];
+      const char* alt_end = &(alt_iter[alt_col_slen]);
+      uint32_t extra_alt_ct = 0;
+      if (alt_col_slen > 1) {
+        extra_alt_ct = CountByte(alt_iter, ',', alt_col_slen);
+        for (uint32_t alt_idx = 0; alt_idx != extra_alt_ct; ++alt_idx) {
+          const char* cur_alt_end = AdvToDelim(alt_iter, ',');
+          const uint32_t cur_allele_slen = cur_alt_end - alt_iter;
+          if (cur_allele_slen > max_allele_slen) {
+            max_allele_slen = cur_allele_slen;
+          }
+          alt_iter = &(cur_alt_end[1]);
+        }
+        const uint32_t cur_allele_slen = alt_end - alt_iter;
+        if (cur_allele_slen > max_allele_slen) {
+          max_allele_slen = cur_allele_slen;
+        }
+      }
+      const uint32_t cur_allele_ct = 2 + extra_alt_ct;
+      if (cur_allele_ct > max_allele_ct) {
+        max_allele_ct = cur_allele_ct;
+      }
+      allele_idx += cur_allele_ct;
+      *allele_idx_offsets_iter++ = allele_idx;
+      const char* line_end = AdvPastDelim(alt_end, '\n');
+      const uint32_t cur_line_blen = line_end - line_start;
+      if (cur_line_blen > max_observed_line_blen) {
+        max_observed_line_blen = cur_line_blen;
+      }
+      line_start = line_end;
+      if (!TextGetUnsafe2K(&txs, &line_start)) {
+        break;
+      }
+      ++line_idx;
+      if (unlikely(*line_start == '#')) {
+        snprintf(g_logbuf, kLogbufSize, "Error: Line %" PRIuPTR " of %s starts with a '#'. (This is only permitted before the first nonheader line, and if a #CHROM header line is present it must denote the end of the header block.)\n", line_idx, file_descrip);
+        goto LoadAlleleIdxOffsetsFromPvar_ret_MALFORMED_INPUT_WW;
+      }
+    }
+    if (unlikely(TextStreamErrcode2(&txs, &reterr))) {
+      goto LoadAlleleIdxOffsetsFromPvar_ret_TSTREAM_FAIL;
+    }
+    const uintptr_t raw_variant_ct_p1 = allele_idx_offsets_iter - allele_idx_offsets;
+    const uintptr_t raw_variant_ct = raw_variant_ct_p1 - 1;
+    if (allele_idx > 2 * raw_variant_ct) {
+      BigstackFinalizeW(allele_idx_offsets, raw_variant_ct_p1);
+      *allele_idx_offsets_ptr = allele_idx_offsets;
+    }
+    *max_allele_ctp = max_allele_ct;
+    if (max_allele_slenp) {
+      *max_allele_slenp = max_allele_slen;
+    }
+    if (raw_variant_ctp) {
+      *raw_variant_ctp = raw_variant_ct;
+    }
+    if (max_observed_line_blenp) {
+      *max_observed_line_blenp = max_observed_line_blen;
+    }
+  }
+  while (0) {
+  LoadAlleleIdxOffsetsFromPvar_ret_NOMEM:
+    reterr = kPglRetNomem;
+    break;
+  LoadAlleleIdxOffsetsFromPvar_ret_TSTREAM_FAIL:
+    TextStreamErrPrint(file_descrip, &txs);
+    break;
+  LoadAlleleIdxOffsetsFromPvar_ret_MISSING_TOKENS:
+    snprintf(g_logbuf, kLogbufSize, "Error: Line %" PRIuPTR " of %s has fewer tokens than expected.\n", line_idx, file_descrip);
+  LoadAlleleIdxOffsetsFromPvar_ret_MALFORMED_INPUT_WW:
+    WordWrapB(0);
+    logerrputsb();
+#ifdef __LP64__
+  LoadAlleleIdxOffsetsFromPvar_ret_MALFORMED_INPUT:
+#endif
+    reterr = kPglRetMalformedInput;
+    break;
+  }
+ LoadAlleleIdxOffsetsFromPvar_ret_1:
+  CleanupTextStream2(file_descrip, &txs, &reterr);
+  BigstackEndReset(bigstack_end_mark);
+  if (reterr) {
+    BigstackReset(bigstack_mark);
   }
   return reterr;
 }

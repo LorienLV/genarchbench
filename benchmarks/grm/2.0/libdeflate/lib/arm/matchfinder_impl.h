@@ -53,7 +53,7 @@ matchfinder_init_neon(mf_pos_t *data, size_t size)
 		size -= 4 * sizeof(*p);
 	} while (size != 0);
 }
-// #define matchfinder_init matchfinder_init_neon
+#define matchfinder_init matchfinder_init_neon
 
 static forceinline void
 matchfinder_rebase_neon(mf_pos_t *data, size_t size)
@@ -79,7 +79,7 @@ matchfinder_rebase_neon(mf_pos_t *data, size_t size)
 		size -= 4 * sizeof(*p);
 	} while (size != 0);
 }
-// #define matchfinder_rebase matchfinder_rebase_neon
+#define matchfinder_rebase matchfinder_rebase_neon
 
 #endif /* __ARM_NEON */
 

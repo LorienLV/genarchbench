@@ -1,4 +1,4 @@
-// This library is part of PLINK 2.00, copyright (C) 2005-2020 Shaun Purcell,
+// This library is part of PLINK 2.00, copyright (C) 2005-2022 Shaun Purcell,
 // Christopher Chang.
 //
 // This library is free software: you can redistribute it and/or modify it
@@ -44,17 +44,15 @@ void InitPedigreeIdInfo(MiscFlags misc_flags, PedigreeIdInfo* piip) {
 
 BoolErr BigstackAllocPgv(uint32_t sample_ct, uint32_t multiallelic_needed, PgenGlobalFlags gflags, PgenVariant* pgvp) {
   const uint32_t sample_ctl2 = NypCtToWordCt(sample_ct);
-  if (unlikely(
-          bigstack_alloc_w(sample_ctl2, &(pgvp->genovec)))) {
+  if (unlikely(bigstack_alloc_w(sample_ctl2, &(pgvp->genovec)))) {
     return 1;
   }
   const uint32_t sample_ctl = BitCtToWordCt(sample_ct);
   if (multiallelic_needed) {
-    if (unlikely(
-            bigstack_alloc_w(sample_ctl, &(pgvp->patch_01_set)) ||
-            bigstack_alloc_ac(sample_ct, &(pgvp->patch_01_vals)) ||
-            bigstack_alloc_w(sample_ctl, &(pgvp->patch_10_set)) ||
-            bigstack_alloc_ac(sample_ct * 2, &(pgvp->patch_10_vals)))) {
+    if (unlikely(bigstack_alloc_w(sample_ctl, &(pgvp->patch_01_set)) ||
+                 bigstack_alloc_ac(sample_ct, &(pgvp->patch_01_vals)) ||
+                 bigstack_alloc_w(sample_ctl, &(pgvp->patch_10_set)) ||
+                 bigstack_alloc_ac(sample_ct * 2, &(pgvp->patch_10_vals)))) {
       return 1;
     }
   } else {
@@ -65,9 +63,8 @@ BoolErr BigstackAllocPgv(uint32_t sample_ct, uint32_t multiallelic_needed, PgenG
     pgvp->patch_10_vals = nullptr;
   }
   if (gflags & (kfPgenGlobalHardcallPhasePresent | kfPgenGlobalDosagePhasePresent)) {
-    if (unlikely(
-            bigstack_alloc_w(sample_ctl, &(pgvp->phasepresent)) ||
-            bigstack_alloc_w(sample_ctl, &(pgvp->phaseinfo)))) {
+    if (unlikely(bigstack_alloc_w(sample_ctl, &(pgvp->phasepresent)) ||
+                 bigstack_alloc_w(sample_ctl, &(pgvp->phaseinfo)))) {
       return 1;
     }
   } else {
@@ -75,18 +72,16 @@ BoolErr BigstackAllocPgv(uint32_t sample_ct, uint32_t multiallelic_needed, PgenG
     pgvp->phaseinfo = nullptr;
   }
   if (gflags & kfPgenGlobalDosagePresent) {
-    if (unlikely(
-            bigstack_alloc_w(sample_ctl, &(pgvp->dosage_present)) ||
-            bigstack_alloc_dosage(sample_ct, &(pgvp->dosage_main)))) {
+    if (unlikely(bigstack_alloc_w(sample_ctl, &(pgvp->dosage_present)) ||
+                 bigstack_alloc_dosage(sample_ct, &(pgvp->dosage_main)))) {
       return 1;
     }
     if (multiallelic_needed) {
       // todo
     }
     if (gflags & kfPgenGlobalDosagePhasePresent) {
-      if (unlikely(
-              bigstack_alloc_w(sample_ctl, &(pgvp->dphase_present)) ||
-              bigstack_alloc_dphase(sample_ct, &(pgvp->dphase_delta)))) {
+      if (unlikely(bigstack_alloc_w(sample_ctl, &(pgvp->dphase_present)) ||
+                   bigstack_alloc_dphase(sample_ct, &(pgvp->dphase_delta)))) {
         return 1;
       }
       if (multiallelic_needed) {
@@ -190,7 +185,7 @@ char* PrintDdosageDecimal(uint32_t remainder, char* start) {
   // (remainder * 2) is in 65536ths
   // 65536 * 625 = 40960k, smallest common denominator with 10^4
 
-  const uint32_t range_top_40960k = (remainder * 2 + 1) * 625;
+  const uint32_t range_top_40960k = remainder * 1250 + 625;
   // this is technically checking a half-open rather than a fully-open
   // interval, but that's fine since we never hit the boundary points
   if ((range_top_40960k % 4096) < 1250) {
@@ -541,7 +536,8 @@ uint32_t GenoarrCountMissingUnsafe(const uintptr_t* genoarr, uint32_t sample_ct)
   uint32_t missing_ct = CountMissingVec6(R_CAST(const VecW*, genoarr), word_idx / kWordsPerVec);
   for (; word_idx != sample_ctl2; ++word_idx) {
     uintptr_t ww = genoarr[word_idx];
-    ww = ww & (ww >> 1);
+    // bugfix (19 Oct 2020): forgot to mask out high bits
+    ww = ww & (ww >> 1) & kMask5555;
     missing_ct += Popcount01Word(ww);
   }
   return missing_ct;
@@ -814,7 +810,7 @@ uint32_t GetMajIdxMulti(const double* cur_allele_freqs, uint32_t cur_allele_ct) 
 
 // forced SID '0' if sids == nullptr
 // ok for sample_augid_map_ptr == nullptr
-PglErr AugidInitAlloc(const uintptr_t* sample_include, const SampleIdInfo* siip, uint32_t sample_ct, uint32_t** sample_augid_map_ptr, char** sample_augids_ptr, uintptr_t* max_sample_augid_blen_ptr) {
+PglErr AugidInitAlloc(const uintptr_t* sample_include, const SampleIdInfo* siip, uint32_t sample_ct, uint32_t alloc_at_end, uint32_t** sample_augid_map_ptr, char** sample_augids_ptr, uintptr_t* max_sample_augid_blen_ptr) {
   const char* sample_ids = siip->sample_ids;
   const char* sids = siip->sids;
   const uintptr_t max_sample_id_blen = siip->max_sample_id_blen;
@@ -826,13 +822,25 @@ PglErr AugidInitAlloc(const uintptr_t* sample_include, const SampleIdInfo* siip,
   *max_sample_augid_blen_ptr = max_sample_augid_blen;
   uint32_t* sample_augid_map = nullptr;
   if (sample_augid_map_ptr) {
-    if (unlikely(bigstack_alloc_u32(sample_ct, sample_augid_map_ptr))) {
-      return kPglRetNomem;
+    if (!alloc_at_end) {
+      if (unlikely(bigstack_alloc_u32(sample_ct, sample_augid_map_ptr))) {
+        return kPglRetNomem;
+      }
+    } else {
+      if (unlikely(bigstack_end_alloc_u32(sample_ct, sample_augid_map_ptr))) {
+        return kPglRetNomem;
+      }
     }
     sample_augid_map = *sample_augid_map_ptr;
   }
-  if (unlikely(bigstack_alloc_c(max_sample_augid_blen * sample_ct, sample_augids_ptr))) {
-    return kPglRetNomem;
+  if (!alloc_at_end) {
+    if (unlikely(bigstack_alloc_c(max_sample_augid_blen * sample_ct, sample_augids_ptr))) {
+      return kPglRetNomem;
+    }
+  } else {
+    if (unlikely(bigstack_end_alloc_c(max_sample_augid_blen * sample_ct, sample_augids_ptr))) {
+      return kPglRetNomem;
+    }
   }
   char* sample_augids_iter = *sample_augids_ptr;
   uintptr_t sample_uidx_base = 0;
@@ -860,7 +868,7 @@ PglErr SortedXidboxInitAlloc(const uintptr_t* sample_include, const SampleIdInfo
     return CopySortStrboxSubset(sample_include, siip->sample_ids, sample_ct, siip->max_sample_id_blen, allow_dups, 0, use_nsort, sorted_xidbox_ptr, xid_map_ptr);
   }
   // three fields
-  if (unlikely(AugidInitAlloc(sample_include, siip, sample_ct, xid_map_ptr, sorted_xidbox_ptr, max_xid_blen_ptr))) {
+  if (unlikely(AugidInitAlloc(sample_include, siip, sample_ct, 0, xid_map_ptr, sorted_xidbox_ptr, max_xid_blen_ptr))) {
     return kPglRetNomem;
   }
   if (unlikely(SortStrboxIndexed(sample_ct, *max_xid_blen_ptr, use_nsort, *sorted_xidbox_ptr, *xid_map_ptr))) {
@@ -869,10 +877,36 @@ PglErr SortedXidboxInitAlloc(const uintptr_t* sample_include, const SampleIdInfo
   if (!allow_dups) {
     char* dup_id = ScanForDuplicateIds(*sorted_xidbox_ptr, sample_ct, *max_xid_blen_ptr);
     if (unlikely(dup_id)) {
-      char* tab_iter = AdvToDelim(dup_id, '\t');
-      *tab_iter = ' ';
-      tab_iter = AdvToDelim(&(tab_iter[1]), '\t');
-      *tab_iter = ' ';
+      TabsToSpaces(dup_id);
+      logerrprintfww("Error: Duplicate ID '%s'.\n", dup_id);
+      return kPglRetMalformedInput;
+    }
+  }
+  return kPglRetSuccess;
+}
+
+PglErr SortedXidboxInitAllocEnd(const uintptr_t* sample_include, const SampleIdInfo* siip, uint32_t sample_ct, uint32_t allow_dups, XidMode xid_mode, uint32_t use_nsort, char** sorted_xidbox_ptr, uint32_t** xid_map_ptr, uintptr_t* max_xid_blen_ptr) {
+  if (!(xid_mode & kfXidModeFlagSid)) {
+    // two fields
+    const uintptr_t max_sample_id_blen = siip->max_sample_id_blen;
+    *max_xid_blen_ptr = max_sample_id_blen;
+    if (unlikely(bigstack_end_alloc_u32(sample_ct, xid_map_ptr) ||
+                 bigstack_end_alloc_c(sample_ct * max_sample_id_blen, sorted_xidbox_ptr))) {
+      return kPglRetNomem;
+    }
+    return CopySortStrboxSubsetNoalloc(sample_include, siip->sample_ids, sample_ct, max_sample_id_blen, allow_dups, 0, use_nsort, *sorted_xidbox_ptr, *xid_map_ptr);
+  }
+  // three fields
+  if (unlikely(AugidInitAlloc(sample_include, siip, sample_ct, 1, xid_map_ptr, sorted_xidbox_ptr, max_xid_blen_ptr))) {
+    return kPglRetNomem;
+  }
+  if (unlikely(SortStrboxIndexed(sample_ct, *max_xid_blen_ptr, use_nsort, *sorted_xidbox_ptr, *xid_map_ptr))) {
+    return kPglRetNomem;
+  }
+  if (!allow_dups) {
+    char* dup_id = ScanForDuplicateIds(*sorted_xidbox_ptr, sample_ct, *max_xid_blen_ptr);
+    if (unlikely(dup_id)) {
+      TabsToSpaces(dup_id);
       logerrprintfww("Error: Duplicate ID '%s'.\n", dup_id);
       return kPglRetMalformedInput;
     }
@@ -909,16 +943,16 @@ uint32_t XidRead(uintptr_t max_xid_blen, uint32_t comma_delim, XidMode xid_mode,
     unsigned char ucc = *token_iter;
     while (ucc != ',') {
       if (ucc < 32) {
-        if (unlikely(!(xid_mode & kfXidModeFlagOneTokenOk))) {
+        if (unlikely(!(xid_mode & kfXidModeFlagOneCoreTokenOk))) {
           *read_pp = nullptr;
           return 0;
         }
-        goto XidRead_comma_single_token;
+        goto XidRead_comma_single_core_token;
       }
       ucc = *(++token_iter);
     }
     if (xid_mode & kfXidModeFlagNeverFid) {
-    XidRead_comma_single_token:
+    XidRead_comma_single_core_token:
       iid_ptr = first_token_start;
       slen_iid = token_iter - first_token_start;
     } else {
@@ -933,8 +967,9 @@ uint32_t XidRead(uintptr_t max_xid_blen, uint32_t comma_delim, XidMode xid_mode,
       slen_iid = token_iter - iid_ptr;
     }
     // token_iter now points to comma/eoln at end of IID
-    if (xid_mode & kfXidModeFlagSid) {
+    if (xid_mode & (kfXidModeFlagSid | kfXidModeFlagSkipSid)) {
       if (*token_iter != ',') {
+        *read_pp = nullptr;
         return 0;
       }
       do {
@@ -944,25 +979,27 @@ uint32_t XidRead(uintptr_t max_xid_blen, uint32_t comma_delim, XidMode xid_mode,
       while ((ucc >= 32) && (ucc != ',')) {
         ucc = *(++token_iter);
       }
-      blen_sid = 1 + S_CAST(uintptr_t, token_iter - sid_ptr);
-      if (token_iter == sid_ptr) {
-        // special case: treat missing SID as '0'
-        blen_sid = 2;
-        sid_ptr = &(g_one_char_strs[96]);
+      if (xid_mode & kfXidModeFlagSid) {
+        blen_sid = 1 + S_CAST(uintptr_t, token_iter - sid_ptr);
+        if (token_iter == sid_ptr) {
+          // special case: treat missing SID as '0'
+          blen_sid = 2;
+          sid_ptr = &(g_one_char_strs[96]);
+        }
       }
     }
   } else {
     assert(!IsEolnKns(*first_token_start));
     token_iter = CurTokenEnd(first_token_start);
     if (xid_mode & kfXidModeFlagNeverFid) {
-    XidRead_space_single_token:
+    XidRead_space_single_core_token:
       iid_ptr = first_token_start;
       slen_iid = token_iter - first_token_start;
     } else {
       slen_fid = token_iter - first_token_start;
       token_iter = FirstNonTspace(token_iter);
       if (IsEolnKns(*token_iter)) {
-        if (unlikely(!(xid_mode & kfXidModeFlagOneTokenOk))) {
+        if (unlikely(!(xid_mode & kfXidModeFlagOneCoreTokenOk))) {
           *read_pp = nullptr;
           return 0;
         }
@@ -970,14 +1007,14 @@ uint32_t XidRead(uintptr_t max_xid_blen, uint32_t comma_delim, XidMode xid_mode,
         token_iter = &(first_token_start[slen_fid]);
         // bugfix (26 Feb 2018): forgot to zero this
         slen_fid = 0;
-        goto XidRead_space_single_token;
+        goto XidRead_space_single_core_token;
       }
       iid_ptr = token_iter;
       token_iter = CurTokenEnd(token_iter);
       slen_iid = token_iter - iid_ptr;
     }
     // token_iter now points to space/eoln at end of IID
-    if (xid_mode & kfXidModeFlagSid) {
+    if (xid_mode & (kfXidModeFlagSid | kfXidModeFlagSkipSid)) {
       token_iter = FirstNonTspace(token_iter);
       if (unlikely(IsEolnKns(*token_iter))) {
         *read_pp = nullptr;
@@ -985,7 +1022,9 @@ uint32_t XidRead(uintptr_t max_xid_blen, uint32_t comma_delim, XidMode xid_mode,
       }
       sid_ptr = token_iter;
       token_iter = CurTokenEnd(token_iter);
-      blen_sid = 1 + S_CAST(uintptr_t, token_iter - sid_ptr);
+      if (xid_mode & kfXidModeFlagSid) {
+        blen_sid = 1 + S_CAST(uintptr_t, token_iter - sid_ptr);
+      }
     }
   }
   *read_pp = token_iter;
@@ -1015,7 +1054,7 @@ BoolErr SortedXidboxReadMultifind(const char* __restrict sorted_xidbox, uintptr_
   if (!slen_final) {
     return 1;
   }
-  const uint32_t lb_idx = bsearch_str_lb(idbuf, sorted_xidbox, slen_final, max_xid_blen, xid_ct);
+  const uint32_t lb_idx = bsearch_strbox_lb(idbuf, sorted_xidbox, slen_final, max_xid_blen, xid_ct);
   idbuf[slen_final] = ' ';
   const uint32_t ub_idx = ExpsearchStrLb(idbuf, sorted_xidbox, slen_final + 1, max_xid_blen, xid_ct, lb_idx);
   if (lb_idx == ub_idx) {
@@ -1026,7 +1065,7 @@ BoolErr SortedXidboxReadMultifind(const char* __restrict sorted_xidbox, uintptr_
   return 0;
 }
 
-PglErr LoadXidHeader(const char* flag_name, XidHeaderFlags xid_header_flags, uintptr_t* line_idx_ptr, TextStream* txsp, XidMode* xid_mode_ptr, char** line_startp, char** line_iterp) {
+PglErr LoadXidHeader(const char* flag_name, XidHeaderFlags xid_header_flags, uintptr_t* line_idx_ptr, TextStream* txsp, XidMode* xid_mode_ptr, char** line_startp) {
   // possible todo: support comma delimiter
   uintptr_t line_idx = *line_idx_ptr;
   char* line_iter;
@@ -1065,31 +1104,31 @@ PglErr LoadXidHeader(const char* flag_name, XidHeaderFlags xid_header_flags, uin
     if (tokequal_k(linebuf_iter, "SID")) {
       if (!(xid_header_flags & kfXidHeaderIgnoreSid)) {
         xid_mode |= kfXidModeFlagSid;
+      } else {
+        xid_mode |= kfXidModeFlagSkipSid;
       }
       linebuf_iter = FirstNonTspace(&(linebuf_iter[3]));
-    } else if (xid_mode == kfXidModeFlagNeverFid) {
-      xid_mode = kfXidModeIid;
+    }
+    if ((xid_mode & kfXidModeCoreMask) == kfXidModeFlagNeverFid) {
+      xid_mode |= kfXidModeFlagOneCoreTokenOk;
     }
     line_iter = linebuf_iter;
   } else {
     xid_mode = (xid_header_flags & kfXidHeaderFixedWidth)? kfXidModeFidIid : kfXidModeFidIidOrIid;
-  }
-  if (line_iterp) {
-    *line_iterp = line_iter;
   }
   *line_idx_ptr = line_idx;
   *xid_mode_ptr = xid_mode;
   return kPglRetSuccess;
 }
 
-PglErr OpenAndLoadXidHeader(const char* fname, const char* flag_name, XidHeaderFlags xid_header_flags, uint32_t max_line_blen, TextStream* txsp, XidMode* xid_mode_ptr, uintptr_t* line_idx_ptr, char** line_startp, char** line_iterp) {
+PglErr OpenAndLoadXidHeader(const char* fname, const char* flag_name, XidHeaderFlags xid_header_flags, uint32_t max_line_blen, TextStream* txsp, XidMode* xid_mode_ptr, uintptr_t* line_idx_ptr, char** line_startp) {
   PglErr reterr = InitTextStream(fname, max_line_blen, 1, txsp);
   // remove unlikely() if any caller treats eof as ok
   if (unlikely(reterr)) {
     return reterr;
   }
   *line_idx_ptr = 0;
-  return LoadXidHeader(flag_name, xid_header_flags, line_idx_ptr, txsp, xid_mode_ptr, line_startp, line_iterp);
+  return LoadXidHeader(flag_name, xid_header_flags, line_idx_ptr, txsp, xid_mode_ptr, line_startp);
 }
 
 PglErr LoadXidHeaderPair(const char* flag_name, uint32_t sid_over_fid, uintptr_t* line_idx_ptr, TextStream* txsp, XidMode* xid_mode_ptr, char** line_startp, char** line_iterp) {
@@ -1181,6 +1220,125 @@ PglErr LoadXidHeaderPair(const char* flag_name, uint32_t sid_over_fid, uintptr_t
   return kPglRetSuccess;
 }
 
+void InitXidHtable(const SampleIdInfo* siip, uint32_t sample_ct, uint32_t xid_htable_size, uint32_t* xid_htable, char* idbuf) {
+  SetAllU32Arr(xid_htable_size, xid_htable);
+  const char* sample_ids_iter = siip->sample_ids;
+  const char* sids_iter = siip->sids;
+  const uintptr_t max_sample_id_blen = siip->max_sample_id_blen;
+  const uintptr_t max_sid_blen = siip->max_sid_blen;
+  for (uint32_t sample_idx = 0; sample_idx != sample_ct; ++sample_idx) {
+    uint32_t slen = strlen(sample_ids_iter);
+    const char* cur_sample_id;
+    if (!sids_iter) {
+      cur_sample_id = sample_ids_iter;
+    } else {
+      char* id_iter = memcpyax(idbuf, sample_ids_iter, slen, '\t');
+      const uint32_t sid_blen = 1 + strlen(sids_iter);
+      memcpy(id_iter, sids_iter, sid_blen);
+      slen += sid_blen;
+      sids_iter = &(sids_iter[max_sid_blen]);
+      cur_sample_id = idbuf;
+    }
+    HtableAddNondup(cur_sample_id, slen, xid_htable_size, sample_idx, xid_htable);
+    sample_ids_iter = &(sample_ids_iter[max_sample_id_blen]);
+  }
+}
+
+BoolErr LookupXidHtable(const char* line_start, const SampleIdInfo* siip, const uint32_t* xid_htable, uint32_t xid_htable_size, uint32_t fid_present, uint32_t sid_present, uint32_t* sample_idxp, char* idbuf) {
+  const char* read_iid_start = line_start;
+  const uintptr_t max_sample_id_blen = siip->max_sample_id_blen;
+  char* write_id_iter = idbuf;
+  if (fid_present) {
+    const char* fid_end = CurTokenEnd(line_start);
+    const uint32_t fid_slen = fid_end - line_start;
+    // check this before copying, to prevent idbuf overflow
+    if (fid_slen + 2 >= max_sample_id_blen) {
+      *sample_idxp = UINT32_MAX;
+      return 0;
+    }
+    write_id_iter = memcpya(write_id_iter, line_start, fid_slen);
+    read_iid_start = FirstNonTspace(fid_end);
+    if (unlikely(IsEolnKns(*read_iid_start))) {
+      return 1;
+    }
+  } else {
+    *write_id_iter++ = '0';
+  }
+  *write_id_iter++ = '\t';
+  const char* read_iid_end = CurTokenEnd(read_iid_start);
+  const uint32_t iid_slen = read_iid_end - read_iid_start;
+  const uint32_t fid_iid_slen = iid_slen + S_CAST(uintptr_t, write_id_iter - idbuf);
+  if (fid_iid_slen >= max_sample_id_blen) {
+    *sample_idxp = UINT32_MAX;
+    return 0;
+  }
+  write_id_iter = memcpya(write_id_iter, read_iid_start, iid_slen);
+
+  const char* sample_ids = siip->sample_ids;
+  const char* sids = siip->sids;
+  if (!sids) {
+    *write_id_iter = '\0';
+    *sample_idxp = StrboxHtableFind(idbuf, sample_ids, xid_htable, max_sample_id_blen, fid_iid_slen, xid_htable_size);
+    return 0;
+  }
+
+  *write_id_iter++ = '\t';
+  char* write_sid_start = write_id_iter;
+  uint32_t sid_slen = 1;
+  const uintptr_t max_sid_blen = siip->max_sid_blen;
+  if (sid_present) {
+    const char* read_sid_start = FirstNonTspace(read_iid_end);
+    if (unlikely(IsEolnKns(*read_sid_start))) {
+      return 1;
+    }
+    const char* read_sid_end = CurTokenEnd(read_sid_start);
+    sid_slen = read_sid_end - read_sid_start;
+    if (sid_slen >= max_sid_blen) {
+      *sample_idxp = UINT32_MAX;
+      return 0;
+    }
+    write_id_iter = memcpya(write_id_iter, read_sid_start, sid_slen);
+  } else {
+    *write_id_iter++ = '0';
+  }
+  *write_id_iter = '\0';
+  const uint32_t fid_iid_blen = fid_iid_slen + 1;
+  const uint32_t sid_blen = sid_slen + 1;
+  uint32_t hashval = Hashceil(idbuf, fid_iid_slen + sid_blen, xid_htable_size);
+  write_sid_start[-1] = '\0';
+  while (1) {
+    const uint32_t sample_idx = xid_htable[hashval];
+    if ((sample_idx == UINT32_MAX) ||
+        (memequal(idbuf, &(sample_ids[sample_idx * max_sample_id_blen]), fid_iid_blen) &&
+         memequal(write_sid_start, &(sids[sample_idx * max_sid_blen]), sid_blen))) {
+      *sample_idxp = sample_idx;
+      return 0;
+    }
+    if (++hashval == xid_htable_size) {
+      hashval = 0;
+    }
+  }
+}
+
+// accept 'M'/'F'/'m'/'f' since that's more readable without being any less
+// efficient
+const unsigned char g_char_to_sex[256] =
+  {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+   0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+   0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+   0, 1, 2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+   0, 0, 0, 0, 0, 0, 2, 0, 0, 0, 0, 0, 0, 1, 0, 0,
+   0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+   0, 0, 0, 0, 0, 0, 2, 0, 0, 0, 0, 0, 0, 1, 0, 0,
+   0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+   0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+   0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+   0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+   0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+   0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+   0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+   0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+   0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0};
 
 const char g_xymt_log_names[kChrOffsetCt][5] = {"chrX", "chrY", "XY", "chrM", "PAR1", "PAR2"};
 
@@ -1755,15 +1913,8 @@ PglErr TryToAddChrName(const char* chr_name, const char* file_descrip, uintptr_t
   *chr_idx_ptr = chr_code_end;
   cip->name_ct = name_ct + 1;
   uint32_t* id_htable = cip->nonstd_id_htable;
-  for (uint32_t hashval = Hashceil(chr_name, name_slen, kChrHtableSize); ; ) {
-    if (id_htable[hashval] == UINT32_MAX) {
-      id_htable[hashval] = chr_code_end;
-      return kPglRetSuccess;
-    }
-    if (++hashval == kChrHtableSize) {
-      hashval = 0;
-    }
-  }
+  HtableAddNondup(chr_name, name_slen, kChrHtableSize, chr_code_end, id_htable);
+  return kPglRetSuccess;
 }
 
 
@@ -2290,13 +2441,13 @@ PglErr ConditionalAllocateNonAutosomalVariants(const ChrInfo* cip, const char* c
   if (!non_autosomal_variant_ct) {
     return kPglRetSuccess;
   }
-  logprintf("Excluding %u variant%s on non-autosomes from %s.\n", non_autosomal_variant_ct, (non_autosomal_variant_ct == 1)? "" : "s", calc_descrip);
   *variant_ct_ptr -= non_autosomal_variant_ct;
-  if (unlikely(!(*variant_ct_ptr))) {
-    // this may not always be an error condition, probably add a flag later to
-    // control printing of this error message, etc.
-    logerrprintf("Error: No variants remaining for %s.\n", calc_descrip);
-    return kPglRetDegenerateData;
+  if (calc_descrip) {
+    logprintf("Excluding %u variant%s on non-autosomes from %s.\n", non_autosomal_variant_ct, (non_autosomal_variant_ct == 1)? "" : "s", calc_descrip);
+    if (unlikely(!(*variant_ct_ptr))) {
+      logerrprintf("Error: No variants remaining for %s.\n", calc_descrip);
+      return kPglRetDegenerateData;
+    }
   }
   const uint32_t raw_variant_ctl = BitCtToWordCt(raw_variant_ct);
   uintptr_t* working_variant_include;
@@ -2559,6 +2710,19 @@ uint32_t GetCatSamples(const uintptr_t* sample_include_base, const PhenoCol* cat
     }
   }
   return PopcountWords(cur_cat_samples, raw_sample_ctl);
+}
+
+uint32_t RemoveExcludedCats(const uint32_t* data_cat, const uintptr_t* cat_keep_bitarr, uint32_t raw_sample_ct, uint32_t in_sample_ct, uintptr_t* sample_include) {
+  uintptr_t sample_include_base = 0;
+  uintptr_t sample_include_bits = sample_include[0];
+  for (uint32_t sample_idx = 0; sample_idx != in_sample_ct; ++sample_idx) {
+    const uintptr_t sample_uidx = BitIter1(sample_include, &sample_include_base, &sample_include_bits);
+    if (!IsSet(cat_keep_bitarr, data_cat[sample_uidx])) {
+      ClearBit(sample_uidx, sample_include);
+    }
+  }
+  const uint32_t raw_sample_ctl = BitCtToWordCt(raw_sample_ct);
+  return PopcountWords(sample_include, raw_sample_ctl);
 }
 
 void CleanupPhenoCols(uint32_t pheno_ct, PhenoCol* pheno_cols) {
@@ -2985,6 +3149,115 @@ void ExpandMhc(uint32_t sample_ct, uintptr_t* mhc, uintptr_t** patch_01_set_ptr,
   *patch_10_vals_ptr = R_CAST(AlleleCode*, &(patch_10_set[sample_ctl]));
 }
 
+// Returns 2 if resize needed (str_ct == strset_table_size / 2), 1 if OOM
+uint32_t StrsetAdd(unsigned char* arena_top, const char* src, uint32_t slen, uint32_t strset_table_size, char** strset, uint32_t* str_ctp, unsigned char** arena_bottom_ptr) {
+  for (uint32_t hashval = Hashceil(src, slen, strset_table_size); ; ) {
+    char* strset_entry = strset[hashval];
+    if (!strset_entry) {
+      const uint32_t str_ct = 1 + (*str_ctp);
+      if (unlikely(str_ct * 2 > strset_table_size)) {
+        return 2;
+      }
+      *str_ctp = str_ct;
+      return S_CAST(uint32_t, StoreStringAtBase(arena_top, src, slen, arena_bottom_ptr, &(strset[hashval])));
+    }
+    if (strequal_unsafe(strset_entry, src, slen)) {
+      return 0;
+    }
+    if (++hashval == strset_table_size) {
+      hashval = 0;
+    }
+  }
+}
+
+uint32_t StrsetAddEnd(unsigned char* arena_bottom, const char* src, uint32_t slen, uint32_t strset_table_size, char** strset, uint32_t* str_ctp, unsigned char** arena_top_ptr) {
+  for (uint32_t hashval = Hashceil(src, slen, strset_table_size); ; ) {
+    char* strset_entry = strset[hashval];
+    if (!strset_entry) {
+      const uint32_t str_ct = 1 + (*str_ctp);
+      if (unlikely(str_ct * 2 > strset_table_size)) {
+        return 2;
+      }
+      *str_ctp = str_ct;
+      return S_CAST(uint32_t, StoreStringAtEnd(arena_bottom, src, slen, arena_top_ptr, &(strset[hashval])));
+    }
+    if (strequal_unsafe(strset_entry, src, slen)) {
+      return 0;
+    }
+    if (++hashval == strset_table_size) {
+      hashval = 0;
+    }
+  }
+}
+
+void RepopulateStrset(char* str_iter, uint32_t str_ct, uint32_t strset_size, char** strset) {
+  ZeroPtrArr(strset_size, strset);
+  for (uint32_t str_idx = 0; str_idx != str_ct; ++str_idx) {
+    char* str_end = strnul(str_iter);
+    const uint32_t slen = str_end - str_iter;
+    for (uint32_t hashval = Hashceil(str_iter, slen, strset_size); ; ) {
+      char* strset_entry = strset[hashval];
+      if (!strset_entry) {
+        strset[hashval] = str_iter;
+        break;
+      }
+      if (++hashval == strset_size) {
+        hashval = 0;
+      }
+    }
+    str_iter = &(str_end[1]);
+  }
+}
+
+BoolErr StrsetAddResize(unsigned char* arena_top, const char* src, uint32_t slen, uint32_t strset_table_size_max, char** strset, uint32_t* strset_table_sizep, uint32_t* str_ctp, unsigned char** arena_bottom_ptr) {
+  uint32_t strset_table_size = *strset_table_sizep;
+  uint32_t retval = StrsetAdd(arena_top, src, slen, strset_table_size, strset, str_ctp, arena_bottom_ptr);
+  if (!retval) {
+    return 0;
+  }
+  if (unlikely((retval == 1) || (strset_table_size == strset_table_size_max))) {
+    return 1;
+  }
+  const uint32_t new_table_size = MINV(strset_table_size * 2LLU, strset_table_size_max);
+  const uint64_t bytes_needed = sizeof(intptr_t) * (new_table_size - strset_table_size);
+  if (S_CAST(uintptr_t, arena_top - (*arena_bottom_ptr)) < bytes_needed) {
+    return 1;
+  }
+  unsigned char* old_str_base = R_CAST(unsigned char*, &(strset[strset_table_size]));
+  unsigned char* new_str_base = R_CAST(unsigned char*, &(strset[new_table_size]));
+  memmove(new_str_base, old_str_base, (*arena_bottom_ptr) - old_str_base);
+  *arena_bottom_ptr += bytes_needed;
+  RepopulateStrset(R_CAST(char*, new_str_base), *str_ctp, new_table_size, strset);
+  *strset_table_sizep = new_table_size;
+  return (StrsetAdd(arena_top, src, slen, new_table_size, strset, str_ctp, arena_bottom_ptr) != 0);
+}
+
+BoolErr StrsetAddEndResize(unsigned char* arena_bottom, const char* src, uint32_t slen, uint32_t strset_table_size_max, char*** strsetp, uint32_t* strset_table_sizep, uint32_t* str_ctp, unsigned char** arena_top_ptr) {
+  char** strset = *strsetp;
+  uint32_t strset_table_size = *strset_table_sizep;
+  uint32_t retval = StrsetAddEnd(arena_bottom, src, slen, strset_table_size, strset, str_ctp, arena_top_ptr);
+  if (!retval) {
+    return 0;
+  }
+  if (unlikely((retval == 1) || (strset_table_size == strset_table_size_max))) {
+    return 1;
+  }
+  const uint32_t new_table_size = MINV(strset_table_size * 2LLU, strset_table_size_max);
+  const uint64_t bytes_needed = sizeof(intptr_t) * (new_table_size - strset_table_size);
+  unsigned char* old_str_base = *arena_top_ptr;
+  if (unlikely(S_CAST(uintptr_t, old_str_base - arena_bottom) < bytes_needed)) {
+    return 1;
+  }
+  unsigned char* new_str_base = old_str_base - bytes_needed;
+  memmove(new_str_base, old_str_base, R_CAST(unsigned char*, strset) - old_str_base);
+  *arena_top_ptr = new_str_base;
+  strset -= new_table_size - strset_table_size;
+  *strsetp = strset;
+  RepopulateStrset(R_CAST(char*, new_str_base), *str_ctp, new_table_size, strset);
+  *strset_table_sizep = new_table_size;
+  return (StrsetAddEnd(arena_bottom, src, slen, new_table_size, strset, str_ctp, arena_top_ptr) != 0);
+}
+
 PglErr WriteSampleIdsOverride(const uintptr_t* sample_include, const SampleIdInfo* siip, const char* outname, uint32_t sample_ct, SampleIdFlags override_flags) {
   FILE* outfile = nullptr;
   PglErr reterr = kPglRetSuccess;
@@ -3058,42 +3331,6 @@ uint32_t RealpathIdentical(const char* outname, const char* read_realpath, char*
 #endif
 }
 
-// assumes rawval is in [1, 32767]
-static_assert(kDosageMax == 32768, "PrintHaploidNonintDosage() needs to be updated.");
-char* PrintHaploidNonintDosage(uint32_t rawval, char* start) {
-  // Instead of constant 5-digit precision, we print fewer digits whenever that
-  // doesn't interfere with proper round-tripping.  I.e. we search for the
-  // shortest string in
-  //   ((n - 0.5)/32768, (n + 0.5)/32768).
-  assert(rawval - 1 < 32767);
-  start = strcpya_k(start, "0.");
-
-  // (rawval * 2) is in 65536ths
-  // 65536 * 625 = 40960k
-  const uint32_t range_top_40960k = rawval * 1250 + 625;
-  // ok to check half-open interval since we never hit boundary
-  if ((range_top_40960k % 4096) < 1250) {
-    // when this is true, the four-decimal-place approximation is in the range
-    // which round-trips back to our original number.
-    const uint32_t four_decimal_places = range_top_40960k / 4096;
-    return u32toa_trunc4(four_decimal_places, start);
-  }
-
-  // we wish to print (100000 * remainder + 16384) / 32768, left-0-padded.  and
-  // may as well banker's round too.
-  //
-  // banker's rounding yields a different result than regular rounding for n/64
-  // when n is congruent to 1 mod 4.  32768/64 = 512.
-  const uint32_t five_decimal_places = ((3125 * rawval + 512) / 1024) - ((rawval % 2048) == 512);
-  const uint32_t first_decimal_place = five_decimal_places / 10000;
-  *start++ = '0' + first_decimal_place;
-  const uint32_t last_four_digits = five_decimal_places - first_decimal_place * 10000;
-  if (last_four_digits) {
-    return u32toa_trunc4(last_four_digits, start);
-  }
-  return start;
-}
-
 char* PrintMultiallelicHcAsDs(uint32_t hc1, uint32_t hc2, uint32_t allele_ct, char* start) {
   if (hc1 == kMissingAlleleCode) {
     *start++ = '.';
@@ -3155,6 +3392,25 @@ char* PrintMultiallelicHcAsHaploidDs(uint32_t hc1, uint32_t hc2, uint32_t allele
 }
 
 const char g_vft_names[3][18] = {"extract", "extract-intersect", "exclude"};
+
+void PgenErrPrintEx(const char* file_descrip, uint32_t prepend_lf, PglErr reterr, uint32_t variant_uidx) {
+  if (reterr == kPglRetReadFail) {
+    if (prepend_lf) {
+      logputs("\n");
+    }
+    logerrprintfww(kErrprintfFread, file_descrip, rstrerror(errno));
+  } else if (reterr == kPglRetMalformedInput) {
+    if (prepend_lf) {
+      logputs("\n");
+    }
+    if (variant_uidx == UINT32_MAX) {
+      logerrprintfww("Error: Failed to unpack variant in %s.\n", file_descrip);
+    } else {
+      logerrprintfww("Error: Failed to unpack (0-based) variant #%u in %s.\n", variant_uidx, file_descrip);
+    }
+    logerrputs("You can use --validate to check whether it is malformed.\n* If it is malformed, you probably need to either re-download the file, or\n  address an error in the command that generated the input .pgen.\n* If it appears to be valid, you have probably encountered a plink2 bug.  If\n  you report the error on GitHub or the plink2-users Google group (make sure to\n  include the full .log file in your report), we'll try to address it.\n");
+  }
+}
 
 #ifdef __cplusplus
 }  // namespace plink2
