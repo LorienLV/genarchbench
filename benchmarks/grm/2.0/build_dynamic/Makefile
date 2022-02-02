@@ -19,10 +19,12 @@
 # NO_AVX2 =
 # NO_SSE42 =
 CPU_CHECK = 1
-NO_LAPACK =
-PREFER_CBLAS_F77 =
+# NO_LAPACK =
+BLAS_FLAG = -lblas -lcblas
+LAPACK_FLAG = -llapack 
+ATLAS_FLAG = -latlas
 ZSTD_O2 = 1
-STATIC_ZLIB =
+# STATIC_ZLIB =
 STATIC_ZSTD = 1
 DYNAMIC_MKL =
 MKLROOT = #/home/ubuntu/intel/mkl
@@ -79,19 +81,14 @@ endif
 # this actually needs to be named "CXXFLAGS"
 CXXFLAGS += -O2
 
-ifdef FORCE_CBLAS_F77
-  BASEFLAGS += -DFORCE_CBLAS_F77
-  BLASFLAGS=-llapack -lf77blas -latlas
-else
-  BLASFLAGS=-llapack -lblas -lcblas -latlas
-endif
+BLASFLAGS=$(LAPACK_FLAG) $(BLAS_FLAG) $(ATLAS_FLAG)
 
-# ifdef STATIC_ZLIB
-#   BASEFLAGS += -DSTATIC_ZLIB
-#   LINKFLAGS += -L. ../../zlib-1.2.11/libz.a
-# else
+ifdef STATIC_ZLIB
+  BASEFLAGS += -DSTATIC_ZLIB
+  LINKFLAGS += -L. ../../zlib-1.2.11/libz.a
+else
   LINKFLAGS += -lz
-# endif
+endif
 
 SKIP_STATIC_ZSTD =
 ifdef STATIC_ZSTD

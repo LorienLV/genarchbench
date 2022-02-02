@@ -9,12 +9,9 @@ export OMP_NUM_THREADS=1
 
 # The compiler to use, "gcc" and/or "fcc".
 compilers=(
-    'gcc'
-    # 'fcc'
+    # 'gcc'
+    'fcc'
 )
-
-# TODO: bwa-mem2 does not use a build folder, so we need to execute make clean
-# before compiling with a different compiler. Fix the makefile to use a build folder.
 
 for compiler in "${compilers[@]}"; do
     echo "----- Compiling with $compiler -----"
@@ -28,14 +25,17 @@ for compiler in "${compilers[@]}"; do
     case "$compiler" in
         gcc)
             module load gcc/10.2.0
-            # module load arm/20.3
+            module load fuji
 
-            make CC=gcc CXX=g++ arch='-march=armv8-a+sve'
+            make CC=gcc CXX=g++ arch='-march=armv8-a+sve' \
+            LAPACK_FLAG='-lssl2mt' # BLAS_FLAG='-lblas -lcblas'
+            # LAPACK_FLAG='-SSL2'
             ;;
         fcc)
             module load fuji
 
-            make CC='fcc -Nclang' CXX='FCC -Nclang' arch='-march=armv8-a+sve'
+            make CC='fcc -Nclang' CXX='FCC -Nclang' arch='-march=armv8-a+sve' \
+            BLAS_FLAG='-SSL2BLAMP' LAPACK_FLAG='' ATLAS_FLAG=''
             ;;
         *)
             echo "ERROR: Compiler '$compiler' not supported."
