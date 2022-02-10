@@ -39,6 +39,13 @@
 #  include <fenv.h>  // fesetenv()
 #endif
 
+#if VTUNE_ANALYSIS
+#  include <ittnotify.h>
+#endif
+#if FAPP_ANALYSIS
+#  include "fj_tool/fapp.h"
+#endif
+
 #ifdef __cplusplus
 namespace plink2 {
 #endif
@@ -3116,6 +3123,9 @@ static_assert(kChrOffsetMT == 3, "--chr-set/--cow/... assume kChrOffsetMT == 3."
 int RealMain(int argc, char** argv) {
 #else
 int main(int argc, char** argv) {
+#endif
+#if VTUNE_ANALYSIS
+    __itt_pause();
 #endif
 #ifdef __cplusplus
   using namespace plink2;

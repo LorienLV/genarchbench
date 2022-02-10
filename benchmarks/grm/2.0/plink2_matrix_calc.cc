@@ -19,9 +19,18 @@
 #include "plink2_matrix.h"
 #include "plink2_matrix_calc.h"
 #include "plink2_random.h"
+#include "time.h"
+#include "sys/time.h"
 
 #ifdef USE_CUDA
 #  include "cuda/plink2_matrix_cuda.h"
+#endif
+
+#if VTUNE_ANALYSIS
+    #include <ittnotify.h>
+#endif
+#if FAPP_ANALYSIS
+    #include "fj_tool/fapp.h"
 #endif
 
 #ifdef __cplusplus
@@ -4079,6 +4088,15 @@ PglErr CalcGrm(const uintptr_t* orig_sample_include, const SampleIdInfo* siip, c
     logputs("Constructing GRM: ");
     fputs("0%", stdout);
     fflush(stdout);
+    struct timeval start_time, end_time;
+    double runtime = 0;
+    gettimeofday(&start_time, NULL);
+#if VTUNE_ANALYSIS
+    __itt_resume();
+#endif
+#if FAPP_ANALYSIS
+		fapp_start("grm", 1, 0);
+#endif
     PgrSampleSubsetIndex pssi;
     PgrSetSampleSubsetIndex(sample_include_cumulative_popcounts, simple_pgrp, &pssi);
     while (1) {
@@ -4120,12 +4138,22 @@ PglErr CalcGrm(const uintptr_t* orig_sample_include, const SampleIdInfo* siip, c
       variant_idx_start = variant_idx;
       parity = 1 - parity;
     }
+#if VTUNE_ANALYSIS
+		__itt_pause();
+#endif
+#if FAPP_ANALYSIS
+		fapp_stop("grm", 1, 0);
+#endif
+    gettimeofday(&end_time, NULL);
+    runtime += (end_time.tv_sec - start_time.tv_sec)*1e6 + end_time.tv_usec - start_time.tv_usec;
+
     BLAS_SET_NUM_THREADS(1);
     if (pct > 10) {
       putc_unlocked('\b', stdout);
     }
     fputs("\b\b", stdout);
     logputs("done.\n");
+    fprintf(stderr, "Time in GRM: %.3f sec", runtime * 1e-6);
     uint32_t* missing_cts = nullptr;  // stays null iff meanimpute
     uint32_t* missing_dbl_exclude_cts = nullptr;
     if (variant_include_has_missing) {
