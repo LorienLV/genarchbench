@@ -34,16 +34,37 @@ call_t read_call(FILE *fp) {
     call.n_segs = n_segs;
     // fprintf(stderr, "%lld\t%f\t%d\t%d\t%d\t%d\n", n, avg_qspan, max_dist_x, max_dist_y, bw, n_segs);
 
-    call.anchors.resize(call.n);
+    // call.anchors.resize(call.n);
+
+    // for (anchor_idx_t i = 0; i < call.n; i++) {
+    //     uint64_t x, y;
+    //     fscanf(fp, "%llu%llu", &x, &y);
+
+    //     anchor_t t;
+    //     t.x = x; t.y = y;
+
+    //     call.anchors[i] = t;
+    // }
+
+    call.anchors_x.resize(call.n + 64); // Some extra space for vectorization with intrinsics.
+    call.anchors_x32.resize(call.n + 64);
+
+    call.anchors_y.resize(call.n + 64);
+    call.anchors_y32.resize(call.n + 64);
+
+    call.q_spans.resize(call.n + 64);
 
     for (anchor_idx_t i = 0; i < call.n; i++) {
         uint64_t x, y;
         fscanf(fp, "%llu%llu", &x, &y);
 
-        anchor_t t;
-        t.x = x; t.y = y;
+        call.anchors_x[i] = x;
+        call.anchors_x32[i] = x;
 
-        call.anchors[i] = t;
+        call.anchors_y[i] = y;
+        call.anchors_y32[i] = y;
+
+        call.q_spans[i] = y >> 32 & 0xff;
     }
 
     skip_to_EOR(fp);

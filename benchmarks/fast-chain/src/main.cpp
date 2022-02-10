@@ -10,12 +10,13 @@
 #include "host_data.h"
 #include "host_kernel.h"
 
-#define PRINT_OUTPUT 0
+#define PRINT_OUTPUT 1
 
-// #define VTUNE_ANALYSIS 1
-
-#ifdef VTUNE_ANALYSIS
+#if VTUNE_ANALYSIS
     #include <ittnotify.h>
+#endif
+#if FAPP_ANALYSIS
+    #include "fj_tool/fapp.h"
 #endif
 
 void help() {
@@ -39,7 +40,7 @@ void help() {
 
 
 int main(int argc, char **argv) {
-#ifdef VTUNE_ANALYSIS
+#if VTUNE_ANALYSIS
     __itt_pause();
 #endif
     FILE *in, *out;
@@ -90,18 +91,24 @@ int main(int argc, char **argv) {
     double runtime = 0;
 
     gettimeofday(&start_time, NULL);
-#ifdef VTUNE_ANALYSIS
+#if VTUNE_ANALYSIS
     __itt_resume();
 #endif
+#if FAPP_ANALYSIS
+    fapp_start("host_chain_kernel", 1, 0);
+#endif
     host_chain_kernel(calls, rets, numThreads);
-#ifdef VTUNE_ANALYSIS
+#if VTUNE_ANALYSIS
     __itt_pause();
+#endif
+#if FAPP_ANALYSIS
+    fapp_stop("host_chain_kernel", 1, 0);
 #endif
     gettimeofday(&end_time, NULL);
 
     runtime += (end_time.tv_sec - start_time.tv_sec) * 1e6 + (end_time.tv_usec - start_time.tv_usec);
     
-#ifdef PRINT_OUTPUT
+#if PRINT_OUTPUT
     for (auto it = rets.begin(); it != rets.end(); it++) {
         print_return(out, *it);
     }
