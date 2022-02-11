@@ -164,7 +164,7 @@ static void chain_dp(call_t *a, return_t *ret) {
     int64_t st = 0;
 
 #ifdef __AVX512BW__
-    printf("Executing AVX512 version");
+    #pragma message("Using AVX512 version")
     //Vector code with SoA function parameters 32-bit number representation - avx512
     
     __m512i zero_v = _mm512_setzero_si512();
@@ -397,7 +397,7 @@ static void chain_dp(call_t *a, return_t *ret) {
         ret->peak_scores[i] = max_j >= 0 && v[max_j] > max_f ? v[max_j] : max_f; // v[] keeps the peak score up to i; ret->scores[] is the score ending at i, not always the peak
     }
 #elif __AVX2__
-    printf("Executing AVX2 version");
+    #pragma message("Using AVX2 version")
 
     __m256i zero_avx2_v = _mm256_setzero_si256();
 
@@ -673,20 +673,20 @@ static void chain_dp(call_t *a, return_t *ret) {
         ret->peak_scores[i] = max_j >= 0 && ret->peak_scores[max_j] > max_f ? ret->peak_scores[max_j] : max_f; // v[] keeps the peak score up to i; ret->scores[] is the score ending at i, not always the peak
     }
 #elif __ARM_FEATURE_SVE
-    printf("Executing SVE version");
+    #pragma message("Using SVE version")
 
     // fill the score and backtrack arrays
-    for (int64_t i = 0; i < n; ++i) {
-        const auto ri_scalar = anchors_x[i];
-        svint64_t ri = svdup_n_s64(ri_scalar);
-        const int32_t qi_scalar = static_cast<int32_t>(anchors_y[i]);
-        svint64_t qi = svdup_n_s64(qi_scalar);
+    for (int32_t i = 0; i < n; ++i) {
+        const auto ri_scalar = anchors_x32[i];
+        svint32_t ri = svdup_n_s32(ri_scalar);
+        const int32_t qi_scalar = static_cast<int32_t>(anchors_y32[i]);
+        svint32_t qi = svdup_n_s32(qi_scalar);
         const int32_t q_spani = q_spans[i];
 
-        int64_t max_j = -1;
+        int32_t max_j = -1;
         int32_t max_f = q_spani;
 
-        while (st < i && ri_scalar > anchors_x[st] + max_dist_x) {
+        while (st < i && !(anchors_x[i] - anchors_x[st] <= max_dist_x)) {
             ++st; //predecessor's position is too far
         }
         if (i - st > max_iter) {
@@ -694,55 +694,55 @@ static void chain_dp(call_t *a, return_t *ret) {
         }
 
         //for (int64_t j = i - 1; j >= st; --j) {
-        svbool_t ptrue = svptrue_b64();
-        for (int64_t j = i - 1; j >= st; j-=VL) {
-            int64_t real_j = j-VL+1;
-            svbool_t valid_elements = svnot_b_z(ptrue,svwhilelt_b64_s64(real_j,st));
+        svbool_t ptrue = svptrue_b32();
+        for (int32_t j = i - 1; j >= st; j-=VL) {
+            int32_t real_j = j-VL+1;
+            svbool_t valid_elements = svnot_b_z(ptrue,svwhilelt_b32_s32(real_j,st));
             //const auto rj = anchors_x[j];
-            svint64_t rj = svld1_s64(valid_elements,(int64_t*)&anchors_x[real_j]);
+            svint32_t rj = svld1_s32(valid_elements,(int32_t*)&anchors_x32[real_j]);
             //const int32_t qj = static_cast<int32_t>(anchors_y[j]);
-            svint64_t qj = svld1_s64(valid_elements,(int64_t*)&anchors_y[real_j]);
-            qj = svextw_s64_x(valid_elements,qj);
+            svint32_t qj = svld1_s32(valid_elements,(int32_t*)&anchors_y32[real_j]);
+            qj = svextw_s32_x(valid_elements,qj);
 
             //const int64_t dr = ri - rj;
-            svint64_t dr = svsub_s64_x(valid_elements,ri,rj);
+            svint32_t dr = svsub_s32_x(valid_elements,ri,rj);
             //const int32_t dq = qi - qj;
-            svint64_t dq = svsub_s64_x(valid_elements,qi,qj);
+            svint32_t dq = svsub_s32_x(valid_elements,qi,qj);
 
             //const int32_t dd = std::abs(dr - dq);
-            svint64_t dd = svabd_s64_x(valid_elements,dr,dq);
+            svint32_t dd = svabd_s32_x(valid_elements,dr,dq);
 
             //if ((dr == 0 || dq <= 0) ||
             //   (dq > max_dist_y || dq > max_dist_x) ||
             //   (dd > bw)) {
             //    continue;
             //}
-            svbool_t skip_anchor = svcmpeq_n_s64(valid_elements,dr,0);
+            svbool_t skip_anchor = svcmpeq_n_s32(valid_elements,dr,0);
             valid_elements = svbic_b_z(valid_elements,valid_elements,skip_anchor);
 
-            skip_anchor = svcmple_n_s64(valid_elements,dq,0);
+            skip_anchor = svcmple_n_s32(valid_elements,dq,0);
             valid_elements = svbic_b_z(valid_elements,valid_elements,skip_anchor);
 
-            skip_anchor = svcmpgt_n_s64(valid_elements,dq,max_dist_y);
+            skip_anchor = svcmpgt_n_s32(valid_elements,dq,max_dist_y);
             valid_elements = svbic_b_z(valid_elements,valid_elements,skip_anchor);
 
-            skip_anchor = svcmpgt_n_s64(valid_elements,dq,max_dist_x);
+            skip_anchor = svcmpgt_n_s32(valid_elements,dq,max_dist_x);
             valid_elements = svbic_b_z(valid_elements,valid_elements,skip_anchor);
 
-            skip_anchor = svcmpgt_n_s64(valid_elements,dd,bw);
+            skip_anchor = svcmpgt_n_s32(valid_elements,dd,bw);
             valid_elements = svbic_b_z(valid_elements,valid_elements,skip_anchor);
 
             if (!svptest_any(ptrue,valid_elements)) continue;
 
             //const int64_t dr_dq_min = (dr < dq) ? dr : dq;
-            svint64_t dr_dq_min = svmin_s64_x(valid_elements,dr,dq);
+            svint32_t dr_dq_min = svmin_s32_x(valid_elements,dr,dq);
             //const int32_t oc = (dr_dq_min < q_spani) ? dr_dq_min : q_spani;
-            svint64_t oc = svmin_n_s64_x(valid_elements,dr_dq_min,q_spani);
+            svint32_t oc = svmin_n_s32_x(valid_elements,dr_dq_min,q_spani);
 
             //const int32_t log_dd = (dd) ? ilog2_32(dd) : 0;
-            svbool_t valid_log = svcmpne_n_s64(valid_elements,dd,0);
-            svint64_t log_dd = svreinterpret_s64(svclz_s64_x(valid_elements,dd));
-            log_dd = svsubr_n_s64_z(valid_log,log_dd,63);
+            svbool_t valid_log = svcmpne_n_s32(valid_elements,dd,0);
+            svint32_t log_dd = svreinterpret_s32(svclz_s32_x(valid_elements,dd));
+            log_dd = svsubr_n_s32_z(valid_log,log_dd,63);
             
             //const int32_t gap_cost = static_cast<int>(dd * 0.01f * avg_qspan) + (log_dd >> 1);
             /*
@@ -750,17 +750,17 @@ static void chain_dp(call_t *a, return_t *ret) {
             log_dd = svlsr_n_s64_x(valid_elements,log_dd,1);
             gap_cost = svadd_s64_x(valid_elements,gap_cost,log_dd);
             */
-            svfloat64_t gap_cost_f = svcvt_f64_s64_x(valid_elements,dd);
+            svfloat32_t gap_cost_f = svcvt_f32_s32_x(valid_elements,dd);
             //gap_cost_f = svmul_n_f64_x(valid_elements,gap_cost_f,0.01f);
-            gap_cost_f = svmul_n_f64_x(valid_elements,gap_cost_f,avg_qspan001);
-            svint64_t gap_cost = svcvt_s64_f64_x(valid_elements,gap_cost_f);
-            log_dd = svlsr_n_s64_x(valid_elements,log_dd,1);
-            gap_cost = svadd_s64_x(valid_elements,gap_cost,log_dd);
+            gap_cost_f = svmul_n_f32_x(valid_elements,gap_cost_f,avg_qspan001);
+            svint32_t gap_cost = svcvt_s32_f32_x(valid_elements,gap_cost_f);
+            log_dd = svlsr_n_s32_x(valid_elements,log_dd,1);
+            gap_cost = svadd_s32_x(valid_elements,gap_cost,log_dd);
 
             //const int32_t score = ret->scores[j] + oc - gap_cost;
-            svint64_t score = svld1sw_s64(valid_elements,&ret->scores[real_j]);
-            score = svadd_s64_x(valid_elements,score,oc);
-            score = svsub_s64_x(valid_elements,score,gap_cost);
+            svint32_t score = svld1sw_s32(valid_elements,&ret->scores[real_j]);
+            score = svadd_s32_x(valid_elements,score,oc);
+            score = svsub_s32_x(valid_elements,score,gap_cost);
 
             // TODO: CAN'T VECTORIZE THIS. THE COMPILER IS ONLY ABLE TO PERFORM
             // ONE REDUCTION.
@@ -775,13 +775,13 @@ static void chain_dp(call_t *a, return_t *ret) {
             //    max_j = j;
             //}
 
-            int32_t max_local = svmaxv_s64(valid_elements,score);
+            int32_t max_local = svmaxv_s32(valid_elements,score);
             if (max_local > max_f) {
                 max_f = max_local;
                 // WARNING
-                svint64_t index = svindex_s64(real_j,1);
-                svbool_t max_index = svcmpeq_n_s64(valid_elements,score,max_local);
-                max_j = svlastb_s64(max_index,index);
+                svint32_t index = svindex_s32(real_j,1);
+                svbool_t max_index = svcmpeq_n_s32(valid_elements,score,max_local);
+                max_j = svlastb_s32(max_index,index);
             }
         }
         ret->scores[i] = max_f;
@@ -790,16 +790,16 @@ static void chain_dp(call_t *a, return_t *ret) {
         ret->peak_scores[i] = max_j >= 0 && ret->peak_scores[max_j] > max_f ? ret->peak_scores[max_j] : max_f;
     }
 #else // SCALAR VERSION
-    printf("Executing SCALAR version");
-    for (int64_t i = 0; i < n; ++i) {
-        const auto ri = anchors_x[i];
-        const int32_t qi = static_cast<int32_t>(anchors_y[i]);
-        const int32_t q_spani = q_spanis[i];
+    #pragma message("Using SCALAR version")
+    for (int32_t i = 0; i < n; ++i) {
+        const uint32_t ri = anchors_x32[i];
+        const int32_t qi = static_cast<int32_t>(anchors_y32[i]);
+        const int32_t q_spani = q_spans[i];
 
-        int64_t max_j = -1;
+        int32_t max_j = -1;
         int32_t max_f = q_spani;
 
-        while (st < i && ri > anchors_x[st] + max_dist_x) {
+        while (st < i && !(anchors_x[i] - anchors_x[st] <= max_dist_x)) {
             ++st; //predecessor's position is too far
         }
         if (i - st > max_iter) {
@@ -809,11 +809,11 @@ static void chain_dp(call_t *a, return_t *ret) {
         // TODO: Iterate forward to vectorize the loop.
         // for (int64_t j_inv = st; j_inv < i; ++j_inv) {
         //     const int64_t j = (i - 1) - j_inv + st;
-        for (int64_t j = i - 1; j >= st; --j) {
-            const auto rj = anchors_x[j];
-            const int32_t qj = static_cast<int32_t>(anchors_y[j]);
+        for (int32_t j = i - 1; j >= st; --j) {
+            const uint32_t rj = anchors_x32[j];
+            const uint32_t qj = anchors_y32[j];
 
-            const int64_t dr = ri - rj;
+            const int32_t dr = ri - rj;
             const int32_t dq = qi - qj;
 
             const int32_t dd = std::abs(dr - dq);
@@ -828,7 +828,7 @@ static void chain_dp(call_t *a, return_t *ret) {
             //                    (dq > max_dist_y || dq > max_dist_x) ||
             //                    (dd > bw));
 
-            const int64_t dr_dq_min = (dr < dq) ? dr : dq;
+            const int32_t dr_dq_min = (dr < dq) ? dr : dq;
             const int32_t oc = (dr_dq_min < q_spani) ? dr_dq_min : q_spani;
 
             // TODO: CAN'T VECTORIZE __builtin_clz 

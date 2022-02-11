@@ -15,7 +15,7 @@ binaries_path="$(dirname "$scriptfolder")"
 clean=1
 
 # The name of the job.
-job="CHAIN-REGRESSION-SMALL"
+job="FAST-CHAIN-REGRESSION-SMALL"
 
 # Commands to run.
 # You can access the number of mpi-ranks using the environment variable
@@ -137,7 +137,7 @@ after_run() (
     echo "Time in kernel: $wall_time s"
 
     # Check if the output file is identical to the reference
-    diff --brief "out.txt" "$inputs_path/out-reference-no-heuristics.txt" >/dev/null 2>&1
+    diff --brief "out.txt" "$inputs_path/out-reference-no-heuristics-32b.txt" >/dev/null 2>&1
     if [[ $? -ne 0 ]]; then
         echo "The output file is not identical to the reference file"
         return 1 # Failure

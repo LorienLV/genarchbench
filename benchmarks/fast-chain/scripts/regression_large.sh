@@ -15,7 +15,7 @@ binaries_path="$(dirname "$scriptfolder")"
 clean=1
 
 # The name of the job.
-job="CHAIN-REGRESSION-LARGE"
+job="FAST-CHAIN-REGRESSION-LARGE"
 
 # Commands to run.
 # You can access the number of mpi-ranks using the environment variable
