@@ -15,7 +15,7 @@
     #include <immintrin.h>
 #endif
 #ifdef __AVX512BW__
-    #include <zmmintrin.h>
+    // #include <zmmintrin.h>
 #endif
 #ifdef __ARM_FEATURE_SVE
     #include <arm_sve.h>
@@ -79,6 +79,7 @@ void print_vector_f(svfloat64_t v) {
         __m512i r_v = _mm512_sub_epi32(vbase, vout);
 
         // log_dd = dd?ilog2:0; log_dd>>1
+        __m512i zero_v = _mm512_setzero_si512();
         __mmask16 neg_mask = _mm512_cmpneq_epi32_mask(dd_v, zero_v);
         __m512i log_dd_v = _mm512_srli_epi32(_mm512_maskz_or_epi32(neg_mask, r_v, zero_v), 1);
 
@@ -335,7 +336,7 @@ static void chain_dp(call_t *a, return_t *ret) {
                     max_j = maxjVector_v[iter];
                 }
                 else if (maxfVector_v[iter] == max_f) {
-                    max_j = max(max_j, maxjVector_v[iter]);
+                    max_j = std::max(max_j, maxjVector_v[iter]);
                     if ((uint32_t)max_f == q_spans[i]) {
                         max_j = -1;
                     }
@@ -394,7 +395,7 @@ static void chain_dp(call_t *a, return_t *ret) {
 
         ret->scores[i] = max_f;
         ret->parents[i] = max_j;
-        ret->peak_scores[i] = max_j >= 0 && v[max_j] > max_f ? v[max_j] : max_f; // v[] keeps the peak score up to i; ret->scores[] is the score ending at i, not always the peak
+        ret->peak_scores[i] = max_j >= 0 && ret->peak_scores[max_j] > max_f ? ret->peak_scores[max_j] : max_f; // v[] keeps the peak score up to i; ret->scores[] is the score ending at i, not always the peak
     }
 #elif __AVX2__
     #pragma message("Using AVX2 version")
