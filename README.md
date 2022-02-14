@@ -10,12 +10,12 @@ A port of [GenomicsBench](https://github.com/arun-sub/genomicsbench) to A64FX. T
 | 2  | bpm        | Bit-Parallel Myers Alignment              | C        | <span style="color:green">PORTED</span>         | Tuning            |
 | 3  | bsw        | Banded Smith-Waterman                     | C++      | <span style="color:green">PORTED</span>         | ---               |
 | 4  | chain      | Seed Chaining                             | C++      | <span style="color:green">PORTED</span>         | Tuning            |
-| 5  | fast-chain | SVE version of Chain (fast-chain)         | C++      | <span style="color:orange">PENDING</span>       | Write SVE version |
+| 5  | fast-chain | SVE version of Chain (fast-chain)         | C++      | <span style="color:green">PORTED</span>         | ---               |
 | 6  | dbg        | De-Bruijn Graph Construction              | C/C++    | <span style="color:green">PORTED</span>         | Tuning            |
 | 7  | fmi        | FM-Index                                  | C++      | <span style="color:green">PORTED</span>         | Tuning            |
-| 8  | grm        | Genomic Relationship Matrix               | C/C++    | <span style="color:orange">PENDING</span>       | Compile in A64FX  |
+| 8  | grm        | Genomic Relationship Matrix               | C/C++    | <span style="color:green">PORTED</span>         | Improve math libraries performance in CTE-ARM  |
 | 9  | kmer-cnt   | K-mer Counting                            | C++      | <span style="color:green">PORTED</span>         | Tuning            |
-| 10 | nn-base    | Neural Network-based Base Calling         | Python   | <span style="color:green">PORTED</span>         | Tuning  |
+| 10 | nn-base    | Neural Network-based Base Calling         | Python   | <span style="color:green">PORTED</span>         | Tuning            |
 | 11 | nn-variant | Neural Network-based Variant Calling      | Python   | <span style="color:orange">PENDING</span>       | Compile in A64FX  |
 | 12 | pairHMM    | Pairwise Hidden Markov Model              | C++/Java | <span style="color:orange">PENDING</span>       | Compile in A64FX  |
 | 13 | pileup     | Pileup Counting                           | C        | <span style="color:green">PORTED</span>         | Tuning            |

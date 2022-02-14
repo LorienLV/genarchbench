@@ -18,7 +18,7 @@ binaries_path="$(dirname "$scriptfolder")"
 clean=1
 
 # The name of the job.
-job="CHAIN-DETAILED-PROFILING"
+job="FAST-CHAIN-DETAILED-PROFILING"
 
 # Commands to run.
 # You can access the number of mpi-ranks using the environment variable
