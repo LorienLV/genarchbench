@@ -335,22 +335,29 @@ for i in ${!jobs_id[@]}; do
 
         case "$job_scheduler" in
         SLURM)
-            job_state="$(sacct -p -n -j $job_id 2>/dev/null | grep "^$job_id|" | cut -d '|' -f 6)"
+            job_info="$(sacct -p -n -j $job_id 2>/dev/null | grep "^$job_id|")"
+            job_state="$(echo "$job_info" | cut -d '|' -f 6)"
             if [[ -n "$job_state" && "$job_state" != "PENDING" && "$job_state" != "RUNNING" &&
                 "$job_state" != "REQUEUED" && "$job_state" != "RESIZING" &&
                 "$job_state" != "SUSPENDED" && "$job_state" != "REVOKED" ]]; then
 
-                if [[ "$job_state" == "COMPLETED" ]]; then
+                job_exit_code="$(echo "$job_info" | cut -d '|' -f 7 | cut -d ':' -f 1)"
+                if [[ $job_exit_code -ne 0 ]]; then
+                    job_state="EXIT CODE $job_exit_code"
+                elif [[ "$job_state" == "COMPLETED" ]]; then
                     status="OK"
                 fi
                 break
             fi
             ;;
         PJM)
-            job_state="$(pjstat -H -S $job_id 2>/dev/null | grep "^[ ]*STATE[ ]*:[ ]*" | tr -s ' ' | cut -d ' ' -f 4)"
+            job_info="$(pjstat -H -S $job_id 2>/dev/null)"
+            job_state="$(echo "$job_info" | grep "^[ ]*STATE[ ]*:[ ]*" | tr -s ' ' | cut -d ' ' -f 4)"
             if [[ -n "$job_state" ]]; then
-
-                if [[ "$job_state" == "EXT" ]]; then
+                job_exit_code="$(echo "$job_info" | grep "^[ ]*EXIT CODE[ ]*:[ ]*" | tr -s ' ' | cut -d ' ' -f 5)" 
+                if [[ $job_exit_code -ne 0 ]]; then
+                    job_state="EXIT CODE $job_exit_code"
+                elif [[ "$job_state" == "EXT" ]]; then
                     status="OK"
                 fi
                 break

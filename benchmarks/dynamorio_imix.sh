@@ -8,7 +8,7 @@
 set -e
 
 if [[ -z $DYNAMORIO_INSTALL_PATH ]]; then
-    echo "ERROR: Run 'DYNAMORIO_INSTALL_PATH' not set"
+    echo "ERROR: 'DYNAMORIO_INSTALL_PATH' not set"
     exit 1
 fi
 
