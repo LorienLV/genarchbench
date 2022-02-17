@@ -54,7 +54,7 @@ endif
 # Fujitsu Advanced Profiler
 FAPP_ANALYSIS=0
 
-COMPILE_FLAGS=-std=c++11 -Wall -Wextra -O3 -fopenmp $(ARCH_FLAGS) -DVTUNE_ANALYSIS=$(VTUNE_ANALYSIS) -DFAPP_ANALYSIS=$(FAPP_ANALYSIS) # -g
+COMPILE_FLAGS=-std=c++11 -Wall -Wextra -O3 -fopenmp -fno-strict-aliasing $(ARCH_FLAGS) -DVTUNE_ANALYSIS=$(VTUNE_ANALYSIS) -DFAPP_ANALYSIS=$(FAPP_ANALYSIS) # -g
 
 .PHONY: default_target
 default_target: release
