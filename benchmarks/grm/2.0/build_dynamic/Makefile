@@ -141,9 +141,8 @@ endif
 VTUNE_ANALYSIS=0
 
 ifeq ($(VTUNE_ANALYSIS),1)
-	# VTUNE_HOME # Path to VTUNE-HOME directory
-	BASEFLAGS+=-I$(VTUNE_HOME)/include
-	LINKFLAGS+=-L$(VTUNE_HOME)/lib64 -littnotify -lpthread -ldl
+	BASEFLAGS+=$(VTUNE_INCLUDES)
+	LINKFLAGS+=$(VTUNE_LDFLAGS)
 endif
 
 # Fujitsu Advanced Profiler

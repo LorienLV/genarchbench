@@ -19,6 +19,9 @@ valid_events="pa1 pa2 pa3 pa4 pa5 pa6 pa7 pa8 pa9 pa10 pa11 pa12 pa13 pa14 pa15 
 level=0
 events="$valid_events"
 
+# exit when any command fails
+set -e
+
 while [ "$1" != "" ]; do
     case "$1" in
     -e | --events)

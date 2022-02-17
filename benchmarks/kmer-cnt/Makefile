@@ -11,9 +11,8 @@ INC = -Ilibcuckoo
 VTUNE_ANALYSIS=0
 
 ifeq ($(VTUNE_ANALYSIS),1)
-	# VTUNE_HOME # Path to VTUNE-HOME directory
-	INC+=-I$(VTUNE_HOME)/include
-	LIBS+=-L$(VTUNE_HOME)/lib64 -littnotify -lpthread -ldl
+	INC+=$(VTUNE_INCLUDES)
+	LIBS+=$(VTUNE_LDFLAGS)
 endif
 
 # Fujitsu Advanced Profiler

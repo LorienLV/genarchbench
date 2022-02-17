@@ -38,6 +38,11 @@
 #if FAPP_ANALYSIS
     #include "fj_tool/fapp.h"
 #endif
+#if DYNAMORIO_ANALYSIS
+    // Two definitions of bool fix.
+    #undef bool
+    #include <dr_api.h>
+#endif
 
 /*
  * Algorithms
@@ -162,13 +167,16 @@ void align_benchmark(const alg_algorithm_type alg_algorithm) {
     #pragma omp barrier
     #pragma omp master
     {
+      timer_start(&(parameters.timer_global));
 #if VTUNE_ANALYSIS
       __itt_resume();
 #endif
 #if FAPP_ANALYSIS
       fapp_start("benchmark_edit_bpm", 1, 0);
 #endif
-      timer_start(&(parameters.timer_global));
+#if DYNAMORIO_ANALYSIS
+      dr_app_setup_and_start();
+#endif
     }
 
     // Process the sequences.
@@ -230,11 +238,14 @@ void align_benchmark(const alg_algorithm_type alg_algorithm) {
     #pragma omp barrier
     #pragma omp master
     {
+#if DYNAMORIO_ANALYSIS
+      dr_app_stop_and_cleanup();
+#endif
 #if VTUNE_ANALYSIS
-    __itt_pause();
+      __itt_pause();
 #endif
 #if FAPP_ANALYSIS
-    fapp_stop("benchmark_edit_bpm", 1, 0);
+      fapp_stop("benchmark_edit_bpm", 1, 0);
 #endif
       timer_stop(&(parameters.timer_global));
     }

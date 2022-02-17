@@ -1,5 +1,8 @@
 #!/bin/bash
 
+# exit when any command fails
+set -e
+
 command="$@"
 
 module load vtune_amplifier/2019.4

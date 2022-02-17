@@ -23,13 +23,20 @@ TOOLS_BIN=$(addprefix ../$(FOLDER_BIN)/, $(GEM_TOOLS))
 VTUNE_ANALYSIS=0
 
 ifeq ($(VTUNE_ANALYSIS),1)
-	# VTUNE_HOME # Path to VTUNE-HOME directory
-	VTUNE_INCLUDES+=-I$(VTUNE_HOME)/include
-	VTUNE_LDFLAGS+=-L$(VTUNE_HOME)/lib64 -littnotify -lpthread -ldl
+	INCLUDES+=$(VTUNE_INCLUDES)
+	LIBS+=$(VTUNE_LDFLAGS)
 endif
 
 # Fujitsu Advanced Profiler
 FAPP_ANALYSIS=0
+
+# Dynamorio
+DYNAMORIO_ANALYSIS=0
+
+ifeq ($(DYNAMORIO_ANALYSIS),1)
+	INCLUDES+=$(DYNAMORIO_INCLUDES)
+	LIBS+=$(DYNAMORIO_LDFLAGS)
+endif
 
 ###############################################################################
 # Rules
@@ -41,7 +48,7 @@ all: FLAGS=$(CC_FLAGS)
 all: $(TOOLS)
 
 align_benchmark: ../$(FOLDER_BUILD)/*.o align_benchmark.c
-	$(CC) -I$(FOLDER_ROOT) $(VTUNE_INCLUDES) -DVTUNE_ANALYSIS=$(VTUNE_ANALYSIS) -DFAPP_ANALYSIS=$(FAPP_ANALYSIS) $(FLAGS) -fopenmp align_benchmark.c $(OBJS) -o ../$(FOLDER_BIN)/align_benchmark $(LIBS) $(VTUNE_LDFLAGS)
+	$(CC) -I$(FOLDER_ROOT) $(INCLUDES) -DVTUNE_ANALYSIS=$(VTUNE_ANALYSIS) -DFAPP_ANALYSIS=$(FAPP_ANALYSIS) -DDYNAMORIO_ANALYSIS=$(DYNAMORIO_ANALYSIS) $(FLAGS) -fopenmp align_benchmark.c $(OBJS) -o ../$(FOLDER_BIN)/align_benchmark $(LIBS)
 	
 generate_datasets: generate_datasets.c
 	$(CC) $(CC_FLAGS) generate_datasets.c -o ../$(FOLDER_BIN)/generate_datasets $(LD_FLAGS)

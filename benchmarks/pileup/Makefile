@@ -13,9 +13,8 @@ LDFLAGS:=-lz -lm -lbz2 -llzma -lpthread -lcurl -lcrypto -ldl
 VTUNE_ANALYSIS=0
 
 ifeq ($(VTUNE_ANALYSIS),1)
-	# VTUNE_HOME # Path to VTUNE-HOME directory
-	INCLUDES+=-I$(VTUNE_HOME)/include
-	LDFLAGS+=-L$(VTUNE_HOME)/lib64 -littnotify -lpthread -ldl
+	INCLUDES+=$(VTUNE_INCLUDES)
+	LDFLAGS+=$(VTUNE_LDFLAGS)
 endif
 
 # Fujitsu Advanced Profiler
