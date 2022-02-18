@@ -77,8 +77,11 @@ MN4)
     )
     ;;
 CTEARM)
+    before_command+="source $scriptfolder/../../setup_ctearm.sh;"
+
     commands=(
         "module load fuji; $scriptfolder/../../ctearm_fapp_profiling.sh -e pa1-pa17 $binaries_path/bin_fcc/align_benchmark"
+        "module load gcc/10.2.0; $scriptfolder/../../dynamorio_imix.sh $binaries_path/bin_gcc/align_benchmark"
         "module load fuji; $scriptfolder/../../dynamorio_imix.sh $binaries_path/bin_fcc/align_benchmark"
     )
 
