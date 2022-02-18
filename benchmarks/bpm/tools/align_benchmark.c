@@ -22,7 +22,17 @@
  * DESCRIPTION: Wavefront Alignments Algorithms Benchmark
  */
 
-#include <omp.h>
+#if VTUNE_ANALYSIS
+    #include <ittnotify.h>
+#endif
+#if FAPP_ANALYSIS
+    #include "fj_tool/fapp.h"
+#endif
+#if DYNAMORIO_ANALYSIS
+    #define bool DR_BOOL
+    #include <dr_api.h>
+    #undef bool
+#endif
 
 #include "utils/commons.h"
 #include "system/profiler_timer.h"
@@ -32,17 +42,7 @@
 #include "benchmark/benchmark_edit.h"
 #include "benchmark/benchmark_bitpal.h"
 
-#if VTUNE_ANALYSIS
-    #include <ittnotify.h>
-#endif
-#if FAPP_ANALYSIS
-    #include "fj_tool/fapp.h"
-#endif
-#if DYNAMORIO_ANALYSIS
-    // Two definitions of bool fix.
-    #undef bool
-    #include <dr_api.h>
-#endif
+#include <omp.h>
 
 /*
  * Algorithms

@@ -56,6 +56,7 @@ case "$GENARCH_BENCH_CLUSTER" in
 MN4)
     commands=(
         "module load gcc/10.1.0; $scriptfolder/../../mn4_vtune_profiling.sh $binaries_path/kmer-cnt_gcc"
+        "module load gcc/10.1.0; $scriptfolder/../../dynamorio_imix.sh $binaries_path/kmer-cnt_gcc"
     )
 
     parallelism=(
@@ -73,12 +74,16 @@ MN4)
         '--reservation=vtune'
         '--constraint=perfparanoid'
         '--exclusive'
-        '--time=00:14:00'
+        # '--time=00:14:00'
     )
     ;;
 CTEARM)
+    before_command+="source $scriptfolder/../../setup_ctearm.sh;"
+
     commands=(
         "module load fuji; $scriptfolder/../../ctearm_fapp_profiling.sh -e pa1-pa17 $binaries_path/kmer-cnt_fcc"
+        "module load gcc/10.2.0; $scriptfolder/../../dynamorio_imix.sh $binaries_path/kmer-cnt_gcc"
+        "module load fuji; $scriptfolder/../../dynamorio_imix.sh $binaries_path/kmer-cnt_fcc"
     )
 
     job_options=(
@@ -97,8 +102,13 @@ CTEARM)
     )
     ;;
 *)
-    echo "Cluster not supported"
-    exit 1
+    commands=(
+        "$scriptfolder/../../dynamorio_imix.sh $binaries_path/kmer-cnt_gcc"
+    )
+
+    parallelism=(
+        'nodes=1, mpi=1, omp=1'
+    )
     ;;
 esac
 
@@ -129,26 +139,17 @@ after_run() (
     job_output_folder="$output_folder/$job_name"
     mkdir "$job_output_folder"
 
-    error=0
     case "$GENARCH_BENCH_CLUSTER" in
     MN4)
         cp -r *.out *.err *runsa "$job_output_folder"
-        error=$?
         ;;
     CTEARM)
-        cp *.csv "$job_output_folder"
-        error=$?
+        cp -r *.out *.err *.csv "$job_output_folder"
         ;;
     *)
-        echo "Cluster not supported"
-        error=1
+        cp -r *.out *.err *runsa "$job_output_folder"
         ;;
     esac
-
-    if [[ $error -ne 0 ]]; then
-        echo "There has been a problem during the execution of the profiling, check the job stage folder: \"$job_name\""
-        return 1 # Failure
-    fi
 
     echo "The profiling files can be found in $job_output_folder"
 

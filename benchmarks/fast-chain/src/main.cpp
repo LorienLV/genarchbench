@@ -18,6 +18,9 @@
 #if FAPP_ANALYSIS
     #include "fj_tool/fapp.h"
 #endif
+#if DYNAMORIO_ANALYSIS
+    #include <dr_api.h>
+#endif
 
 void help() {
     std::cout <<
@@ -97,7 +100,13 @@ int main(int argc, char **argv) {
 #if FAPP_ANALYSIS
     fapp_start("host_chain_kernel", 1, 0);
 #endif
+#if DYNAMORIO_ANALYSIS
+    dr_app_setup_and_start();
+#endif
     host_chain_kernel(calls, rets, numThreads);
+#if DYNAMORIO_ANALYSIS
+    dr_app_stop_and_cleanup();
+#endif
 #if VTUNE_ANALYSIS
     __itt_pause();
 #endif

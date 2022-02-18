@@ -1,12 +1,17 @@
 #define _GNU_SOURCE
-#include <assert.h>
-#include <errno.h>
-#include <math.h>
-#include <string.h>
-#include <stdbool.h>
-#include <stdio.h>
-#include <stdint.h>
-#include <stdlib.h>
+
+#if VTUNE_ANALYSIS
+    #include <ittnotify.h>
+#endif
+#if FAPP_ANALYSIS
+    #include "fj_tool/fapp.h"
+#endif
+#if DYNAMORIO_ANALYSIS
+    #define bool DR_BOOL
+    #include <dr_api.h>
+    #undef bool
+#endif
+
 #include "omp.h"
 #include "time.h"
 #include "sys/time.h"
@@ -20,12 +25,14 @@
 
 // #define PRINT_OUTPUT 1
 
-#if VTUNE_ANALYSIS
-    #include <ittnotify.h>
-#endif
-#if FAPP_ANALYSIS
-    #include "fj_tool/fapp.h"
-#endif
+#include <assert.h>
+#include <errno.h>
+#include <math.h>
+#include <string.h>
+#include <stdio.h>
+#include <stdint.h>
+#include <stdlib.h>
+#include <stdbool.h>
 
 #define bam1_seq(b) ((b)->data + (b)->core.n_cigar*4 + (b)->core.l_qname)
 #define bam1_seqi(s, i) (bam_seqi((s), (i)))
@@ -553,6 +560,9 @@ int main(int argc, char *argv[]) {
 #if FAPP_ANALYSIS
     fapp_start("calculate_pileup", 1, 0);
 #endif
+#if DYNAMORIO_ANALYSIS
+    dr_app_setup_and_start();
+#endif
     // process batches in parallel
     #pragma omp parallel num_threads(numThreads)
     {
@@ -564,6 +574,9 @@ int main(int argc, char *argv[]) {
                                         weibull_summation, read_group);
             }
     }
+#if DYNAMORIO_ANALYSIS
+    dr_app_stop_and_cleanup();
+#endif
 #if VTUNE_ANALYSIS
     __itt_pause();
 #endif

@@ -48,6 +48,9 @@ Authors: Vasimuddin Md <vasimuddin.md@intel.com>; Sanchit Misra <sanchit.misra@i
 #if FAPP_ANALYSIS
     #include "fj_tool/fapp.h"
 #endif
+#if DYNAMORIO_ANALYSIS
+    #include <dr_api.h>
+#endif
 
 #define PRINT_OUTPUT 1
 
@@ -176,6 +179,9 @@ int main(int argc, char **argv) {
 #endif
 #if FAPP_ANALYSIS
     fapp_start("computing", 1, 0);
+#endif
+#if DYNAMORIO_ANALYSIS
+    dr_app_setup_and_start();
 #endif
 
     int64_t i;
@@ -312,6 +318,9 @@ int main(int argc, char **argv) {
 
     endTick = __rdtsc();
 
+#if DYNAMORIO_ANALYSIS
+    dr_app_stop_and_cleanup();
+#endif
 #if VTUNE_ANALYSIS
     __itt_pause();
 #endif

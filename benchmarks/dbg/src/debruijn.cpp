@@ -26,6 +26,9 @@
 #if FAPP_ANALYSIS
     #include "fj_tool/fapp.h"
 #endif
+#if DYNAMORIO_ANALYSIS
+    #include <dr_api.h>
+#endif
 
 inline char _getBase(uint8_t *s, int i) {
     char* baseLookup = "=ACMGRSVTWYHKDBN";
@@ -1591,6 +1594,10 @@ int main(int argc,char** argv){
 #if FAPP_ANALYSIS
     fapp_start("assembleReadsAndDetectVariants", 1, 0);
 #endif
+#if DYNAMORIO_ANALYSIS
+    dr_app_setup_and_start();
+#endif
+
 #pragma omp parallel num_threads(numThreads)
 {
     int tid = omp_get_thread_num();
@@ -1607,6 +1614,9 @@ int main(int argc,char** argv){
             assembleReadsAndDetectVariants(refStart, refEnd, batches[i].windowStart, batches[i].windowEnd, batches[i].ref, verbose > 0);
         }
 }
+#if DYNAMORIO_ANALYSIS
+    dr_app_stop_and_cleanup();
+#endif
 #if VTUNE_ANALYSIS
     __itt_pause();
 #endif

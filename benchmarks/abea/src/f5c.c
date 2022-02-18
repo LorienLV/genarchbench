@@ -12,19 +12,22 @@
 #include <stdlib.h>
 #include <string.h>
 
-#include "f5c.h"
-#include "f5cmisc.h"
-#include "profiles.h"
-
-#include <sys/wait.h>
-#include <unistd.h>
-
+#if DYNAMORIO_ANALYSIS
+    #include <dr_api.h>
+#endif
 #if VTUNE_ANALYSIS
     #include <ittnotify.h>
 #endif
 #if FAPP_ANALYSIS
     #include "fj_tool/fapp.h"
 #endif
+
+#include "f5c.h"
+#include "f5cmisc.h"
+#include "profiles.h"
+
+#include <sys/wait.h>
+#include <unistd.h>
 
 /*
 todo :
@@ -1508,6 +1511,9 @@ void process_db(core_t* core, db_t* db) {
 #if FAPP_ANALYSIS
     fapp_start("process_db", 1, 0);
 #endif
+#if DYNAMORIO_ANALYSIS
+    dr_app_setup_and_start();
+#endif
 
     double process_start = realtime();
 
@@ -1570,6 +1576,9 @@ void process_db(core_t* core, db_t* db) {
 
     }
 
+#if DYNAMORIO_ANALYSIS
+    dr_app_stop_and_cleanup();
+#endif
 #if VTUNE_ANALYSIS
     __itt_pause();
 #endif

@@ -23,7 +23,7 @@ for compiler in "${compilers[@]}"; do
         gcc)
             module load gcc/10.1.0
             make CC=gcc CXX=g++ BUILD_DIR=build_gcc MSA_SPOA_OMP=msa_spoa_omp_gcc \
-            VTUNE_ANALYSIS=1
+            VTUNE_ANALYSIS=1 DYNAMORIO_ANALYSIS=1
             ;;
         *)
             echo "ERROR: Compiler '$compiler' not supported."

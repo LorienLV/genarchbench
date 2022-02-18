@@ -18,7 +18,15 @@ endif
 # Fujitsu Advanced Profiler
 FAPP_ANALYSIS=0
 
-CPPFLAGS+=-DVTUNE_ANALYSIS=$(VTUNE_ANALYSIS) -DFAPP_ANALYSIS=$(FAPP_ANALYSIS)
+# Dynamorio
+DYNAMORIO_ANALYSIS=0
+
+ifeq ($(DYNAMORIO_ANALYSIS),1)
+	INC+=$(DYNAMORIO_INCLUDES)
+	LIBS+=$(DYNAMORIO_LDFLAGS)
+endif
+
+CPPFLAGS+=-DVTUNE_ANALYSIS=$(VTUNE_ANALYSIS) -DFAPP_ANALYSIS=$(FAPP_ANALYSIS) -DDYNAMORIO_ANALYSIS=$(DYNAMORIO_ANALYSIS)
 
 all: sequence_container.cpp sequence.cpp vertex_index.cpp kmer_cnt.cpp
 	$(CXX) $(CXXFLAGS) $(CPPFLAGS) sequence_container.cpp sequence.cpp vertex_index.cpp kmer_cnt.cpp $(INC) $(LIBS) -o $(EXE)

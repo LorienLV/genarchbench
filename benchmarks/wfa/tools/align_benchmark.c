@@ -29,18 +29,23 @@
  * DESCRIPTION: Wavefront Alignment benchmarking tool
  */
 
-#include "utils/commons.h"
-#include "gap_affine/affine_wavefront.h"
-#include "gap_affine/affine_wavefront_align.h"
-
-#include "omp.h"
-
 #if VTUNE_ANALYSIS
     #include <ittnotify.h>
 #endif
 #if FAPP_ANALYSIS
     #include "fj_tool/fapp.h"
 #endif
+#if DYNAMORIO_ANALYSIS
+    #define bool DR_BOOL
+    #include <dr_api.h>
+    #undef bool
+#endif
+
+#include "utils/commons.h"
+#include "gap_affine/affine_wavefront.h"
+#include "gap_affine/affine_wavefront_align.h"
+
+#include "omp.h"
 
 /*
  * Parameters
@@ -333,6 +338,9 @@ int main(int argc,char* argv[]) {
     #pragma omp barrier
     #pragma omp master
     {
+#if DYNAMORIO_ANALYSIS
+      dr_app_setup_and_start();
+#endif
 #if VTUNE_ANALYSIS
       __itt_resume();
 #endif
@@ -390,6 +398,9 @@ int main(int argc,char* argv[]) {
     #pragma omp master
     {
       gettimeofday(&alignment_end, NULL);
+#if DYNAMORIO_ANALYSIS
+      dr_app_stop_and_cleanup();
+#endif
 #if VTUNE_ANALYSIS
       __itt_pause();
 #endif

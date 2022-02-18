@@ -28,7 +28,8 @@ for compiler in "${compilers[@]}"; do
 
             make CC=gcc CXX=g++ arch='-march=native' \
             DYNAMIC_MKL=1 MKLROOT='/apps/INTEL/oneapi/2021.3/mkl/2021.3.0' \
-            MKL_IOMP5_DIR='/apps/INTEL/oneapi/2021.3/compiler/2021.3.0/linux/compiler/lib/intel64_lin'
+            MKL_IOMP5_DIR='/apps/INTEL/oneapi/2021.3/compiler/2021.3.0/linux/compiler/lib/intel64_lin' \
+            VTUNE_ANALYSIS=1 DYNAMORIO_ANALYSIS=1
             ;;
         *)
             echo "ERROR: Compiler '$compiler' not supported."

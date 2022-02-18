@@ -17,7 +17,7 @@ for compiler in "${compilers[@]}"; do
         gcc)
             make CC=gcc CXX=g++ arch=-march=native \
             TARGET_ARCH=x86_64 BUILDDIR=build_gcc \
-            VTUNE_ANALYSIS=1
+            VTUNE_ANALYSIS=1 DYNAMORIO_ANALYSIS=1
             ;;
         *)
             echo "ERROR: Compiler '$compiler' not supported."

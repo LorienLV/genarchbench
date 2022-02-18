@@ -28,6 +28,9 @@
 #if FAPP_ANALYSIS
     #include "fj_tool/fapp.h"
 #endif
+#if DYNAMORIO_ANALYSIS
+    #include <dr_api.h>
+#endif
 
 bool parseArgs(int argc, char** argv, std::string& readsFasta, 
 			   std::string& logFile,
@@ -227,6 +230,9 @@ int main(int argc, char** argv)
 #if FAPP_ANALYSIS
     fapp_start("computing", 1, 0);
 #endif
+#if DYNAMORIO_ANALYSIS
+    dr_app_setup_and_start();
+#endif
 	roi_q = __parsec_roi_begin(roi_s, &roi_i, &roi_j);
 	bool useMinimizers = Config::get("use_minimizers");
 	if (useMinimizers)
@@ -241,6 +247,9 @@ int main(int argc, char** argv)
 		//									 TANDEM_FREQ);
 	}
 	roi_q = __parsec_roi_end(roi_s, &roi_i, &roi_j);
+#if DYNAMORIO_ANALYSIS
+    dr_app_stop_and_cleanup();
+#endif
 #if VTUNE_ANALYSIS
     __itt_pause();
 #endif

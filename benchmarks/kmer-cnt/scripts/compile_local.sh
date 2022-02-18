@@ -16,7 +16,7 @@ for compiler in "${compilers[@]}"; do
     case "$compiler" in
         gcc)
             make CC=gcc CXX=g++ EXE=kmer-cnt_gcc \
-            VTUNE_ANALYSIS=1
+            VTUNE_ANALYSIS=1 DYNAMORIO_ANALYSIS=1
             ;;
         *)
             echo "ERROR: Compiler '$compiler' not supported."

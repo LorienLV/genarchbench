@@ -32,6 +32,9 @@
 #if FAPP_ANALYSIS
     #include "fj_tool/fapp.h"
 #endif
+#if DYNAMORIO_ANALYSIS
+    #include <dr_api.h>
+#endif
 
 #ifdef __cplusplus
 namespace plink2 {
@@ -4097,6 +4100,9 @@ PglErr CalcGrm(const uintptr_t* orig_sample_include, const SampleIdInfo* siip, c
 #if FAPP_ANALYSIS
 		fapp_start("grm", 1, 0);
 #endif
+#if DYNAMORIO_ANALYSIS
+    dr_app_setup_and_start();
+#endif
     PgrSampleSubsetIndex pssi;
     PgrSetSampleSubsetIndex(sample_include_cumulative_popcounts, simple_pgrp, &pssi);
     while (1) {
@@ -4138,6 +4144,9 @@ PglErr CalcGrm(const uintptr_t* orig_sample_include, const SampleIdInfo* siip, c
       variant_idx_start = variant_idx;
       parity = 1 - parity;
     }
+#if DYNAMORIO_ANALYSIS
+    dr_app_stop_and_cleanup();
+#endif
 #if VTUNE_ANALYSIS
 		__itt_pause();
 #endif

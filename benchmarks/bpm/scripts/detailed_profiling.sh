@@ -137,7 +137,6 @@ after_run() (
     job_output_folder="$output_folder/$job_name"
     mkdir "$job_output_folder"
 
-    error=0
     case "$GENARCH_BENCH_CLUSTER" in
     MN4)
         cp -r *.out *.err *runsa "$job_output_folder"

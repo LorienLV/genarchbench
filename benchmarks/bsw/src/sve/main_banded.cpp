@@ -51,6 +51,9 @@ Authors: Vasimuddin Md <vasimuddin.md@intel.com>; Sanchit Misra <sanchit.misra@i
 #if FAPP_ANALYSIS
     #include "fj_tool/fapp.h"
 #endif
+#if DYNAMORIO_ANALYSIS
+    #include <dr_api.h>
+#endif
 
 #define DEFAULT_MATCH 1
 #define DEFAULT_MISMATCH 4
@@ -280,6 +283,9 @@ int main(int argc, char *argv[])
 	#if FAPP_ANALYSIS
 		fapp_start("getScores", 1, 0);
 	#endif
+	#if DYNAMORIO_ANALYSIS
+      	dr_app_setup_and_start();
+	#endif
     //int64_t workTicks[CLMUL * numThreads];
     //memset(workTicks, 0, CLMUL * numThreads * sizeof(int64_t));
 
@@ -306,6 +312,9 @@ int main(int argc, char *argv[])
     __parsec_roi_end();
 #endif
 
+	#if DYNAMORIO_ANALYSIS
+      	dr_app_stop_and_cleanup();
+	#endif
 	#if VTUNE_ANALYSIS
 		__itt_pause();
 	#endif

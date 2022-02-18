@@ -32,6 +32,9 @@
 #if FAPP_ANALYSIS
     #include "fj_tool/fapp.h"
 #endif
+#if DYNAMORIO_ANALYSIS
+    #include <dr_api.h>
+#endif
 
 using namespace std;
 using Alignment = std::vector<std::pair<std::int32_t, std::int32_t>>;
@@ -229,6 +232,9 @@ int main(int argc, char** argv) {
 #if FAPP_ANALYSIS
     fapp_start("alignment", 1, 0);
 #endif
+#if DYNAMORIO_ANALYSIS
+    dr_app_setup_and_start();
+#endif
 
 #ifdef ENABLE_SORT
     std::sort(batches.begin(), batches.end(), SortBySize());
@@ -269,6 +275,9 @@ int main(int argc, char** argv) {
     std::sort(batches.begin(), batches.end(), SortById());
 #endif
 
+#if DYNAMORIO_ANALYSIS
+    dr_app_stop_and_cleanup();
+#endif
 #if VTUNE_ANALYSIS
     __itt_pause();
 #endif
