@@ -19,15 +19,15 @@
 #endif
 #ifdef __ARM_FEATURE_SVE
     #include <arm_sve.h>
-    #define VL svcntd()
+    #define VL svcntw()
 #endif
 
-static const char LogTable256_dp_lib[256] = {
+static const signed char LogTable256_dp_lib[256] = {
 #define LT(n) n, n, n, n, n, n, n, n, n, n, n, n, n, n, n, n
     -1, 0, 1, 1, 2, 2, 2, 2, 3, 3, 3, 3, 3, 3, 3, 3,
         LT(4), LT(5), LT(5), LT(6), LT(6), LT(6), LT(6),
         LT(7), LT(7), LT(7), LT(7), LT(7), LT(7), LT(7), LT(7)
-    };
+};
 
 static inline int ilog2_32_dp_lib(uint32_t v) {
     uint32_t t, tt;
@@ -143,7 +143,7 @@ static void chain_dp(call_t *a, return_t *ret) {
     const auto bw = a->bw;
 
     const auto avg_qspan = a->avg_qspan;
-    const auto avg_qspan001 = 0.01f * avg_qspan;
+    const float avg_qspan001 = 0.01f * avg_qspan;
 
     // const auto n_segs = a->n_segs;
     const auto n = a->n;
@@ -162,7 +162,7 @@ static void chain_dp(call_t *a, return_t *ret) {
     ret->targets.resize(n);
     ret->peak_scores.resize(n);
 
-    int64_t st = 0;
+    int32_t st = 0;
 
 #ifdef __AVX512BW__
     #pragma message("Using AVX512 version")
@@ -678,7 +678,7 @@ static void chain_dp(call_t *a, return_t *ret) {
 
     // fill the score and backtrack arrays
     for (int32_t i = 0; i < n; ++i) {
-        const auto ri_scalar = anchors_x32[i];
+        const int32_t ri_scalar = anchors_x32[i];
         svint32_t ri = svdup_n_s32(ri_scalar);
         const int32_t qi_scalar = static_cast<int32_t>(anchors_y32[i]);
         svint32_t qi = svdup_n_s32(qi_scalar);
@@ -703,7 +703,7 @@ static void chain_dp(call_t *a, return_t *ret) {
             svint32_t rj = svld1_s32(valid_elements,(int32_t*)&anchors_x32[real_j]);
             //const int32_t qj = static_cast<int32_t>(anchors_y[j]);
             svint32_t qj = svld1_s32(valid_elements,(int32_t*)&anchors_y32[real_j]);
-            qj = svextw_s32_x(valid_elements,qj);
+            // qj = svextw_s64_x(valid_elements,qj);
 
             //const int64_t dr = ri - rj;
             svint32_t dr = svsub_s32_x(valid_elements,ri,rj);
@@ -743,7 +743,7 @@ static void chain_dp(call_t *a, return_t *ret) {
             //const int32_t log_dd = (dd) ? ilog2_32(dd) : 0;
             svbool_t valid_log = svcmpne_n_s32(valid_elements,dd,0);
             svint32_t log_dd = svreinterpret_s32(svclz_s32_x(valid_elements,dd));
-            log_dd = svsubr_n_s32_z(valid_log,log_dd,63);
+            log_dd = svsubr_n_s32_z(valid_log,log_dd,31);
             
             //const int32_t gap_cost = static_cast<int>(dd * 0.01f * avg_qspan) + (log_dd >> 1);
             /*
@@ -755,11 +755,11 @@ static void chain_dp(call_t *a, return_t *ret) {
             //gap_cost_f = svmul_n_f64_x(valid_elements,gap_cost_f,0.01f);
             gap_cost_f = svmul_n_f32_x(valid_elements,gap_cost_f,avg_qspan001);
             svint32_t gap_cost = svcvt_s32_f32_x(valid_elements,gap_cost_f);
-            log_dd = svlsr_n_s32_x(valid_elements,log_dd,1);
+            log_dd = svreinterpret_s32(svlsr_n_u32_x(valid_elements,svreinterpret_u32(log_dd),1));
             gap_cost = svadd_s32_x(valid_elements,gap_cost,log_dd);
 
             //const int32_t score = ret->scores[j] + oc - gap_cost;
-            svint32_t score = svld1sw_s32(valid_elements,&ret->scores[real_j]);
+            svint32_t score = svld1_s32(valid_elements,&ret->scores[real_j]);
             score = svadd_s32_x(valid_elements,score,oc);
             score = svsub_s32_x(valid_elements,score,gap_cost);
 
