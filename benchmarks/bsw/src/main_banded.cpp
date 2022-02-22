@@ -319,6 +319,8 @@ int main(int argc, char *argv[])
 	printf("Executed AVX2 vector code...\n");
 #elif __SSE2__
 	printf("Executed SSE2 vector code...\n");
+#elif __ARM_FEATURE_SVE
+	printf("Executed SVE vector code...\n");
 #else
 	printf("Executed serial code...\n");
 #endif

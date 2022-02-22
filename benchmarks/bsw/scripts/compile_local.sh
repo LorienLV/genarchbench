@@ -16,7 +16,7 @@ for compiler in "${compilers[@]}"; do
     case "$compiler" in
         gcc)
             make CC=gcc CXX=g++ arch=-march=native \
-            TARGET_ARCH=x86_64 BUILDDIR=build_gcc \
+            BUILDDIR=build_gcc \
             VTUNE_ANALYSIS=1 DYNAMORIO_ANALYSIS=1
             ;;
         *)
