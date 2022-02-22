@@ -337,13 +337,18 @@ for i in ${!jobs_id[@]}; do
         SLURM)
             job_info="$(sacct -p -n -j $job_id 2>/dev/null | grep "^$job_id|")"
             job_state="$(echo "$job_info" | cut -d '|' -f 6)"
+
             if [[ -n "$job_state" && "$job_state" != "PENDING" && "$job_state" != "RUNNING" &&
                 "$job_state" != "REQUEUED" && "$job_state" != "RESIZING" &&
                 "$job_state" != "SUSPENDED" && "$job_state" != "REVOKED" ]]; then
 
                 job_exit_code="$(echo "$job_info" | cut -d '|' -f 7 | cut -d ':' -f 1)"
-                if [[ $job_exit_code -ne 0 ]]; then
-                    job_state="EXIT CODE $job_exit_code"
+                job_signal_number="$(echo "$job_info" | cut -d '|' -f 7 | cut -d ':' -f 2)"
+
+                if [[ $job_signal_number -ne 0 ]]; then
+                    job_state="JOB KILLED BY SIGNAL: $job_signal_number"
+                elif [[ $job_exit_code -ne 0 ]]; then
+                    job_state="JOB EXITED WITH CODE: $job_exit_code"
                 elif [[ "$job_state" == "COMPLETED" ]]; then
                     status="OK"
                 fi
@@ -353,10 +358,16 @@ for i in ${!jobs_id[@]}; do
         PJM)
             job_info="$(pjstat -H -S $job_id 2>/dev/null)"
             job_state="$(echo "$job_info" | grep "^[ ]*STATE[ ]*:[ ]*" | tr -s ' ' | cut -d ' ' -f 4)"
+
             if [[ -n "$job_state" ]]; then
-                job_exit_code="$(echo "$job_info" | grep "^[ ]*EXIT CODE[ ]*:[ ]*" | tr -s ' ' | cut -d ' ' -f 5)" 
-                if [[ $job_exit_code -ne 0 ]]; then
-                    job_state="EXIT CODE $job_exit_code"
+
+                job_exit_code="$(echo "$job_info" | grep "^[ ]*EXIT CODE[ ]*:[ ]*" | tr -s ' ' | cut -d ' ' -f 5)"
+
+                if [[ $job_exit_code == "-" ]]; then
+                    job_signal_number="$(echo "$job_info" | grep "^[ ]*SIGNAL NO[ ]*:[ ]*" | tr -s ' ' | cut -d ' ' -f 5)"
+                    job_state="JOB KILLED BY SIGNAL: $job_signal_number"
+                elif [[ $job_exit_code -ne 0 ]]; then
+                    job_state="JOB EXITED WITH CODE: $job_exit_code"
                 elif [[ "$job_state" == "EXT" ]]; then
                     status="OK"
                 fi
