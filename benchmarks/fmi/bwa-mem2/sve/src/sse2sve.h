@@ -1,8 +1,6 @@
 #ifndef SSE2NEON_H
 #define SSE2NEON_H
 
-#ifdef __ARM_FEATURE_SVE
-
 #include <arm_sve.h>
 
 #if defined(__GNUC__) || defined(__clang__)
@@ -277,4 +275,3 @@ FORCE_INLINE void _mm_store_si128(svint64_t * dir, svint64_t reg) {
 
 #endif
 
-#endif
