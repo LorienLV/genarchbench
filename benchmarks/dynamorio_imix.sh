@@ -16,8 +16,15 @@ full_command="$@"
 command_folder="$(dirname "$1")"
 command_executable="$(basename "$1")"
 
-pushd "$command_folder" &>/dev/null
+pushd "$command_folder"
+
 "${DYNAMORIO_INSTALL_PATH}/bin64/drconfig" -reg ${command_executable} -c  "${DYNAMORIO_INSTALL_PATH}/api/bin/libopcodes.so"
-${full_command}
+
+command_exit_code=0
+${full_command} || command_exit_code=$?
+
 "${DYNAMORIO_INSTALL_PATH}/bin64/drconfig" -unreg ${command_executable} || true # Ignore errors in this command
-popd &>/dev/null
+
+popd
+
+exit $command_exit_code

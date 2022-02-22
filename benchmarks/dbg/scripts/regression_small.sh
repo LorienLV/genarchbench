@@ -65,6 +65,8 @@ MN4)
     )
     ;;
 CTEARM)
+    before_command+="source $scriptfolder/../../setup_ctearm.sh;"
+
     commands=(
         "module load gcc/10.2.0; $binaries_path/build_gcc/dbg"
         "module load fuji; $binaries_path/build_gcc/dbg"

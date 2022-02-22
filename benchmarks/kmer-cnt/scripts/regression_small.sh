@@ -76,6 +76,8 @@ MN4)
     )
     ;;
 CTEARM)
+    before_command+="source $scriptfolder/../../setup_ctearm.sh;"
+
     commands=(
         "module load gcc/10.2.0; $binaries_path/kmer-cnt_gcc"
         "module load fuji;$binaries_path/kmer-cnt_fcc"

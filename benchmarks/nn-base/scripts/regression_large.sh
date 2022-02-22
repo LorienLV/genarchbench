@@ -61,6 +61,8 @@ MN4)
     )
     ;;
 CTEARM)
+    before_command+="source $scriptfolder/../../setup_ctearm.sh;"
+
     commands=(
         "module load gcc/11.0.0-3503git python/3.6.8; python3 $benchmark_path/bonito/basecall.py"
         # "module load fuji; $benchmark_path/build_gcc/dbg_fcc"
