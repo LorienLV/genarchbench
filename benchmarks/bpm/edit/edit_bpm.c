@@ -95,7 +95,7 @@ void edit_bpm_pattern_compile(
   bpm_pattern->init_score = memory; memory += score_size;
   bpm_pattern->pattern_left = memory;
   // Init PEQ
-  memset(bpm_pattern->PEQ,0,PEQ_size);
+  memset(bpm_pattern->PEQ,0,PEQ_size * sizeof(*bpm_pattern->PEQ));
   uint64_t i;
   for (i=0;i<pattern_length;++i) {
     const uint8_t enc_char = dna_encode(pattern[i]);
@@ -114,7 +114,7 @@ void edit_bpm_pattern_compile(
   // Init auxiliary data
   uint64_t pattern_left = pattern_length;
   const uint64_t top = pattern_num_words64-1;
-  memset(bpm_pattern->level_mask,0,aux_vector_size);
+  memset(bpm_pattern->level_mask,0, aux_vector_size * sizeof(bpm_pattern->level_mask));
   for (i=0;i<top;++i) {
     bpm_pattern->level_mask[i] = BPM_W64_MASK;
     bpm_pattern->init_score[i] = BPM_W64_LENGTH;
