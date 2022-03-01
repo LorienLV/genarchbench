@@ -70,7 +70,7 @@ MN4)
 
     job_options=(
         '--exclusive'
-        '--time=00:00:30'
+        '--time=00:01:00'
     )
     ;;
 CTEARM)
@@ -110,7 +110,7 @@ CTEARM)
 esac
 
 # Additional arguments to pass to the commands.
-command_opts="-i \"$inputs_path/input.n1M.l100.seq\" -o checksum.file -t \$OMP_NUM_THREADS"
+command_opts="-i \"$inputs_path/WFA_SRR7733443_100k_input.txt\" -o checksum.file -t \$OMP_NUM_THREADS"
 
 #
 # Additional variables.

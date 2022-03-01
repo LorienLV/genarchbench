@@ -112,7 +112,7 @@ CTEARM)
 esac
 
 # Additional arguments to pass to the commands.
-command_opts="-i \"$inputs_path/input.n100K.l1K.seq\" -o checksum.file -t \$OMP_NUM_THREADS"
+command_opts="-i \"$inputs_path/WFA_SRR7733443_1m_input.txt\" -o checksum.file -t \$OMP_NUM_THREADS"
 
 #
 # This function is executed before launching a job. You can use this function to

@@ -142,6 +142,12 @@ void align_benchmark(const alg_algorithm_type alg_algorithm) {
           it->seq1.length = getline(&it->seq1.data, &it->seq1.allocated, input_file);
           it->seq2.length = getline(&it->seq2.data, &it->seq2.allocated, input_file);
 
+          if (it->seq1.length < it->seq2.length) { // Swap
+            sequence_t aux = it->seq1;
+            it->seq1 = it->seq2;
+            it->seq2 = aux;
+          }
+
           if (it->seq1.length == -1 || it->seq2.length == -1) {
             // OMP: Implicit flush of more_seqs at the end of the for loop.
             more_seqs = 0;
@@ -250,19 +256,22 @@ void align_benchmark(const alg_algorithm_type alg_algorithm) {
       timer_stop(&(parameters.timer_global));
     }
 
-    // Print scores and free private data.
-    it = head;
-    while(it != NULL) {
-      if (it->seq1.length > 0 && it->seq2.length > 0 && output_file != NULL) {
-        fprintf(output_file,"[%d] score=%d\n", it->id, it->score);
+    #pragma omp critical
+    {
+      // Print scores and free private data.
+      it = head;
+      while(it != NULL) {
+        if (it->seq1.length > 0 && it->seq2.length > 0 && output_file != NULL) {
+          fprintf(output_file,"[%d] score=%d\n", it->id, it->score);
+        }
+
+        free(it->seq1.data);
+        free(it->seq2.data);
+
+        seq_pair_t *temp = it;
+        it = it->next;
+        free(temp);
       }
-
-      free(it->seq1.data);
-      free(it->seq2.data);
-
-      seq_pair_t *temp = it;
-      it = it->next;
-      free(temp);
     }
 
     mm_allocator_delete(align_input.mm_allocator);

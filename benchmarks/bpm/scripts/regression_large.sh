@@ -110,7 +110,7 @@ CTEARM)
 esac
 
 # Additional arguments to pass to the commands.
-command_opts="-a bpm-edit -i \"$inputs_path/input.n100K.l1K.seq\" -o checksum.file -t \$OMP_NUM_THREADS"
+command_opts="-a bpm-edit -i \"$inputs_path/BPM_SRR7733443_1m_input.txt\" -o checksum.file -t \$OMP_NUM_THREADS"
 
 #
 # Additional variables.

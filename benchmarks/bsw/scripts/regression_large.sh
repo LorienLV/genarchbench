@@ -110,7 +110,7 @@ CTEARM)
 esac
 
 # Additional arguments to pass to the commands.
-command_opts="-pairs \"$inputs_path/bandedSWA_SRR7733443_1m_input.txt\" -t \$OMP_NUM_THREADS -b 512"
+command_opts="-pairs \"$inputs_path/bandedSWA_SRR7733443_10m_input.txt\" -t \$OMP_NUM_THREADS -b 512"
 
 #
 # Additional variables.
