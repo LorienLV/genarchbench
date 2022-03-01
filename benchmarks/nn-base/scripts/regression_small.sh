@@ -41,7 +41,8 @@ before_command="export OMP_PROC_BIND=true;"
 case "$GENARCH_BENCH_CLUSTER" in
 MN4)
     commands=(
-        "python3 $benchmark_path/bonito/basecall.py"
+        "module load gcc/8.1.0 impi/2018.1 mkl/2018.1 opencv/4.1.2 python/3.6.4_ML; \
+         python3 $benchmark_path/bonito/basecall.py"
     )
 
     parallelism=(
@@ -96,7 +97,8 @@ CTEARM)
 esac
 
 # Additional arguments to pass to the commands.
-command_opts="\"$benchmark_path/models/bonito_dna_r941\" \"$inputs_path/reads\" --chunksize 3000 --fastq > out.fastq"
+command_opts="\"$benchmark_path/models/bonito_dna_r941\" \"$inputs_path/reads\" \
+--chunksize 3000 --fastq > out.fastq"
 
 #
 # This function is executed before launching a job. You can use this function to
