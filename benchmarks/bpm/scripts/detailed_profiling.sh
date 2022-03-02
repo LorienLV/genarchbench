@@ -112,7 +112,7 @@ CTEARM)
 esac
 
 # Additional arguments to pass to the commands.
-command_opts="-a bpm-edit -i \"$inputs_path/BPM_SRR7733443_1m_input.txt\" -o checksum.file -t \$OMP_NUM_THREADS"
+command_opts="-a bpm-edit -i \"$inputs_path/BPM_SRR7733443_10m_input.txt\" -o checksum.file -t \$OMP_NUM_THREADS"
 
 #
 # This function is executed before launching a job. You can use this function to
