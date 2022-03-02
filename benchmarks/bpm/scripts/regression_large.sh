@@ -70,7 +70,7 @@ MN4)
 
     job_options=(
         '--exclusive'
-        '--time=00:00:30'
+        '--time=00:05:00'
     )
     ;;
 CTEARM)
