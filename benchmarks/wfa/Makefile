@@ -10,7 +10,7 @@ CC=gcc
 CPP=g++
 
 LD_FLAGS=-lm
-CC_FLAGS=-Wall -fopenmp -g
+CC_FLAGS=-Wall -fopenmp # -g
 # ifeq ($(UNAME), Linux)
 #   LD_FLAGS+=-lrt 
 # endif
