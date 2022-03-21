@@ -449,6 +449,132 @@ PglErr ExtractExcludeFlagNorange(const char* const* variant_ids, const uint32_t*
   return reterr;
 }
 
+void NondupIdLoadProcessTokens(const char* const* variant_ids, const uint32_t* variant_id_htable, const char* shard_start, const char* shard_end, uint32_t variant_id_htable_size, uintptr_t* already_seen) {
+  const char* shard_iter = shard_start;
+  while (1) {
+    shard_iter = FirstPostspaceBounded(shard_iter, shard_end);
+    if (shard_iter == shard_end) {
+      return;
+    }
+    const char* token_end = CurTokenEnd(shard_iter);
+    const uint32_t variant_uidx = IdHtableFindNnt(shard_iter, variant_ids, variant_id_htable, token_end - shard_iter, variant_id_htable_size);
+    shard_iter = token_end;
+    if (variant_uidx == UINT32_MAX) {
+      continue;
+    }
+    SetBit(variant_uidx, already_seen);
+  }
+}
+
+CONSTI32(kMaxNondupIdLoadThreads, 8);
+
+typedef struct NondupIdLoadCtxStruct {
+  const char* const* variant_ids;
+  const uint32_t* variant_id_htable;
+  uintptr_t variant_id_htable_size;
+
+  char* shard_boundaries[kMaxNondupIdLoadThreads + 1];
+  uintptr_t* already_seens[kMaxNondupIdLoadThreads];
+} NondupIdLoadCtx;
+
+THREAD_FUNC_DECL NondupIdLoadThread(void* raw_arg) {
+  ThreadGroupFuncArg* arg = S_CAST(ThreadGroupFuncArg*, raw_arg);
+  const uintptr_t tidx_p1 = arg->tidx + 1;
+  NondupIdLoadCtx* ctx = S_CAST(NondupIdLoadCtx*, arg->sharedp->context);
+
+  const char* const* variant_ids = ctx->variant_ids;
+  const uint32_t* variant_id_htable = ctx->variant_id_htable;
+  const uintptr_t variant_id_htable_size = ctx->variant_id_htable_size;
+  uintptr_t* already_seen = ctx->already_seens[tidx_p1];
+  do {
+    NondupIdLoadProcessTokens(variant_ids, variant_id_htable, ctx->shard_boundaries[tidx_p1], ctx->shard_boundaries[tidx_p1 + 1], variant_id_htable_size, already_seen);
+  } while (!THREAD_BLOCK_FINISH(arg));
+  THREAD_RETURN;
+}
+
+PglErr NondupIdLoad(const char* const* variant_ids, const char* fname, uint32_t raw_variant_ct, uint32_t variant_ct, uint32_t max_thread_ct, uintptr_t* variant_set, uint32_t* dup_found_ptr) {
+  unsigned char* bigstack_mark = g_bigstack_base;
+  PglErr reterr = kPglRetSuccess;
+  TokenStream tks;
+  ThreadGroup tg;
+  PreinitTokenStream(&tks);
+  PreinitThreads(&tg);
+  NondupIdLoadCtx ctx;
+  {
+    const uint32_t calc_thread_ct_m1 = MINV(max_thread_ct, kMaxNondupIdLoadThreads) - 1;
+    if (unlikely(SetThreadCt0(calc_thread_ct_m1, &tg))) {
+      goto NondupIdLoad_ret_NOMEM;
+    }
+    if (!variant_ct) {
+      goto NondupIdLoad_ret_1;
+    }
+    uint32_t decompress_thread_ct = 1;
+    if (max_thread_ct > calc_thread_ct_m1 + 2) {
+      decompress_thread_ct = max_thread_ct - calc_thread_ct_m1 - 1;
+    }
+    const uint32_t raw_variant_ctl = BitCtToWordCt(raw_variant_ct);
+    for (uint32_t tidx = 1; tidx <= calc_thread_ct_m1; ++tidx) {
+      if (unlikely(bigstack_calloc_w(raw_variant_ctl, &(ctx.already_seens[tidx])))) {
+        goto NondupIdLoad_ret_NOMEM;
+      }
+    }
+    reterr = InitTokenStream(fname, decompress_thread_ct, &tks);
+    if (unlikely(reterr)) {
+      goto NondupIdLoad_ret_TKSTREAM_FAIL;
+    }
+    // Allocate/initialize hash table last, so we can make the most appropriate
+    // speed/size tradeoff.
+    uint32_t* variant_id_htable;
+    uint32_t variant_id_htable_size;
+    reterr = AllocAndPopulateNondupHtableMt(g_bigstack_end, variant_set, variant_ids, variant_ct, max_thread_ct, &g_bigstack_base, &variant_id_htable, &variant_id_htable_size, dup_found_ptr);
+    if (reterr || (*dup_found_ptr)) {
+      goto NondupIdLoad_ret_1;
+    }
+    if (calc_thread_ct_m1) {
+      ctx.variant_ids = variant_ids;
+      ctx.variant_id_htable = variant_id_htable;
+      ctx.variant_id_htable_size = variant_id_htable_size;
+      SetThreadFuncAndData(NondupIdLoadThread, &ctx, &tg);
+    }
+    ZeroWArr(raw_variant_ctl, variant_set);
+    while (1) {
+      reterr = TksNext(&tks, calc_thread_ct_m1 + 1, ctx.shard_boundaries);
+      if (reterr) {
+        break;
+      }
+      if (calc_thread_ct_m1) {
+        if (unlikely(SpawnThreads(&tg))) {
+          goto NondupIdLoad_ret_THREAD_CREATE_FAIL;
+        }
+      }
+      NondupIdLoadProcessTokens(variant_ids, variant_id_htable, ctx.shard_boundaries[0], ctx.shard_boundaries[1], variant_id_htable_size, variant_set);
+      JoinThreads0(&tg);
+    }
+    if (unlikely(reterr != kPglRetEof)) {
+      goto NondupIdLoad_ret_TKSTREAM_FAIL;
+    }
+    reterr = kPglRetSuccess;
+    for (uint32_t tidx = 1; tidx <= calc_thread_ct_m1; ++tidx) {
+      BitvecOr(ctx.already_seens[tidx], raw_variant_ctl, variant_set);
+    }
+  }
+  while (0) {
+  NondupIdLoad_ret_NOMEM:
+    reterr = kPglRetNomem;
+    break;
+  NondupIdLoad_ret_TKSTREAM_FAIL:
+    TokenStreamErrPrint(fname, &tks);
+    break;
+  NondupIdLoad_ret_THREAD_CREATE_FAIL:
+    reterr = kPglRetThreadCreateFail;
+  }
+ NondupIdLoad_ret_1:
+  CleanupThreads(&tg);
+  CleanupTokenStream2(fname, &tks, &reterr);
+  BigstackReset(bigstack_mark);
+  return reterr;
+}
+
 PglErr ExtractColCond(const char* const* variant_ids, const uint32_t* variant_id_htable, const uint32_t* htable_dup_base, const ExtractColCondInfo* eccip, uint32_t raw_variant_ct, uint32_t max_variant_id_slen, uintptr_t htable_size, uint32_t max_thread_ct, uintptr_t* variant_include, uint32_t* variant_ct_ptr) {
   unsigned char* bigstack_mark = g_bigstack_base;
   uintptr_t line_idx = 0;
@@ -3388,6 +3514,7 @@ THREAD_FUNC_DECL LoadSampleMissingCtsThread(void* raw_arg) {
   while (0) {
   LoadSampleMissingCtsThread_err:
     UpdateU64IfSmaller(new_err_info, &ctx->err_info);
+    THREAD_BLOCK_FINISH(arg);
     break;
   }
   THREAD_RETURN;
@@ -4059,7 +4186,7 @@ void EnforceMinBpSpace(const ChrInfo* cip, const uint32_t* variant_bps, uint32_t
 // (Workaround for that case when merge is implemented: generate a
 // single-sample file with all the right reference alleles, and merge with
 // that.)
-PglErr SetRefalt1FromFile(const uintptr_t* variant_include, const char* const* variant_ids, const uintptr_t* allele_idx_offsets, const TwoColParams* allele_flag_info, uint32_t raw_variant_ct, uint32_t variant_ct, uint32_t max_variant_id_slen, uint32_t is_alt1, uint32_t force, uint32_t max_thread_ct, const char** allele_storage, uint32_t* max_allele_slen_ptr, STD_ARRAY_PTR_DECL(AlleleCode, 2, refalt1_select), uintptr_t* nonref_flags, uintptr_t* previously_seen) {
+PglErr SetRefalt1FromFile(const uintptr_t* variant_include, const char* const* variant_ids, const uintptr_t* allele_idx_offsets, const TwoColParams* allele_flag_info, uint32_t raw_variant_ct, uint32_t variant_ct, uint32_t max_variant_id_slen, uint32_t is_alt1, uint32_t force, char input_missing_geno_char, uint32_t max_thread_ct, const char** allele_storage, uint32_t* max_allele_slen_ptr, STD_ARRAY_PTR_DECL(AlleleCode, 2, refalt1_select), uintptr_t* nonref_flags, uintptr_t* previously_seen) {
   // temporary allocations on bottom, "permanent" allocations on top (so we
   // don't reset g_bigstack_end).
   // previously_seen[] should be preallocated iff both --ref-allele and
@@ -4114,7 +4241,6 @@ PglErr SetRefalt1FromFile(const uintptr_t* variant_include, const char* const* v
       coldiff = allele_flag_info->colid - allele_flag_info->colx;
     }
     line_idx = allele_flag_info->skip_ct;
-    const char input_missing_geno_char = *g_input_missing_geno_ptr;
     uintptr_t skipped_variant_ct = 0;
     uintptr_t missing_allele_ct = 0;
     uint32_t allele_mismatch_warning_ct = 0;

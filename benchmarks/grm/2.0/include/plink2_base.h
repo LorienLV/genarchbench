@@ -97,7 +97,7 @@
 // 10000 * major + 100 * minor + patch
 // Exception to CONSTI32, since we want the preprocessor to have access
 // to this value.  Named with all caps as a consequence.
-#define PLINK2_BASE_VERNUM 706
+#define PLINK2_BASE_VERNUM 800
 
 
 #define _FILE_OFFSET_BITS 64
@@ -808,6 +808,10 @@ HEADER_INLINE VecI16 veci16_and_notfirst(VecI16 excl, VecI16 main) {
   return R_CAST(VecI16, _mm256_andnot_si256(R_CAST(__m256i, excl), R_CAST(__m256i, main)));
 }
 
+HEADER_INLINE VecUc vecuc_and_notfirst(VecUc excl, VecUc main) {
+  return R_CAST(VecUc, _mm256_andnot_si256(R_CAST(__m256i, excl), R_CAST(__m256i, main)));
+}
+
 HEADER_INLINE VecI8 veci8_and_notfirst(VecI8 excl, VecI8 main) {
   return R_CAST(VecI8, _mm256_andnot_si256(R_CAST(__m256i, excl), R_CAST(__m256i, main)));
 }
@@ -830,6 +834,10 @@ HEADER_INLINE VecU16 vecu16_set1(unsigned short usi) {
 
 HEADER_INLINE VecI16 veci16_set1(short si) {
   return R_CAST(VecI16, _mm256_set1_epi16(si));
+}
+
+HEADER_INLINE VecUc vecuc_set1_epi16(unsigned short usi) {
+  return R_CAST(VecUc, _mm256_set1_epi16(usi));
 }
 
 HEADER_INLINE VecUc vecuc_set1(unsigned char ucc) {
@@ -886,6 +894,10 @@ HEADER_INLINE VecW vecw_setr8x(char e31, char e30, char e29, char e28, char e27,
   return R_CAST(VecW, _mm256_setr_epi8(e31, e30, e29, e28, e27, e26, e25, e24, e23, e22, e21, e20, e19, e18, e17, e16, e15, e14, e13, e12, e11, e10, e9, e8, e7, e6, e5, e4, e3, e2, e1, e0));
 }
 
+HEADER_INLINE VecUc vecuc_setr8x(char e31, char e30, char e29, char e28, char e27, char e26, char e25, char e24, char e23, char e22, char e21, char e20, char e19, char e18, char e17, char e16, char e15, char e14, char e13, char e12, char e11, char e10, char e9, char e8, char e7, char e6, char e5, char e4, char e3, char e2, char e1, char e0) {
+  return R_CAST(VecUc, _mm256_setr_epi8(e31, e30, e29, e28, e27, e26, e25, e24, e23, e22, e21, e20, e19, e18, e17, e16, e15, e14, e13, e12, e11, e10, e9, e8, e7, e6, e5, e4, e3, e2, e1, e0));
+}
+
 HEADER_INLINE VecW vecw_unpacklo8(VecW evens, VecW odds) {
   return R_CAST(VecW, _mm256_unpacklo_epi8(R_CAST(__m256i, evens), R_CAST(__m256i, odds)));
 }
@@ -936,6 +948,23 @@ HEADER_INLINE VecI8 veci8_permute0xd8_if_avx2(VecI8 vv) {
 
 HEADER_INLINE VecUc vecuc_permute0xd8_if_avx2(VecUc vv) {
   return R_CAST(VecUc, _mm256_permute4x64_epi64(R_CAST(__m256i, vv), 0xd8));
+}
+
+// Could have a single-src gather_even function, but that should wait until
+// there is a clear SSE2 use case.
+HEADER_INLINE VecW vecw_gather_even(VecW src_lo, VecW src_hi, VecW m8) {
+  const VecW gathered_laneswapped = R_CAST(VecW, _mm256_packus_epi16(R_CAST(__m256i, src_lo & m8), R_CAST(__m256i, src_hi & m8)));
+  return vecw_permute0xd8_if_avx2(gathered_laneswapped);
+}
+
+HEADER_INLINE VecUc vecuc_gather_even(VecUc src_lo, VecUc src_hi, VecUc m8) {
+  const VecUc gathered_laneswapped = R_CAST(VecUc, _mm256_packus_epi16(R_CAST(__m256i, src_lo & m8), R_CAST(__m256i, src_hi & m8)));
+  return vecuc_permute0xd8_if_avx2(gathered_laneswapped);
+}
+
+HEADER_INLINE VecUc vecuc_gather_odd(VecUc src_lo, VecUc src_hi) {
+  const VecUc gathered_laneswapped = R_CAST(VecUc, _mm256_packus_epi16(_mm256_srli_epi16(R_CAST(__m256i, src_lo), 8), _mm256_srli_epi16(R_CAST(__m256i, src_hi), 8)));
+  return vecuc_permute0xd8_if_avx2(gathered_laneswapped);
 }
 
 HEADER_INLINE VecW vecw_shuffle8(VecW table, VecW indexes) {
@@ -1073,6 +1102,10 @@ HEADER_INLINE VecU16 vecu16_blendv(VecU16 aa, VecU16 bb, VecU16 mask) {
   return R_CAST(VecU16, _mm256_blendv_epi8(R_CAST(__m256i, aa), R_CAST(__m256i, bb), R_CAST(__m256i, mask)));
 }
 
+HEADER_INLINE VecUc vecuc_blendv(VecUc aa, VecUc bb, VecUc mask) {
+  return R_CAST(VecUc, _mm256_blendv_epi8(R_CAST(__m256i, aa), R_CAST(__m256i, bb), R_CAST(__m256i, mask)));
+}
+
 #  else  // !USE_AVX2
 
 #    define VCONST_W(xx) {xx, xx}
@@ -1136,6 +1169,10 @@ HEADER_INLINE VecI16 veci16_and_notfirst(VecI16 excl, VecI16 main) {
   return R_CAST(VecI16, _mm_andnot_si128(R_CAST(__m128i, excl), R_CAST(__m128i, main)));
 }
 
+HEADER_INLINE VecUc vecuc_and_notfirst(VecUc excl, VecUc main) {
+  return R_CAST(VecUc, _mm_andnot_si128(R_CAST(__m128i, excl), R_CAST(__m128i, main)));
+}
+
 HEADER_INLINE VecI8 veci8_and_notfirst(VecI8 excl, VecI8 main) {
   return R_CAST(VecI8, _mm_andnot_si128(R_CAST(__m128i, excl), R_CAST(__m128i, main)));
 }
@@ -1158,6 +1195,10 @@ HEADER_INLINE VecU16 vecu16_set1(unsigned short usi) {
 
 HEADER_INLINE VecI16 veci16_set1(short si) {
   return R_CAST(VecI16, _mm_set1_epi16(si));
+}
+
+HEADER_INLINE VecUc vecuc_set1_epi16(unsigned short usi) {
+  return R_CAST(VecUc, _mm_set1_epi16(usi));
 }
 
 HEADER_INLINE VecUc vecuc_set1(unsigned char ucc) {
@@ -1290,6 +1331,22 @@ HEADER_INLINE VecW vecw_setr8x(
   return R_CAST(VecW, _mm_setr_epi8(e31, e30, e29, e28, e27, e26, e25, e24, e23, e22, e21, e20, e19, e18, e17, e16));
 }
 
+HEADER_INLINE VecUc vecuc_setr8x(
+    char e31, char e30, char e29, char e28,
+    char e27, char e26, char e25, char e24,
+    char e23, char e22, char e21, char e20,
+    char e19, char e18, char e17, char e16,
+    __maybe_unused char e15, __maybe_unused char e14,
+    __maybe_unused char e13, __maybe_unused char e12,
+    __maybe_unused char e11, __maybe_unused char e10,
+    __maybe_unused char e9, __maybe_unused char e8,
+    __maybe_unused char e7, __maybe_unused char e6,
+    __maybe_unused char e5, __maybe_unused char e4,
+    __maybe_unused char e3, __maybe_unused char e2,
+    __maybe_unused char e1, __maybe_unused char e0) {
+  return R_CAST(VecUc, _mm_setr_epi8(e31, e30, e29, e28, e27, e26, e25, e24, e23, e22, e21, e20, e19, e18, e17, e16));
+}
+
 HEADER_INLINE VecW vecw_unpacklo8(VecW evens, VecW odds) {
   return R_CAST(VecW, _mm_unpacklo_epi8(R_CAST(__m128i, evens), R_CAST(__m128i, odds)));
 }
@@ -1350,6 +1407,18 @@ HEADER_INLINE VecUc vecuc_permute0xd8_if_avx2(VecUc vv) {
   return vv;
 }
 
+HEADER_INLINE VecW vecw_gather_even(VecW src_lo, VecW src_hi, VecW m8) {
+  return R_CAST(VecW, _mm_packus_epi16(R_CAST(__m128i, src_lo & m8), R_CAST(__m128i, src_hi & m8)));
+}
+
+HEADER_INLINE VecUc vecuc_gather_even(VecUc src_lo, VecUc src_hi, VecUc m8) {
+  return R_CAST(VecUc, _mm_packus_epi16(R_CAST(__m128i, src_lo & m8), R_CAST(__m128i, src_hi & m8)));
+}
+
+HEADER_INLINE VecUc vecuc_gather_odd(VecUc src_lo, VecUc src_hi) {
+  return R_CAST(VecUc, _mm_packus_epi16(_mm_srli_epi16(R_CAST(__m128i, src_lo), 8), _mm_srli_epi16(R_CAST(__m128i, src_hi), 8)));
+}
+
 #    ifdef USE_SSE42
 HEADER_INLINE VecI32 veci32_max(VecI32 v1, VecI32 v2) {
   return R_CAST(VecI32, _mm_max_epi32(R_CAST(__m128i, v1), R_CAST(__m128i, v2)));
@@ -1386,6 +1455,10 @@ HEADER_INLINE VecU32 vecu32_blendv(VecU32 aa, VecU32 bb, VecU32 mask) {
 HEADER_INLINE VecU16 vecu16_blendv(VecU16 aa, VecU16 bb, VecU16 mask) {
   return R_CAST(VecU16, _mm_blendv_epi8(R_CAST(__m128i, aa), R_CAST(__m128i, bb), R_CAST(__m128i, mask)));
 }
+
+HEADER_INLINE VecUc vecuc_blendv(VecUc aa, VecUc bb, VecUc mask) {
+  return R_CAST(VecUc, _mm_blendv_epi8(R_CAST(__m128i, aa), R_CAST(__m128i, bb), R_CAST(__m128i, mask)));
+}
 #    else
 HEADER_INLINE uintptr_t vecw_extract64_0(VecW vv) {
   return R_CAST(uintptr_t, _mm_movepi64_pi64(R_CAST(__m128i, vv)));
@@ -1408,6 +1481,10 @@ HEADER_INLINE VecU32 vecu32_blendv(VecU32 aa, VecU32 bb, VecU32 mask) {
 
 HEADER_INLINE VecU16 vecu16_blendv(VecU16 aa, VecU16 bb, VecU16 mask) {
   return vecu16_and_notfirst(mask, aa) | (mask & bb);
+}
+
+HEADER_INLINE VecUc vecuc_blendv(VecUc aa, VecUc bb, VecUc mask) {
+  return vecuc_and_notfirst(mask, aa) | (mask & bb);
 }
 #    endif
 
@@ -1661,6 +1738,13 @@ template <class T, std::size_t N> void STD_ARRAY_FILL0(std::array<T, N>& arr) {
   struct_name(const struct_name&) = delete; \
   struct_name& operator=(const struct_name&) = delete
 
+#  define MOVABLE_BUT_NONCOPYABLE(struct_name) \
+  struct_name() = default; \
+  struct_name(const struct_name&) = delete; \
+  struct_name& operator=(const struct_name&) = delete; \
+  struct_name(struct_name&&) = default; \
+  struct_name& operator=(struct_name&&) = default
+
 #else
 #  define STD_ARRAY_DECL(tt, nn, vv) tt vv[nn]
 #  define STD_ARRAY_REF(tt, nn) tt* const
@@ -1674,6 +1758,7 @@ template <class T, std::size_t N> void STD_ARRAY_FILL0(std::array<T, N>& arr) {
 #  define STD_ARRAY_REF_FILL0(ct, aref) memset(aref, 0, ct * sizeof(*aref))
 
 #  define NONCOPYABLE(struct_name)
+#  define MOVABLE_BUT_NONCOPYABLE(struct_name)
 #endif
 
 typedef union {
@@ -2010,12 +2095,16 @@ extern uintptr_t g_failed_alloc_attempt_size;
 // number is printed as well; see e.g.
 //   https://stackoverflow.com/questions/15884793/how-to-get-the-name-or-file-and-line-of-caller-method
 
-#if (__GNUC__ == 4) && (__GNUC_MINOR__ < 7) && !defined(__APPLE__)
+#if (((__GNUC__ == 4) && (__GNUC_MINOR__ < 7)) || (__GNUC__ >= 11)) && !defined(__APPLE__)
 // putting this in the header file caused a bunch of gcc 4.4 strict-aliasing
 // warnings, while not doing so seems to inhibit some malloc-related compiler
 // optimizations, bleah
 // compromise: header-inline iff gcc version >= 4.7 (might not be the right
 // cutoff?)
+// update (18 Feb 2022): looks like inlined pgl_malloc is not compiled as
+// intended by gcc 11, due to new ipa-modref pass?  Open to suggestions on how
+// to fix this; maybe it's now necessary to define type-specific malloc
+// wrappers, ugh...
 BoolErr pgl_malloc(uintptr_t size, void* pp);
 #else
 // Unfortunately, defining the second parameter to be of type void** doesn't do
@@ -2866,6 +2955,22 @@ HEADER_INLINE char* memcpyao_k(void* __restrict dst, const void* __restrict src,
 
 HEADER_INLINE unsigned char* memcpyuao_k(void* __restrict dst, const void* __restrict src, uintptr_t ct) {
   return memcpyua(dst, src, ct);
+}
+
+#endif
+
+#if defined(__LP64__) && (__cplusplus >= 201103L)
+
+constexpr uint32_t CompileTimeSlen(const char* k_str) {
+  return k_str[0]? (1 + CompileTimeSlen(&(k_str[1]))) : 0;
+}
+
+#  define strcpy_k(dst, src) plink2::MemcpyKImpl<plink2::CompileTimeSlen(src) + 1>::MemcpyK(dst, src);
+
+#else
+
+HEADER_INLINE void strcpy_k(char* __restrict dst, const void* __restrict src) {
+  strcpy(dst, S_CAST(const char*, src));
 }
 
 #endif

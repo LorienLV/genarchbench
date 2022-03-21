@@ -32,6 +32,10 @@ namespace plink2 {
 
 #define PROG_NAME_STR "plink2"
 
+// Exclude 0x7fffffff, since the half-open interval containing it ends in
+// 0x80000000U or higher.
+CONSTI32(kMaxBp, 0x7ffffffe);
+
 // leave the door semi-open to 32-bit dosages (or 31?  24?)
 // note that u31tod()/u31tof() can't be used on 32-bit dosages
 typedef uint16_t Dosage;
@@ -148,7 +152,7 @@ FLAGSET64_DEF_START()
   kfExportfRefFirst = (1 << 3),
   kfExportf23 = (1 << 4),
   kfExportfA = (1 << 5),
-  kfExportfATranspose = (1 << 6),
+  kfExportfAv = (1 << 6),
   kfExportfAD = (1 << 7),
   kfExportfBcf42 = (1 << 8),
   kfExportfBcf43 = (1 << 9),
@@ -177,7 +181,7 @@ FLAGSET64_DEF_START()
   kfExportfPed = (1 << 30),
   kfExportfCompound = (1U << 31),
   kfExportfStructure = (1LLU << 32),
-  kfExportfTranspose = (1LLU << 33),
+  kfExportfTped = (1LLU << 33),
   kfExportfVcf42 = (1LLU << 34),
   kfExportfVcf43 = (1LLU << 35),
   kfExportfVcf = kfExportfVcf42 | kfExportfVcf43,
@@ -813,23 +817,23 @@ HEADER_INLINE PglErr GetOrAddChrCodeDestructive(const char* file_descrip, uintpt
 uint32_t AllGenoEqual(const uintptr_t* genoarr, uint32_t sample_ct);
 
 // zeroes out samples not in the mask
-void InterleavedMaskZero(const uintptr_t* __restrict interleaved_mask, uintptr_t vec_ct, uintptr_t* __restrict genovec);
+void InterleavedMaskZero(const uintptr_t* __restrict interleaved_mask, uintptr_t geno_vec_ct, uintptr_t* __restrict genovec);
 
 // sets samples outside the mask to missing (0b11)
-void InterleavedMaskMissing(const uintptr_t* __restrict interleaved_set, uintptr_t vec_ct, uintptr_t* __restrict genovec);
+void InterleavedMaskMissing(const uintptr_t* __restrict interleaved_set, uintptr_t geno_vec_ct, uintptr_t* __restrict genovec);
 
 // sets samples in the mask to missing (0b11)
-void InterleavedSetMissing(const uintptr_t* __restrict interleaved_set, uintptr_t vec_ct, uintptr_t* __restrict genovec);
+void InterleavedSetMissing(const uintptr_t* __restrict interleaved_set, uintptr_t geno_vec_ct, uintptr_t* __restrict genovec);
 
-void InterleavedSetMissingCleardosage(const uintptr_t* __restrict orig_set, const uintptr_t* __restrict interleaved_set, uintptr_t vec_ct, uintptr_t* __restrict genovec, uint32_t* __restrict write_dosage_ct_ptr, uintptr_t* __restrict dosagepresent, Dosage* dosage_main);
+void InterleavedSetMissingCleardosage(const uintptr_t* __restrict orig_set, const uintptr_t* __restrict interleaved_set, uintptr_t geno_vec_ct, uintptr_t* __restrict genovec, uint32_t* __restrict write_dosage_ct_ptr, uintptr_t* __restrict dosagepresent, Dosage* dosage_main);
 
-void SetMaleHetMissing(const uintptr_t* __restrict sex_male_interleaved, uint32_t vec_ct, uintptr_t* __restrict genovec);
+void SetMaleHetMissing(const uintptr_t* __restrict sex_male_interleaved, uint32_t geno_vec_ct, uintptr_t* __restrict genovec);
 
 void EraseMaleDphases(const uintptr_t* __restrict sex_male, uint32_t* __restrict write_dphase_ct_ptr, uintptr_t* __restrict dphasepresent, SDosage* dphase_delta);
 
-void SetMaleHetMissingCleardosage(const uintptr_t* __restrict sex_male, const uintptr_t* __restrict sex_male_interleaved, uint32_t vec_ct, uintptr_t* __restrict genovec, uint32_t* __restrict write_dosage_ct_ptr, uintptr_t* __restrict dosagepresent, Dosage* dosage_main);
+void SetMaleHetMissingCleardosage(const uintptr_t* __restrict sex_male, const uintptr_t* __restrict sex_male_interleaved, uint32_t geno_vec_ct, uintptr_t* __restrict genovec, uint32_t* __restrict write_dosage_ct_ptr, uintptr_t* __restrict dosagepresent, Dosage* dosage_main);
 
-void SetMaleHetMissingKeepdosage(const uintptr_t* __restrict sex_male, const uintptr_t* __restrict sex_male_interleaved, uint32_t word_ct, uintptr_t* __restrict genovec, uint32_t* __restrict write_dosage_ct_ptr, uintptr_t* __restrict dosagepresent, Dosage* dosage_main);
+void SetMaleHetMissingKeepdosage(const uintptr_t* __restrict sex_male, const uintptr_t* __restrict sex_male_interleaved, uint32_t geno_word_ct, uintptr_t* __restrict genovec, uint32_t* __restrict write_dosage_ct_ptr, uintptr_t* __restrict dosagepresent, Dosage* dosage_main);
 
 // Clears each bit in bitarr which doesn't correspond to a genovec het.
 // Assumes that either trailing bits of bitarr are already zero, or trailing
@@ -950,12 +954,6 @@ void cleanup_allele_storage(uint32_t max_allele_slen, uintptr_t allele_storage_e
 */
 
 CONSTI32(kMaxMissingPhenostrBlen, 32);
-// might want g_input_missing_catname and/or g_output_missing_catname later,
-// but let's start with the simplest implementation
-extern char g_missing_catname[];  // default "NONE", not changeable for now
-
-extern char g_output_missing_pheno[];  // default "NA"
-extern char g_legacy_output_missing_pheno[];  // default "-9"
 
 // don't care about kfUnsortedVarChrom
 FLAGSET_DEF_START()
@@ -1016,9 +1014,6 @@ typedef struct PhenoColStruct {
 
   uint32_t nonnull_category_ct;
 } PhenoCol;
-
-void InitPheno();
-
 
 uint32_t IsCategoricalPhenostr(const char* phenostr_iter);
 
@@ -1234,6 +1229,10 @@ HEADER_INLINE void PgenErrPrint(PglErr reterr) {
 HEADER_INLINE void PgenErrPrintV(PglErr reterr, uint32_t variant_uidx) {
   PgenErrPrintEx(".pgen file", 0, reterr, variant_uidx);
 }
+
+// Given <outname>.tmp.pgen and <outname>.tmp.pgen.pgi, this generates
+// <outname>.pgen and then deletes the two temporary files.
+PglErr EmbedPgenIndex(char* outname, char* outname_end);
 
 #ifdef __cplusplus
 }  // namespace plink2

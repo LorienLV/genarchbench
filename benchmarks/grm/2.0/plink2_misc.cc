@@ -378,7 +378,7 @@ PglErr UpdateVarNames(const uintptr_t* variant_include, const uint32_t* variant_
   return reterr;
 }
 
-PglErr UpdateVarAlleles(const char* fname, const uintptr_t* variant_include, const char* const* variant_ids, const uint32_t* variant_id_htable, const uint32_t* htable_dup_base, const uintptr_t* allele_idx_offsets, uint32_t raw_variant_ct, uint32_t max_variant_id_slen, uint32_t htable_size, uint32_t max_thread_ct, char** allele_storage_mutable, uint32_t* max_allele_slen_ptr, char* outname, char* outname_end) {
+PglErr UpdateVarAlleles(const char* fname, const uintptr_t* variant_include, const char* const* variant_ids, const uint32_t* variant_id_htable, const uint32_t* htable_dup_base, const uintptr_t* allele_idx_offsets, uint32_t raw_variant_ct, uint32_t max_variant_id_slen, uint32_t htable_size, char input_missing_geno_char, uint32_t max_thread_ct, char** allele_storage_mutable, uint32_t* max_allele_slen_ptr, char* outname, char* outname_end) {
   // probable todos:
   // - add '3col' modifier to support three-column input file where second
   //   column has comma-delimited old alleles and third column has
@@ -404,7 +404,6 @@ PglErr UpdateVarAlleles(const char* fname, const uintptr_t* variant_include, con
       goto UpdateVarAlleles_ret_TSTREAM_FAIL;
     }
     const char* std_input_missing_geno = &(g_one_char_strs[92]);
-    const char input_missing_geno_char = *g_input_missing_geno_ptr;
     unsigned char* tmp_alloc_base = g_bigstack_base;
     unsigned char* tmp_alloc_end = g_bigstack_end;
     uintptr_t miss_ct = 0;
@@ -1130,7 +1129,7 @@ PglErr RecoverVarIds(const char* fname, const uintptr_t* variant_include, const 
   return reterr;
 }
 
-PglErr Plink1ClusterImport(const char* within_fname, const char* catpheno_name, const char* family_missing_catname, const uintptr_t* sample_include, const char* sample_ids, uint32_t raw_sample_ct, uint32_t sample_ct, uintptr_t max_sample_id_blen, uint32_t mwithin_val, uint32_t max_thread_ct, PhenoCol** pheno_cols_ptr, char** pheno_names_ptr, uint32_t* pheno_ct_ptr, uintptr_t* max_pheno_name_blen_ptr) {
+PglErr Plink1ClusterImport(const char* within_fname, const char* catpheno_name, const char* family_missing_catname, const uintptr_t* sample_include, const char* sample_ids, const char* missing_catname, uint32_t raw_sample_ct, uint32_t sample_ct, uintptr_t max_sample_id_blen, uint32_t mwithin_val, uint32_t max_thread_ct, PhenoCol** pheno_cols_ptr, char** pheno_names_ptr, uint32_t* pheno_ct_ptr, uintptr_t* max_pheno_name_blen_ptr) {
   unsigned char* bigstack_mark = g_bigstack_base;
   uintptr_t line_idx = 0;
   PglErr reterr = kPglRetSuccess;
@@ -1206,7 +1205,6 @@ PglErr Plink1ClusterImport(const char* within_fname, const char* catpheno_name, 
       goto Plink1ClusterImport_ret_NOMEM;
     }
     SetAllU32Arr(cat_htable_size, cat_htable);
-    const char* missing_catname = g_missing_catname;
     const uintptr_t data_vec_ct = Int32CtToVecCt(raw_sample_ct);
     const uint32_t missing_catname_slen = strlen(missing_catname);
     const uint32_t missing_catname_hval = Hashceil(missing_catname, missing_catname_slen, cat_htable_size);
@@ -1328,7 +1326,13 @@ PglErr Plink1ClusterImport(const char* within_fname, const char* catpheno_name, 
         goto Plink1ClusterImport_LINE_ITER_ALREADY_ADVANCED;
       }
       if (unlikely(!nonnull_cat_ct)) {
-        logerrputs("Error: All --within categories are null.\n");
+        if (line_idx == miss_ct + 1) {
+          // could be fancy and only print the last part of this message if
+          // all FIDs are 0
+          logerrputs("Error: No sample IDs in --within file are in the main dataset.  Compare it with\nyour .fam/.psam file; note that if the latter has no FID column at all, that\ncorresponds to FIDs of '0', not FIDs equal to the IIDs.\n");
+        } else {
+          logerrputs("Error: All --within categories are null.\n");
+        }
         goto Plink1ClusterImport_ret_INCONSISTENT_INPUT;
       }
       double dxx;
@@ -1406,10 +1410,10 @@ PglErr Plink1ClusterImport(const char* within_fname, const char* catpheno_name, 
         logprintfww("Note: %" PRIuPTR " duplicate sample ID%s) in --within file.\n", duplicate_ct, (duplicate_ct == 1)? " (with a consistent category assignment" : "s (with consistent category assignments");
       }
       if (miss_ct) {
-        snprintf(g_logbuf, kLogbufSize, "--within: %u non-null categories present, %" PRIuPTR " sample ID%s skipped.\n", nonnull_cat_ct, miss_ct, (miss_ct == 1)? "" : "s");
+        snprintf(g_logbuf, kLogbufSize, "--within: %u non-null categor%s present, %" PRIuPTR " sample ID%s skipped.\n", nonnull_cat_ct, (nonnull_cat_ct == 1)? "y" : "ies", miss_ct, (miss_ct == 1)? "" : "s");
         WordWrapB(0);
       } else {
-        snprintf(g_logbuf, kLogbufSize, "--within: %u non-null categories present.\n", nonnull_cat_ct);
+        snprintf(g_logbuf, kLogbufSize, "--within: %u non-null categor%s present.\n", nonnull_cat_ct, (nonnull_cat_ct == 1)? "y" : "ies");
       }
       logputsb();
     } else {
@@ -6311,6 +6315,7 @@ THREAD_FUNC_DECL SampleCountsThread(void* raw_arg) {
   while (0) {
   SampleCountsThread_err:
     UpdateU64IfSmaller(new_err_info, &ctx->err_info);
+    THREAD_BLOCK_FINISH(arg);
     break;
   }
   THREAD_RETURN;
@@ -8975,7 +8980,7 @@ PglErr WriteSnplist(const uintptr_t* variant_include, const char* const* variant
 }
 
 // similar to write_psam().
-PglErr WriteCovar(const uintptr_t* sample_include, const PedigreeIdInfo* piip, const uintptr_t* sex_nm, const uintptr_t* sex_male, const PhenoCol* pheno_cols, const char* pheno_names, const PhenoCol* covar_cols, const char* covar_names, const uint32_t* new_sample_idx_to_old, uint32_t sample_ct, uint32_t pheno_ct, uintptr_t max_pheno_name_blen, uint32_t covar_ct, uintptr_t max_covar_name_blen, WriteCovarFlags write_covar_flags, char* outname, char* outname_end) {
+PglErr WriteCovar(const uintptr_t* sample_include, const PedigreeIdInfo* piip, const uintptr_t* sex_nm, const uintptr_t* sex_male, const PhenoCol* pheno_cols, const char* pheno_names, const PhenoCol* covar_cols, const char* covar_names, const uint32_t* new_sample_idx_to_old, const char* output_missing_pheno, uint32_t sample_ct, uint32_t pheno_ct, uintptr_t max_pheno_name_blen, uint32_t covar_ct, uintptr_t max_covar_name_blen, WriteCovarFlags write_covar_flags, char* outname, char* outname_end) {
   unsigned char* bigstack_mark = g_bigstack_base;
   FILE* outfile = nullptr;
   PglErr reterr = kPglRetSuccess;
@@ -8984,7 +8989,6 @@ PglErr WriteCovar(const uintptr_t* sample_include, const PedigreeIdInfo* piip, c
     if (unlikely(fopen_checked(outname, FOPEN_WB, &outfile))) {
       goto WriteCovar_ret_OPEN_FAIL;
     }
-    const char* output_missing_pheno = g_output_missing_pheno;
     const uint32_t omp_slen = strlen(output_missing_pheno);
 
     char* textbuf = g_textbuf;
@@ -9586,6 +9590,7 @@ THREAD_FUNC_DECL HetThread(void* raw_arg) {
   while (0) {
   HetThread_err:
     UpdateU64IfSmaller(new_err_info, &ctx->err_info);
+    THREAD_BLOCK_FINISH(arg);
     break;
   }
   THREAD_RETURN;
@@ -10253,12 +10258,11 @@ THREAD_FUNC_DECL FstThread(void* raw_arg) {
       pop_allele_obs_cts_iter = &(pop_allele_obs_cts_iter[pop_ct * allele_ct]);
     }
     parity = 1 - parity;
+    while (0) {
+    FstThread_err:
+      UpdateU64IfSmaller(new_err_info, &ctx->err_info);
+    }
   } while (!THREAD_BLOCK_FINISH(arg));
-  while (0) {
-  FstThread_err:
-    UpdateU64IfSmaller(new_err_info, &ctx->err_info);
-    break;
-  }
   THREAD_RETURN;
 }
 

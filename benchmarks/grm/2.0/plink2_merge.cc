@@ -295,7 +295,7 @@ PglErr LoadPmergeList(const char* list_fname, const char* list_base_dir, PmergeL
 }
 
 // Permanent allocations are at end of bigstack.
-PglErr MergePsams(const PmergeInfo* pmip, const char* sample_sort_fname, MiscFlags misc_flags, SortMode sample_sort_mode, FamCol fam_cols, int32_t missing_pheno, uint32_t max_thread_ct, char* outname, char* outname_end, PmergeInputFilesetLl* filesets, SampleIdInfo* siip, uint32_t* sample_ctp, uint32_t* linebuf_capacityp) {
+PglErr MergePsams(const PmergeInfo* pmip, const char* sample_sort_fname, const char* missing_catname, MiscFlags misc_flags, SortMode sample_sort_mode, FamCol fam_cols, int32_t missing_pheno, uint32_t max_thread_ct, char* outname, char* outname_end, PmergeInputFilesetLl* filesets, SampleIdInfo* siip, uint32_t* sample_ctp, uint32_t* linebuf_capacityp) {
   unsigned char* bigstack_mark = g_bigstack_base;
   unsigned char* bigstack_end_mark = g_bigstack_end;
   uintptr_t line_idx = 0;
@@ -613,7 +613,7 @@ PglErr MergePsams(const PmergeInfo* pmip, const char* sample_sort_fname, MiscFla
         const uint32_t id_slen = id_iter - idbuf;
         if (sample_id_strset) {
           if (unlikely(StrsetAddResize(arena_top, idbuf, id_slen, 2U * 0x7ffffffe, sample_id_strset, &sample_id_table_size, &sample_ct, &arena_bottom))) {
-            if (sample_ct == 0x7ffffffe) {
+            if (sample_ct == kPglMaxSampleCt) {
               logerrputs("Error: " PROG_NAME_STR " does not support more than 2^31 - 2 samples.\n");
               goto MergePsams_ret_INCONSISTENT_INPUT;
             }
@@ -625,7 +625,7 @@ PglErr MergePsams(const PmergeInfo* pmip, const char* sample_sort_fname, MiscFla
               goto MergePsams_ret_NOMEM;
             }
             arena_bottom = memcpyua(arena_bottom, idbuf, id_slen + 1);
-            if (unlikely(first_sample_id_ct == 0x7ffffffe)) {
+            if (unlikely(first_sample_id_ct == kPglMaxSampleCt)) {
               logerrputs("Error: " PROG_NAME_STR " does not support more than 2^31 - 2 samples.\n");
               goto MergePsams_ret_INCONSISTENT_INPUT;
             }
@@ -1144,11 +1144,11 @@ PglErr MergePsams(const PmergeInfo* pmip, const char* sample_sort_fname, MiscFla
       }
       SetAllU32Arr(category_names_htable_size, category_names_htable);
       // copy into arena so overread is safe
-      const uint32_t missing_catname_slen = strlen(g_missing_catname);
-      if (unlikely(StoreStringAtEndK(g_bigstack_base, g_missing_catname, missing_catname_slen, &arena_top, &(category_names[0])))) {
+      const uint32_t missing_catname_slen = strlen(missing_catname);
+      if (unlikely(StoreStringAtEndK(g_bigstack_base, missing_catname, missing_catname_slen, &arena_top, &(category_names[0])))) {
         goto MergePsams_ret_NOMEM;
       }
-      const uint32_t hashval = Hashceil(g_missing_catname, missing_catname_slen, category_names_htable_size);
+      const uint32_t hashval = Hashceil(missing_catname, missing_catname_slen, category_names_htable_size);
       category_names_htable[0] = hashval;
       category_names_ct = 1;
     }
@@ -1617,7 +1617,7 @@ PglErr MergePsams(const PmergeInfo* pmip, const char* sample_sort_fname, MiscFla
       }
     }
     snprintf(outname_end, kMaxOutfnameExtBlen, ".psam");
-    reterr = WritePsam(outname, sample_include, siip, &parental_id_info, sex_nm, sex_male, pheno_cols, pheno_names, nullptr, "NA", sample_ct, pheno_ct, max_pheno_name_blen, kfPsamColDefault);
+    reterr = WritePsam(outname, sample_include, siip, &parental_id_info, sex_nm, sex_male, pheno_cols, pheno_names, nullptr, "NA", sample_ct, pheno_ct, max_pheno_name_blen, kfPsamColDefault, 0);
     if (unlikely(reterr)) {
       goto MergePsams_ret_1;
     }
@@ -1675,7 +1675,7 @@ PglErr ScanPgenHeaders(uint32_t is_list, MiscFlags misc_flags, PmergeInputFilese
       read_pgen_fname = filesets_iter->pgen_fname;
       PgenHeaderCtrl header_ctrl;
       uintptr_t cur_alloc_cacheline_ct;  // unused
-      reterr = PgfiInitPhase1(read_pgen_fname, UINT32_MAX, filesets_iter->read_sample_ct, 0, &header_ctrl, &pgfi, &cur_alloc_cacheline_ct, g_logbuf);
+      reterr = PgfiInitPhase1(read_pgen_fname, nullptr, UINT32_MAX, filesets_iter->read_sample_ct, &header_ctrl, &pgfi, &cur_alloc_cacheline_ct, g_logbuf);
       if (unlikely(reterr)) {
         if (reterr == kPglRetSampleMajorBed) {
           snprintf(g_logbuf, kLogbufSize, "Error: %s is a sample-major .bed file; this is not supported by --pmerge%s. Retry after converting it to a .pgen.\n", read_pgen_fname, is_list? "-list" : "");
@@ -1949,7 +1949,7 @@ BoolErr ScrapeLastVarid(const RescanOnePosContext* ctxp, unsigned char* arena_bo
 // info_keys, pointed-to InfoVtype entries, and info_keys_htable are allocated
 // at the end of bigstack.
 static_assert(kCompressStreamBlock <= kDecompressChunkSize, "ScanPvarsAndMergeHeader() needs to be updated.");
-PglErr ScanPvarsAndMergeHeader(const PmergeInfo* pmip, MiscFlags misc_flags, uint32_t max_thread_ct, SortMode sort_vars_mode, char* outname, char* outname_end, PmergeInputFilesetLl** filesets_ptr, ChrInfo* cip, uintptr_t* fileset_ctp, const char* const** info_keys_ptr, uint32_t* info_key_ctp, uint32_t** info_keys_htablep, uint32_t* info_keys_htable_sizep, uint32_t* info_conflict_presentp) {
+PglErr ScanPvarsAndMergeHeader(const PmergeInfo* pmip, MiscFlags misc_flags, char input_missing_geno_char, uint32_t max_thread_ct, SortMode sort_vars_mode, char* outname, char* outname_end, PmergeInputFilesetLl** filesets_ptr, ChrInfo* cip, uintptr_t* fileset_ctp, const char* const** info_keys_ptr, uint32_t* info_key_ctp, uint32_t** info_keys_htablep, uint32_t* info_keys_htable_sizep, uint32_t* info_conflict_presentp) {
   unsigned char* bigstack_mark = g_bigstack_base;
   unsigned char* bigstack_end_mark = g_bigstack_end;
   const char* cur_fname = nullptr;
@@ -2018,7 +2018,7 @@ PglErr ScanPvarsAndMergeHeader(const PmergeInfo* pmip, MiscFlags misc_flags, uin
     ctx.write_allele_ct_max = pmip->max_allele_ct? pmip->max_allele_ct : kPglMaxAlleleCt;
     ctx.sort_vars_ascii = (sort_vars_mode == kSortAscii);
     ctx.multiallelics_already_joined = (pmip->flags / kfPmergeMultiallelicsAlreadyJoined) & 1;
-    ctx.input_missing_geno_char = *g_input_missing_geno_ptr;
+    ctx.input_missing_geno_char = input_missing_geno_char;
     ctx.cip = cip;
     // For each .pvar, need to determine:
     // - variant_ct
@@ -2639,7 +2639,7 @@ PglErr ScanPvarsAndMergeHeader(const PmergeInfo* pmip, MiscFlags misc_flags, uin
         goto ScanPvarsAndMergeHeader_ret_1;
       }
       const uintptr_t read_variant_ct = line_idx - line_idx_body_start;
-      if (unlikely(read_variant_ct > 0x7ffffffd)) {
+      if (unlikely(read_variant_ct > kPglMaxVariantCt)) {
         logerrputs("Error: " PROG_NAME_STR " does not support more than 2^31 - 3 variants.  We recommend using\nother software for very deep studies of small numbers of genomes.\n");
         goto ScanPvarsAndMergeHeader_ret_MALFORMED_INPUT;
       }
@@ -2886,7 +2886,8 @@ PglErr ScanPvarsAndMergeHeader(const PmergeInfo* pmip, MiscFlags misc_flags, uin
     //    depending on --sort-vars setting.
     // See also SortChr() in plink2_data.cc.  This is a bit simpler since we
     // don't need the sort_idxs to be dense.
-    const uint32_t chr_code_end = cip->max_code + 1 + name_ct;
+    const uint32_t max_code_p1 = cip->max_code + 1;
+    const uint32_t chr_code_end = max_code_p1 + name_ct;
     uint32_t* chr_idx_to_sort_idx;
     if (unlikely(bigstack_end_alloc_u32(chr_code_end, &chr_idx_to_sort_idx))) {
       goto ScanPvarsAndMergeHeader_ret_NOMEM;
@@ -2907,12 +2908,13 @@ PglErr ScanPvarsAndMergeHeader(const PmergeInfo* pmip, MiscFlags misc_flags, uin
       }
       const char** nonstd_names = cip->nonstd_names;
       for (uint32_t name_idx = 0; name_idx != name_ct; ++name_idx) {
-        nonstd_sort_buf[name_idx].strptr = nonstd_names[name_idx];
+        // bugfix (17 Feb 2022): first non-null nonstd_names[] entry is at
+        // [max_code_p1], not [0]
+        nonstd_sort_buf[name_idx].strptr = nonstd_names[name_idx + max_code_p1];
         nonstd_sort_buf[name_idx].orig_idx = name_idx;
       }
       // nonstd_names are not allocated in main workspace, so can't overread.
       StrptrArrSortMain(name_ct, 0, (sort_vars_mode != kSortAscii), nonstd_sort_buf);
-      const uint32_t max_code_p1 = cip->max_code + 1;
       for (uint32_t name_idx = 0; name_idx != name_ct; ++name_idx) {
         chr_idx_to_sort_idx[max_code_p1 + nonstd_sort_buf[name_idx].orig_idx] = name_code_start + name_idx;
       }
@@ -3156,7 +3158,8 @@ PglErr DetectConcatJob(const uint32_t* chr_idx_to_foidx, uintptr_t fileset_ct, S
   return reterr;
 }
 
-void CleanupFilesetLl(PglErr reterr, PmergeInputFilesetLl* filesets_iter) {
+void CleanupFilesetLl(PmergeInputFilesetLl* filesets_iter, PglErr* reterrp) {
+  PglErr reterr = *reterrp;
   while (filesets_iter != nullptr) {
     free_cond(filesets_iter->first_varid);
     free_cond(filesets_iter->last_varid);
@@ -3164,25 +3167,33 @@ void CleanupFilesetLl(PglErr reterr, PmergeInputFilesetLl* filesets_iter) {
     if (is_temporary) {
       if (filesets_iter->pgen_fname) {
         if (reterr == kPglRetSuccess) {
-          unlink(filesets_iter->pgen_fname);
+          if (unlikely(unlink(filesets_iter->pgen_fname))) {
+            reterr = kPglRetWriteFail;
+          }
         }
         free(filesets_iter->pgen_fname);
       }
       if (filesets_iter->pvar_fname) {
         if (reterr == kPglRetSuccess) {
-          unlink(filesets_iter->pvar_fname);
+          if (unlikely(unlink(filesets_iter->pvar_fname))) {
+            reterr = kPglRetWriteFail;
+          }
         }
         free(filesets_iter->pvar_fname);
       }
       if (filesets_iter->psam_fname) {
         if (reterr == kPglRetSuccess) {
-          unlink(filesets_iter->psam_fname);
+          if (unlikely(unlink(filesets_iter->psam_fname))) {
+            reterr = kPglRetWriteFail;
+          }
         }
         free(filesets_iter->psam_fname);
       }
       if (filesets_iter->pgen_locked_fname) {
         if (reterr == kPglRetSuccess) {
-          unlink(filesets_iter->pgen_locked_fname);
+          if (unlikely(unlink(filesets_iter->pgen_locked_fname))) {
+            reterr = kPglRetWriteFail;
+          }
         }
         free(filesets_iter->pgen_locked_fname);
       }
@@ -3193,6 +3204,7 @@ void CleanupFilesetLl(PglErr reterr, PmergeInputFilesetLl* filesets_iter) {
       free(cur_node);
     }
   }
+  *reterrp = reterr;
 }
 
 PglErr ScrapeSampleOrder(const char* psam_fname, const SampleIdInfo* siip, const uint32_t* xid_htable, uint32_t read_sample_ct, uint32_t xid_ct, uint32_t xid_htable_size, FamCol fam_cols, uint32_t psam_linebuf_capacity, uint32_t max_thread_ct, uint32_t* old_sample_idx_to_new, uint32_t* sample_idx_increasingp, uint32_t* cur_write_sample_ctp, uintptr_t* read_sample_include, uintptr_t* sample_span) {
@@ -5126,9 +5138,9 @@ PglErr MergePgenVariantNoTmpLocked(SamePosPvarRecord** same_id_records, const Al
             ZeroTrailingNyps(write_sample_ct, read_genovec);
             assert(!pgvp->dosage_ct);  // not yet supported
             if (!pgvp->phasepresent_ct) {
-              reterr = SpgwAppendMultiallelicSparse(read_genovec, pgvp->patch_01_set, pgvp->patch_01_vals, pgvp->patch_10_set, pgvp->patch_10_vals, pgvp->patch_01_ct, pgvp->patch_10_ct, spgwp);
+              reterr = SpgwAppendMultiallelicSparse(read_genovec, pgvp->patch_01_set, pgvp->patch_01_vals, pgvp->patch_10_set, pgvp->patch_10_vals, write_allele_ct, pgvp->patch_01_ct, pgvp->patch_10_ct, spgwp);
             } else {
-              reterr = SpgwAppendMultiallelicGenovecHphase(read_genovec, pgvp->patch_01_set, pgvp->patch_01_vals, pgvp->patch_10_set, pgvp->patch_10_vals, pgvp->phasepresent, pgvp->phaseinfo, pgvp->patch_01_ct, pgvp->patch_10_ct, spgwp);
+              reterr = SpgwAppendMultiallelicGenovecHphase(read_genovec, pgvp->patch_01_set, pgvp->patch_01_vals, pgvp->patch_10_set, pgvp->patch_10_vals, pgvp->phasepresent, pgvp->phaseinfo, write_allele_ct, pgvp->patch_01_ct, pgvp->patch_10_ct, spgwp);
             }
           }
           goto MergePgenVariantNoTmpLocked_ret_1;
@@ -5363,9 +5375,9 @@ PglErr MergePgenVariantNoTmpLocked(SamePosPvarRecord** same_id_records, const Al
               }
             } else {
               if (!phasepresent_ct) {
-                reterr = SpgwAppendMultiallelicSparse(genovec, mwp->patch_01_set, mwp->patch_01_vals, mwp->patch_10_set, mwp->patch_10_vals, patch_01_ct, patch_10_ct, spgwp);
+                reterr = SpgwAppendMultiallelicSparse(genovec, mwp->patch_01_set, mwp->patch_01_vals, mwp->patch_10_set, mwp->patch_10_vals, write_allele_ct, patch_01_ct, patch_10_ct, spgwp);
               } else {
-                reterr = SpgwAppendMultiallelicGenovecHphase(genovec, mwp->patch_01_set, mwp->patch_01_vals, mwp->patch_10_set, mwp->patch_10_vals, mwp->phasepresent, mwp->phaseinfo, patch_01_ct, patch_10_ct, spgwp);
+                reterr = SpgwAppendMultiallelicGenovecHphase(genovec, mwp->patch_01_set, mwp->patch_01_vals, mwp->patch_10_set, mwp->patch_10_vals, mwp->phasepresent, mwp->phaseinfo, write_allele_ct, patch_01_ct, patch_10_ct, spgwp);
               }
             }
           } else {
@@ -5952,9 +5964,9 @@ PglErr MergePgenVariantNoTmpLocked(SamePosPvarRecord** same_id_records, const Al
     } else {
       assert(!dosage_ct); // not yet supported
       if (!phasepresent_ct) {
-        reterr = SpgwAppendMultiallelicSparse(genovec, patch_01_set, patch_01_vals, patch_10_set, patch_10_vals, patch_01_ct, patch_10_ct, spgwp);
+        reterr = SpgwAppendMultiallelicSparse(genovec, patch_01_set, patch_01_vals, patch_10_set, patch_10_vals, write_allele_ct, patch_01_ct, patch_10_ct, spgwp);
       } else {
-        reterr = SpgwAppendMultiallelicGenovecHphase(genovec, patch_01_set, patch_01_vals, patch_10_set, patch_10_vals, phasepresent, phaseinfo, patch_01_ct, patch_10_ct, spgwp);
+        reterr = SpgwAppendMultiallelicGenovecHphase(genovec, patch_01_set, patch_01_vals, patch_10_set, patch_10_vals, phasepresent, phaseinfo, write_allele_ct, patch_01_ct, patch_10_ct, spgwp);
       }
     }
     if (unlikely(reterr)) {
@@ -6098,7 +6110,7 @@ void CleanupPvariantPosMergeContext(PvariantPosMergeContext* ppmcp) {
 // are reordered by ID, and same-position same-ID variants are merged.  The
 // distinction from the general case is that we never need to have more than
 // one .pvar + .pgen open for reading at a time.
-PglErr PmergeConcat(const PmergeInfo* pmip, const SampleIdInfo* siip, const ChrInfo* cip, const PmergeInputFilesetLl* filesets, const char* const* info_keys, const uint32_t* info_keys_htable, uint32_t sample_ct, FamCol fam_cols, uintptr_t fileset_ct, uint32_t psam_linebuf_capacity, uint32_t info_key_ct, uint32_t info_keys_htable_size, uint32_t info_conflict_present, uint32_t max_thread_ct, SortMode sort_vars_mode, char* outname, char* outname_end) {
+PglErr PmergeConcat(const PmergeInfo* pmip, const SampleIdInfo* siip, const ChrInfo* cip, const PmergeInputFilesetLl* filesets, const char* const* info_keys, const uint32_t* info_keys_htable, uint32_t sample_ct, FamCol fam_cols, uintptr_t fileset_ct, uint32_t psam_linebuf_capacity, uint32_t info_key_ct, uint32_t info_keys_htable_size, uint32_t info_conflict_present, char input_missing_geno_char, uint32_t max_thread_ct, SortMode sort_vars_mode, char* outname, char* outname_end) {
   // Don't need to reset bigstack at function end, since Pmerge() will do it.
   const char* read_pgen_fname = nullptr;
   const char* read_pvar_fname = nullptr;
@@ -6170,7 +6182,7 @@ PglErr PmergeConcat(const PmergeInfo* pmip, const SampleIdInfo* siip, const ChrI
       }
       filesets_iter = filesets_iter->next;
     }
-    if (unlikely(write_variant_ct > 0x7ffffffd)) {
+    if (unlikely(write_variant_ct > kPglMaxVariantCt)) {
       logerrputs("Error: " PROG_NAME_STR " does not support more than 2^31 - 3 variants.  We recommend using\nother software for very deep studies of small numbers of genomes.\n");
       goto PmergeConcat_ret_INCONSISTENT_INPUT;
     }
@@ -6238,7 +6250,7 @@ PglErr PmergeConcat(const PmergeInfo* pmip, const SampleIdInfo* siip, const ChrI
     const PgenGlobalFlags write_gflags = vrtype_8bit_needed? (kfPgenGlobalHardcallPhasePresent | kfPgenGlobalDosagePresent | kfPgenGlobalDosagePhasePresent) : kfPgenGlobal0;
     uintptr_t spgw_alloc_cacheline_ct;
     uint32_t max_vrec_len;
-    reterr = SpgwInitPhase1(outname, ppmc.write_allele_idx_offsets, ppmc.write_nonref_flags, write_variant_ct, sample_ct, write_max_allele_ct, write_gflags, nonref_flags_storage, &mw.spgw, &spgw_alloc_cacheline_ct, &max_vrec_len);
+    reterr = SpgwInitPhase1(outname, ppmc.write_allele_idx_offsets, ppmc.write_nonref_flags, write_variant_ct, sample_ct, write_max_allele_ct, kPgenWriteBackwardSeek, write_gflags, nonref_flags_storage, &mw.spgw, &spgw_alloc_cacheline_ct, &max_vrec_len);
     if (unlikely(reterr)) {
       if (reterr == kPglRetOpenFail) {
         logerrprintfww(kErrprintfFopen, outname, strerror(errno));
@@ -6312,7 +6324,6 @@ PglErr PmergeConcat(const PmergeInfo* pmip, const SampleIdInfo* siip, const ChrI
 
     unsigned char* bigstack_mark = g_bigstack_base;
     filesets_iter = filesets;
-    const char input_missing_geno_char = *g_input_missing_geno_ptr;
     logputs("Concatenating... ");
     printf("0/%" PRIuPTR " variant%s complete.", write_variant_ct, (write_variant_ct == 1)? "" : "s");
     fflush(stdout);
@@ -6345,7 +6356,7 @@ PglErr PmergeConcat(const PmergeInfo* pmip, const SampleIdInfo* siip, const ChrI
       const uint32_t read_variant_ct = filesets_iter->read_variant_ct;
       PgenHeaderCtrl header_ctrl;
       uintptr_t cur_alloc_cacheline_ct;
-      reterr = PgfiInitPhase1(read_pgen_fname, read_variant_ct, read_sample_ct, 0, &header_ctrl, &pgfi, &cur_alloc_cacheline_ct, g_logbuf);
+      reterr = PgfiInitPhase1(read_pgen_fname, nullptr, read_variant_ct, read_sample_ct, &header_ctrl, &pgfi, &cur_alloc_cacheline_ct, g_logbuf);
       if (unlikely(reterr)) {
         if (reterr == kPglRetInconsistentInput) {
           // .pgen was not checked for consistency with .pvar on the first
@@ -6711,8 +6722,6 @@ PglErr PmergeConcat(const PmergeInfo* pmip, const SampleIdInfo* siip, const ChrI
   return reterr;
 }
 
-// TODO: write library for handling pgen_locked bitmap.
-
 // Performs one pass of a possibly-multipass merge.
 // *input_filesets_ptr is advanced as files are processed, and temporary files
 // are deleted while this happens.
@@ -6752,7 +6761,7 @@ PglErr PmergePass(__attribute__((unused)) const PmergeInfo* pmip, __attribute__(
   return reterr;
 }
 
-PglErr Pmerge(const PmergeInfo* pmip, const char* sample_sort_fname, MiscFlags misc_flags, SortMode sample_sort_mode, FamCol fam_cols, int32_t missing_pheno, uint32_t max_thread_ct, SortMode sort_vars_mode, char* pgenname, char* psamname, char* pvarname, char* outname, char* outname_end, ChrInfo* cip) {
+PglErr Pmerge(const PmergeInfo* pmip, const char* sample_sort_fname, const char* missing_catname, MiscFlags misc_flags, SortMode sample_sort_mode, FamCol fam_cols, int32_t missing_pheno, char input_missing_geno_char, uint32_t max_thread_ct, SortMode sort_vars_mode, char* pgenname, char* psamname, char* pvarname, char* outname, char* outname_end, ChrInfo* cip) {
   unsigned char* bigstack_mark = g_bigstack_base;
   unsigned char* bigstack_end_mark = g_bigstack_end;
 
@@ -6818,7 +6827,7 @@ PglErr Pmerge(const PmergeInfo* pmip, const char* sample_sort_fname, MiscFlags m
     SampleIdInfo sii;
     uint32_t sample_ct = 0;
     uint32_t psam_linebuf_capacity = 0;
-    reterr = MergePsams(pmip, sample_sort_fname, misc_flags, sample_sort_mode, fam_cols, missing_pheno, max_thread_ct, outname, outname_end, input_filesets, &sii, &sample_ct, &psam_linebuf_capacity);
+    reterr = MergePsams(pmip, sample_sort_fname, missing_catname, misc_flags, sample_sort_mode, fam_cols, missing_pheno, max_thread_ct, outname, outname_end, input_filesets, &sii, &sample_ct, &psam_linebuf_capacity);
     if (unlikely(reterr)) {
       goto Pmerge_ret_1;
     }
@@ -6832,7 +6841,7 @@ PglErr Pmerge(const PmergeInfo* pmip, const char* sample_sort_fname, MiscFlags m
     uint32_t info_key_ct = 0;
     uint32_t info_keys_htable_size = 0;
     uint32_t info_conflict_present;
-    reterr = ScanPvarsAndMergeHeader(pmip, misc_flags, max_thread_ct, sort_vars_mode, outname, outname_end, &input_filesets, cip, &fileset_ct, &info_keys, &info_key_ct, &info_keys_htable, &info_keys_htable_size, &info_conflict_present);
+    reterr = ScanPvarsAndMergeHeader(pmip, misc_flags, input_missing_geno_char, max_thread_ct, sort_vars_mode, outname, outname_end, &input_filesets, cip, &fileset_ct, &info_keys, &info_key_ct, &info_keys_htable, &info_keys_htable_size, &info_conflict_present);
     if (unlikely(reterr)) {
       goto Pmerge_ret_1;
     }
@@ -6844,7 +6853,7 @@ PglErr Pmerge(const PmergeInfo* pmip, const char* sample_sort_fname, MiscFlags m
       }
     }
     if (is_concat_job) {
-      reterr = PmergeConcat(pmip, &sii, cip, input_filesets, info_keys, info_keys_htable, sample_ct, fam_cols, fileset_ct, psam_linebuf_capacity, info_key_ct, info_keys_htable_size, info_conflict_present, max_thread_ct, sort_vars_mode, outname, outname_end);
+      reterr = PmergeConcat(pmip, &sii, cip, input_filesets, info_keys, info_keys_htable, sample_ct, fam_cols, fileset_ct, psam_linebuf_capacity, info_key_ct, info_keys_htable_size, info_conflict_present, input_missing_geno_char, max_thread_ct, sort_vars_mode, outname, outname_end);
     } else {
       for (uint32_t pass_idx = 1; ; ++pass_idx) {
         uint32_t next_fileset_ct;
@@ -6873,6 +6882,11 @@ PglErr Pmerge(const PmergeInfo* pmip, const char* sample_sort_fname, MiscFlags m
     }
     memcpy(psamname, outname, outname_slen);
     strcpy_k(&(psamname[outname_slen]), ".psam");
+    if ((pmip->flags & kfPmergeVariantInnerJoin) || pmip->max_allele_ct) {
+      // Some input variants that pass the chromosome filter might still be
+      // excluded from the merged dataset.
+      ForgetExtraChrNames(1, cip);
+    }
   }
   while (0) {
   Pmerge_ret_NOMEM:
@@ -6880,8 +6894,8 @@ PglErr Pmerge(const PmergeInfo* pmip, const char* sample_sort_fname, MiscFlags m
     break;
   }
  Pmerge_ret_1:
-  CleanupFilesetLl(reterr, input_filesets);
-  CleanupFilesetLl(reterr, next_filesets);
+  CleanupFilesetLl(input_filesets, &reterr);
+  CleanupFilesetLl(next_filesets, &reterr);
   BigstackDoubleReset(bigstack_mark, bigstack_end_mark);
   return reterr;
 }
@@ -6907,7 +6921,7 @@ typedef struct PgenDiffGtEntryStruct {
 } PgenDiffGtEntry;
 
 static_assert(sizeof(Dosage) == 2, "PgenDiff() must be updated.");
-PglErr PgenDiff(const uintptr_t* orig_sample_include, const SampleIdInfo* siip, const uintptr_t* sex_nm, const uintptr_t* sex_male, const uintptr_t* variant_include, const ChrInfo* cip, const uint32_t* variant_bps, const char* const* variant_ids, const uintptr_t* allele_idx_offsets, const char* const* allele_storage, const PgenDiffInfo* pdip, uint32_t raw_sample_ct, uint32_t orig_sample_ct, uint32_t raw_variant_ct, uint32_t max_allele_ct1, uint32_t max_allele_slen, uint32_t max_thread_ct, PgenFileInfo* pgfip, PgenReader* simple_pgrp, char* outname, char* outname_end) {
+PglErr PgenDiff(const uintptr_t* orig_sample_include, const SampleIdInfo* siip, const uintptr_t* sex_nm, const uintptr_t* sex_male, const uintptr_t* variant_include, const ChrInfo* cip, const uint32_t* variant_bps, const char* const* variant_ids, const uintptr_t* allele_idx_offsets, const char* const* allele_storage, const PgenDiffInfo* pdip, uint32_t raw_sample_ct, uint32_t orig_sample_ct, uint32_t raw_variant_ct, uint32_t max_allele_ct1, uint32_t max_allele_slen, char input_missing_geno_char, uint32_t max_thread_ct, PgenFileInfo* pgfip, PgenReader* simple_pgrp, char* outname, char* outname_end) {
   unsigned char* bigstack_mark = g_bigstack_base;
   unsigned char* bigstack_end_mark = g_bigstack_end;
   char* cswritep = nullptr;
@@ -7052,7 +7066,7 @@ PglErr PgenDiff(const uintptr_t* orig_sample_include, const SampleIdInfo* siip, 
       }
       const uintptr_t raw_sample_ct2_ul = psam_line_idx - first_payload_line_idx;
 #ifdef __LP64__
-      if (raw_sample_ct2_ul > 0x7ffffffe) {
+      if (raw_sample_ct2_ul > kPglMaxSampleCt) {
         logerrputs("Error: Too many samples in --pgen-diff .psam file (max 2^31 - 2).\n");
         goto PgenDiff_ret_MALFORMED_INPUT;
       }
@@ -7111,7 +7125,7 @@ PglErr PgenDiff(const uintptr_t* orig_sample_include, const SampleIdInfo* siip, 
 
     PgenHeaderCtrl header_ctrl;
     uintptr_t cur_alloc_cacheline_ct;
-    reterr = PgfiInitPhase1(pdip->pgen_fname, raw_variant_ct2, raw_sample_ct2, 0, &header_ctrl, &pgfi2, &cur_alloc_cacheline_ct, g_logbuf);
+    reterr = PgfiInitPhase1(pdip->pgen_fname, nullptr, raw_variant_ct2, raw_sample_ct2, &header_ctrl, &pgfi2, &cur_alloc_cacheline_ct, g_logbuf);
     if (unlikely(reterr)) {
       WordWrapB(0);
       logerrputsb();
@@ -7397,7 +7411,6 @@ PglErr PgenDiff(const uintptr_t* orig_sample_include, const SampleIdInfo* siip, 
     const uint32_t include_missing = (flags / kfPgenDiffIncludeMissing) & 1;
     const uint32_t x_code = cip->xymt_codes[kChrOffsetX];
     const uint32_t y_code = cip->xymt_codes[kChrOffsetY];
-    const char input_missing_geno_char = *g_input_missing_geno_ptr;
     const uintptr_t* nonref_flags1 = pgfip->nonref_flags;
     const uint32_t all_nonref1 = (pgfip->gflags & kfPgenGlobalAllNonref) && (!nonref_flags1);
     uint32_t chr_idx = UINT32_MAX;

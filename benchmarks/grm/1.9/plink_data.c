@@ -7322,9 +7322,6 @@ int32_t transposed_to_bed(char* tpedname, char* tfamname, char* outname, char* o
 	}
 	axptr = cptr2;
 	axlen = strlen_se(cptr2);
-	if (!axlen) {
-	  goto transposed_to_bed_ret_MISSING_TOKENS;
-	}
 	cptr2 = &(axptr[axlen]);
 	// only way for this to happen if it isn't at end of buffer is if we're
 	// at EOF, which is an error anyway
@@ -7343,11 +7340,14 @@ int32_t transposed_to_bed(char* tpedname, char* tfamname, char* outname, char* o
 	      cptr2 = token_endnn(cptr2);
 	    }
 	    if ((((uintptr_t)(cptr3 - allele_buf)) + ((uintptr_t)(cptr2 - g_textbuf))) >= NON_BIGSTACK_MIN) {
-	      goto transposed_to_bed_ret_NOMEM;
+	      goto transposed_to_bed_ret_LONG_ALLELE;
 	    }
 	    cptr3 = memcpya(cptr3, g_textbuf, cptr2 - g_textbuf);
 	  } while (!(*cptr2));
 	  axlen = (uintptr_t)(cptr3 - allele_buf);
+	}
+	if (!axlen) {
+	  goto transposed_to_bed_ret_MISSING_TOKENS;
 	}
 	if ((*axptr != missing_geno) || (axlen != 1)) {
 	  retval = update_tped_alleles_and_cts(&allele_tot, alleles, alens, allele_cts, axptr, axlen, &uii);
@@ -7377,9 +7377,6 @@ int32_t transposed_to_bed(char* tpedname, char* tfamname, char* outname, char* o
 	axlen = strlen_se(cptr2);
 	cptr2 = &(axptr[axlen]);
 	if (!(*cptr2)) {
-	  if (!axlen) {
-	    goto transposed_to_bed_ret_MISSING_TOKENS;
-	  }
 	  cptr3 = memcpya(allele_buf, axptr, axlen);
 	  axptr = allele_buf;
 	  do {
@@ -7398,12 +7395,15 @@ int32_t transposed_to_bed(char* tpedname, char* tfamname, char* outname, char* o
 	      cptr2 = token_endnn(cptr2);
 	    }
 	    if ((((uintptr_t)(cptr3 - allele_buf)) + ((uintptr_t)(cptr2 - g_textbuf))) >= NON_BIGSTACK_MIN) {
-	      goto transposed_to_bed_ret_NOMEM;
+	      goto transposed_to_bed_ret_LONG_ALLELE;
 	    }
 	    cptr3 = memcpya(cptr3, g_textbuf, cptr2 - g_textbuf);
 	  } while (!(*cptr2));
 	  axlen = (uintptr_t)(cptr3 - allele_buf);
 	}
+        if (!axlen) {
+          goto transposed_to_bed_ret_MISSING_TOKENS;
+        }
 	if ((*axptr != missing_geno) || (axlen != 1)) {
 	  if (uii == 4) {
 	    goto transposed_to_bed_ret_HALF_MISSING;
@@ -7741,11 +7741,14 @@ int32_t transposed_to_bed(char* tpedname, char* tfamname, char* outname, char* o
   transposed_to_bed_ret_WRITE_FAIL:
     retval = RET_WRITE_FAIL;
     break;
+  transposed_to_bed_ret_LONG_ALLELE:
+    putc_unlocked('\r', stdout);
+    logerrprint("Error: Excessively long allele in .tped file.\n");
+    retval = RET_INVALID_FORMAT;
+    break;
   transposed_to_bed_ret_MISSING_TOKENS:
     putc_unlocked('\r', stdout);
     LOGERRPRINTF("Error: Line %" PRIuPTR " of .tped file has fewer tokens than expected.\n", line_idx);
-    retval = RET_INVALID_FORMAT;
-    break;
   transposed_to_bed_ret_INVALID_FORMAT:
     retval = RET_INVALID_FORMAT;
     break;
@@ -12297,7 +12300,7 @@ int32_t recode(uint32_t recode_modifier, FILE* bedfile, uintptr_t bed_offset, ch
       }
     }
     if (bigstack_left() < ((uint64_t)unfiltered_sample_ct4) * max_chrom_size + 2 * round_up_pow2(max_chrom_size, CACHELINE)) {
-      goto recode_ret_NO_MULTIPASS_YET;
+      goto recode_ret_NO_MULTIPASS;
     }
     if (bigstack_alloc_c(max_chrom_size, &writebuf) ||
         bigstack_alloc_c(max_chrom_size, &writebuf2)) {
@@ -13773,7 +13776,7 @@ int32_t recode(uint32_t recode_modifier, FILE* bedfile, uintptr_t bed_offset, ch
   } else if (recode_modifier & (RECODE_A | RECODE_AD)) {
     memcpy(outname_end, ".raw", 5);
     if (bigstack_left() < ((uint64_t)unfiltered_sample_ct4) * marker_ct) {
-      goto recode_ret_NO_MULTIPASS_YET;
+      goto recode_ret_NO_MULTIPASS;
     }
     if (fopen_checked(outname, "w", &outfile)) {
       goto recode_ret_OPEN_FAIL;
@@ -14089,7 +14092,7 @@ int32_t recode(uint32_t recode_modifier, FILE* bedfile, uintptr_t bed_offset, ch
     }
   } else if (recode_modifier & (RECODE_HV | RECODE_HV_1CHR)) {
     if (bigstack_left() < ((uint64_t)unfiltered_sample_ct4) * max_chrom_size) {
-      goto recode_ret_NO_MULTIPASS_YET;
+      goto recode_ret_NO_MULTIPASS;
     }
     if (!marker_ct) {
       logerrprint("Error: No variants for --recode HV{-1chr}.\n");
@@ -14169,7 +14172,7 @@ int32_t recode(uint32_t recode_modifier, FILE* bedfile, uintptr_t bed_offset, ch
   } else if (recode_modifier & RECODE_STRUCTURE) {
     memcpy(outname_end, ".recode.strct_in", 17);
     if (bigstack_left() < ((uint64_t)unfiltered_sample_ct4) * marker_ct) {
-      goto recode_ret_NO_MULTIPASS_YET;
+      goto recode_ret_NO_MULTIPASS;
     }
     if (fopen_checked(outname, "w", &outfile)) {
       goto recode_ret_OPEN_FAIL;
@@ -14256,7 +14259,7 @@ int32_t recode(uint32_t recode_modifier, FILE* bedfile, uintptr_t bed_offset, ch
   } else {
     memcpy(outname_end, ".ped", 5);
     if (bigstack_left() < ((uint64_t)unfiltered_sample_ct4) * marker_ct) {
-      goto recode_ret_NO_MULTIPASS_YET;
+      goto recode_ret_NO_MULTIPASS;
     }
     if (fopen_checked(outname, "w", &outfile)) {
       goto recode_ret_OPEN_FAIL;
@@ -14354,9 +14357,8 @@ int32_t recode(uint32_t recode_modifier, FILE* bedfile, uintptr_t bed_offset, ch
   recode_ret_INVALID_FORMAT:
     retval = RET_INVALID_FORMAT;
     break;
-  recode_ret_NO_MULTIPASS_YET:
-    // probably want to implement this later
-    logerrprint("Error: --recode does not yet support multipass recoding of very large files;\ncontact the " PROG_NAME_CAPS " developers if you need this.\nFor now, you can try using a machine with more memory, and/or split the file\ninto smaller pieces and recode them separately.\n");
+  recode_ret_NO_MULTIPASS:
+    logerrprint("Error: --recode does not support multipass recoding of very large files.\n\nIn most cases, you shouldn't be trying to do this in the first place.  The .ped\nformat is simultaneously highly inefficient, even relative to other text\nformats (e.g. VCF), and limited in scope (unobserved minor allele codes can't\nbe stored).\n\nIf you absolutely must do this, the necessary functionality was added to PLINK\n2.0 on 12 Mar 2022.\n");
     retval = RET_CALC_NOT_YET_SUPPORTED;
     break;
   recode_ret_ALL_MARKERS_EXCLUDED:

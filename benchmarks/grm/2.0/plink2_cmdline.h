@@ -132,13 +132,6 @@ extern char g_textbuf[];
 
 extern const char* g_one_char_strs;
 
-// '.' missing genotype value is now taken for granted; this is in *addition*
-// to it (default '0').
-// (Yes, this might not belong in plink2_cmdline.)
-extern const char* g_input_missing_geno_ptr;
-
-extern const char* g_output_missing_geno_ptr;  // now defaults to '.'
-
 extern FILE* g_logfile;
 
 // Mostly-safe log buffer (length kLogbufSize, currently 256k).  Good practice
@@ -1730,14 +1723,22 @@ uint32_t CubicRealRoots(double coef_a, double coef_b, double coef_c, STD_ARRAY_R
 // to change
 PglErr PopulateIdHtableMt(unsigned char* arena_top, const uintptr_t* subset_mask, const char* const* item_ids, uintptr_t item_ct, uint32_t store_all_dups, uint32_t id_htable_size, uint32_t thread_ct, unsigned char** arena_bottom_ptr, uint32_t* id_htable, uint32_t* dup_ct_ptr);
 
-PglErr CheckIdUniqueness(unsigned char* arena_bottom, unsigned char* arena_top, const uintptr_t* subset_mask, const char* const* item_ids, uintptr_t item_ct, uint32_t max_thread_ct, uint32_t* dup_found_ptr);
-
 // Pass in htable_dup_base_ptr == nullptr if just flagging duplicate IDs rather
 // than tracking all their positions in item_ids.
 // Otherwise, htable_dup_base entries are guaranteed to be filled in increasing
 // order (briefly made that nondeterministic on 11 Oct 2019 and broke --rm-dup,
 // not doing that again).
 PglErr AllocAndPopulateIdHtableMt(const uintptr_t* subset_mask, const char* const* item_ids, uintptr_t item_ct, uintptr_t fast_size_min_extra_bytes, uint32_t max_thread_ct, uint32_t** id_htable_ptr, uint32_t** htable_dup_base_ptr, uint32_t* id_htable_size_ptr, uint32_t* dup_ct_ptr);
+
+PglErr MakeNondupHtable(const uintptr_t* subset_mask, const char* const* item_ids, uintptr_t item_ct, uint32_t id_htable_size, uint32_t max_thread_ct, uint32_t* id_htable, uint32_t* dup_found_ptr);
+
+PglErr AllocAndPopulateNondupHtableMt(unsigned char* arena_top, const uintptr_t* subset_mask, const char* const* item_ids, uintptr_t item_ct, uint32_t max_thread_ct, unsigned char** arena_bottom_ptr, uint32_t** id_htable_ptr, uint32_t* id_htable_size_ptr, uint32_t* dup_found_ptr);
+
+HEADER_INLINE PglErr CheckIdUniqueness(unsigned char* arena_bottom, unsigned char* arena_top, const uintptr_t* subset_mask, const char* const* item_ids, uintptr_t item_ct, uint32_t max_thread_ct, uint32_t* dup_found_ptr) {
+  uint32_t* id_htable;
+  uint32_t id_htable_size;
+  return AllocAndPopulateNondupHtableMt(arena_top, subset_mask, item_ids, item_ct, max_thread_ct, &arena_bottom, &id_htable, &id_htable_size, dup_found_ptr);
+}
 
 typedef struct HelpCtrlStruct {
   NONCOPYABLE(HelpCtrlStruct);

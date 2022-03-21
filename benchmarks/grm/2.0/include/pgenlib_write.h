@@ -30,26 +30,35 @@ typedef struct PgenWriterCommonStruct {
   // was marked noncopyable, but, well, gcc 9 caught me cheating (memcpying the
   // whole struct) in the multithreaded writer implementation.  So, copyable
   // now.
-  uint32_t variant_ct;
+
+  // This must be the true variant count when writing a regular .pgen; but if
+  // the index is being written to a separate .pgen.pgi file, it is okay for
+  // this to just be an upper bound.
+  uint32_t variant_ct_limit;
+
   uint32_t sample_ct;
   PgenGlobalFlags phase_dosage_gflags;  // subset of gflags
+  unsigned char nonref_flags_storage;
 
-  // there should be a single copy of these arrays shared by all threads.
-  // allele_idx_offsets is read-only.
+  // I'll cache this for now
+  uintptr_t vrec_len_byte_ct;
+
+  // There should be a single copy of these arrays shared by all threads.
   uint64_t* vblock_fpos;
   unsigned char* vrec_len_buf;
   uintptr_t* vrtype_buf;
-  const uintptr_t* allele_idx_offsets;
   uintptr_t* explicit_nonref_flags;  // usually nullptr
 
   // needed for multiallelic-phased case
   uintptr_t* genovec_hets_buf;
 
-  STD_ARRAY_DECL(uint32_t, 4, ldbase_genocounts);
-
   // should match ftello() return value in singlethreaded case, but be set to
   // zero in multithreaded case
   uint64_t vblock_fpos_offset;
+
+
+  // The remainder of this data structure is unshared.
+  STD_ARRAY_DECL(uint32_t, 4, ldbase_genocounts);
 
   // these must hold sample_ct entries
   // genovec_invert_buf also used as phaseinfo and dphase_present temporary
@@ -68,52 +77,62 @@ typedef struct PgenWriterCommonStruct {
   uint32_t ldbase_common_geno;  // UINT32_MAX if ldbase_genovec present
   uint32_t ldbase_difflist_len;
 
-  // I'll cache this for now
-  uintptr_t vrec_len_byte_ct;
-
   uint32_t vidx;
 } PgenWriterCommon;
 
 // Given packed arrays of unphased biallelic genotypes in uncompressed plink2
 // binary format (00 = hom ref, 01 = het ref/alt1, 10 = hom alt1, 11 =
-// missing), {Single,Multi}threaded_pgen_writer performs difflist (sparse
-// variant), one bit (mostly-two-value), and LD compression before writing to
-// disk, and backfills the header at the end.  CPRA -> CPR merging is under
-// development.
-// The major difference between the two interfaces is that
-// Multithreaded_pgen_writer forces you to process large blocks of variants at
-// a time (64k per thread).  So Singlethreaded_pgen_writer is still worth using
-// in some cases (memory is very limited, I/O is slow, no programmer time to
-// spare for the additional complexity).
+// missing), {S,M}TPgenWriter performs difflist (sparse variant), one bit
+// (mostly-two-value), and LD compression before writing to disk, and flushes
+// the header at the end.
+//
+// The flush requires a backward seek if write_mode is set to
+// kPgenWriteBackwardSeek during initialization.  Otherwise, the index is
+// saved to a separate .pgen.pgi file (and the .pgen is written sequentially.
+//
+// Slightly over 128 KiB (kPglFwriteBlockSize) of stack space is currently
+// required.  We use plain fwrite() instead of write() to make this more
+// portable, and a 128 KiB write-block size keeps the associated performance
+// penalty to a minimum.
+//
+// MTPgenWriter has additional restrictions:
+// * You must process large blocks of variants at a time (64k per thread).
+// * You must know the true variant_ct (and, in the multiallelic case, the true
+//   allele_idx_offsets) during initialization.
+// Thus, STPgenWriter is still worth using in many cases.
+
+ENUM_U31_DEF_START()
+  kPgenWriteBackwardSeek,
+  kPgenWriteSeparateIndex
+ENUM_U31_DEF_END(PgenWriteMode);
 
 typedef struct STPgenWriterStruct {
-  NONCOPYABLE(STPgenWriterStruct);
+  MOVABLE_BUT_NONCOPYABLE(STPgenWriterStruct);
 #ifdef __cplusplus
   PgenWriterCommon& GET_PRIVATE_pwc() { return pwc; }
   PgenWriterCommon const& GET_PRIVATE_pwc() const { return pwc; }
   FILE*& GET_PRIVATE_pgen_outfile() { return pgen_outfile; }
   FILE* const& GET_PRIVATE_pgen_outfile() const { return pgen_outfile; }
+  FILE*& GET_PRIVATE_pgi_outfile() { return pgi_outfile; }
+  FILE* const& GET_PRIVATE_pgi_outfile() const { return pgi_outfile; }
  private:
 #endif
   PgenWriterCommon pwc;
   FILE* pgen_outfile;
+  FILE* pgi_outfile;
 } STPgenWriter;
 
 typedef struct MTPgenWriterStruct {
-  NONCOPYABLE(MTPgenWriterStruct);
+  MOVABLE_BUT_NONCOPYABLE(MTPgenWriterStruct);
   FILE* pgen_outfile;
+  FILE* pgi_outfile;
   uint32_t thread_ct;
   PgenWriterCommon* pwcs[];
 } MTPgenWriter;
 
-HEADER_INLINE const uintptr_t* SpgwGetAlleleIdxOffsets(STPgenWriter* spgwp) {
-  PgenWriterCommon* pwcp = &GET_PRIVATE(*spgwp, pwc);
-  return pwcp->allele_idx_offsets;
-}
-
 HEADER_INLINE uint32_t SpgwGetVariantCt(STPgenWriter* spgwp) {
   PgenWriterCommon* pwcp = &GET_PRIVATE(*spgwp, pwc);
-  return pwcp->variant_ct;
+  return pwcp->variant_ct_limit;
 }
 
 HEADER_INLINE uint32_t SpgwGetSampleCt(STPgenWriter* spgwp) {
@@ -139,15 +158,17 @@ void PreinitSpgw(STPgenWriter* spgwp);
 //   3 = use explicit_nonref_flags
 //
 // Caller is responsible for printing open-fail error message.
-// In the multiallelic case, it is not necessary for the body of
-// allele_idx_offsets to already be filled if known_max_allele_ct is provided;
-// allele_idx_offsets[x] and [x+1] only have to be finalized before writing
-// (0-based) variant #x.
-// Conversely, if optional_max_allele_ct is set to 0, it will be computed from
-// allele_idx_offsets.
-// The body of explicit_nonref_flags also doesn't need to be filled until
-// flush.
-PglErr SpgwInitPhase1(const char* __restrict fname, const uintptr_t* __restrict allele_idx_offsets, uintptr_t* __restrict explicit_nonref_flags, uint32_t variant_ct, uint32_t sample_ct, uint32_t optional_max_allele_ct, PgenGlobalFlags phase_dosage_gflags, uint32_t nonref_flags_storage, STPgenWriter* spgwp, uintptr_t* alloc_cacheline_ct_ptr, uint32_t* max_vrec_len_ptr);
+//
+// In the multiallelic case, allele_idx_offsets can be nullptr if
+// allele_ct_upper_bound is provided.
+//
+// If write_mode is kPgenWriteBackwardSeek, variant_ct_limit must be the actual
+// variant count.  Otherwise, variant_ct_limit just needs to be an upper bound,
+// unless you're writing multiallelic variants and you don't specify
+// allele_ct_upper_bound.
+//
+// The body of explicit_nonref_flags doesn't need to be filled until flush.
+PglErr SpgwInitPhase1(const char* __restrict fname, const uintptr_t* __restrict allele_idx_offsets, uintptr_t* __restrict explicit_nonref_flags, uint32_t variant_ct_limit, uint32_t sample_ct, uint32_t allele_ct_upper_bound, PgenWriteMode write_mode, PgenGlobalFlags phase_dosage_gflags, uint32_t nonref_flags_storage, STPgenWriter* spgwp, uintptr_t* alloc_cacheline_ct_ptr, uint32_t* max_vrec_len_ptr);
 
 void SpgwInitPhase2(uint32_t max_vrec_len, STPgenWriter* spgwp, unsigned char* spgw_alloc);
 
@@ -160,7 +181,7 @@ void SpgwInitPhase2(uint32_t max_vrec_len, STPgenWriter* spgwp, unsigned char* s
 void MpgwInitPhase1(const uintptr_t* __restrict allele_idx_offsets, uint32_t variant_ct, uint32_t sample_ct, PgenGlobalFlags phase_dosage_gflags, uintptr_t* alloc_base_cacheline_ct_ptr, uint64_t* alloc_per_thread_cacheline_ct_ptr, uint32_t* vrec_len_byte_ct_ptr, uint64_t* vblock_cacheline_ct_ptr);
 
 // Caller is responsible for printing open-fail error message.
-PglErr MpgwInitPhase2(const char* __restrict fname, const uintptr_t* __restrict allele_idx_offsets, uintptr_t* __restrict explicit_nonref_flags, uint32_t variant_ct, uint32_t sample_ct, PgenGlobalFlags phase_dosage_gflags, uint32_t nonref_flags_storage, uint32_t vrec_len_byte_ct, uintptr_t vblock_cacheline_ct, uint32_t thread_ct, unsigned char* mpgw_alloc, MTPgenWriter* mpgwp);
+PglErr MpgwInitPhase2(const char* __restrict fname, uintptr_t* __restrict explicit_nonref_flags, uint32_t variant_ct, uint32_t sample_ct, PgenWriteMode write_mode, PgenGlobalFlags phase_dosage_gflags, uint32_t nonref_flags_storage, uint32_t vrec_len_byte_ct, uintptr_t vblock_cacheline_ct, uint32_t thread_ct, unsigned char* mpgw_alloc, MTPgenWriter* mpgwp);
 
 
 // trailing bits of genovec must be zeroed out
@@ -207,14 +228,14 @@ HEADER_INLINE PglErr SpgwAppendBiallelicDifflistLimited(const uintptr_t* __restr
 //    functions for this, we just provide a dense -> sparse helper function.
 //
 // All arrays should be vector-aligned.
-BoolErr PwcAppendMultiallelicSparse(const uintptr_t* __restrict genovec, const uintptr_t* __restrict patch_01_set, const AlleleCode* __restrict patch_01_vals, const uintptr_t* __restrict patch_10_set, const AlleleCode* __restrict patch_10_vals, uint32_t patch_01_ct, uint32_t patch_10_ct, PgenWriterCommon* pwcp);
+BoolErr PwcAppendMultiallelicSparse(const uintptr_t* __restrict genovec, const uintptr_t* __restrict patch_01_set, const AlleleCode* __restrict patch_01_vals, const uintptr_t* __restrict patch_10_set, const AlleleCode* __restrict patch_10_vals, uint32_t allele_ct, uint32_t patch_01_ct, uint32_t patch_10_ct, PgenWriterCommon* pwcp);
 
-HEADER_INLINE PglErr SpgwAppendMultiallelicSparse(const uintptr_t* __restrict genovec, const uintptr_t* __restrict patch_01_set, const AlleleCode* __restrict patch_01_vals, const uintptr_t* __restrict patch_10_set, const AlleleCode* __restrict patch_10_vals, uint32_t patch_01_ct, uint32_t patch_10_ct, STPgenWriter* spgwp) {
+HEADER_INLINE PglErr SpgwAppendMultiallelicSparse(const uintptr_t* __restrict genovec, const uintptr_t* __restrict patch_01_set, const AlleleCode* __restrict patch_01_vals, const uintptr_t* __restrict patch_10_set, const AlleleCode* __restrict patch_10_vals, uint32_t allele_ct, uint32_t patch_01_ct, uint32_t patch_10_ct, STPgenWriter* spgwp) {
   if (unlikely(SpgwFlush(spgwp))) {
     return kPglRetWriteFail;
   }
   PgenWriterCommon* pwcp = &GET_PRIVATE(*spgwp, pwc);
-  if (unlikely(PwcAppendMultiallelicSparse(genovec, patch_01_set, patch_01_vals, patch_10_set, patch_10_vals, patch_01_ct, patch_10_ct, pwcp))) {
+  if (unlikely(PwcAppendMultiallelicSparse(genovec, patch_01_set, patch_01_vals, patch_10_set, patch_10_vals, allele_ct, patch_01_ct, patch_10_ct, pwcp))) {
     return kPglRetVarRecordTooLarge;
   }
   return kPglRetSuccess;
@@ -251,14 +272,14 @@ HEADER_INLINE PglErr SpgwAppendBiallelicGenovecHphase(const uintptr_t* __restric
   return kPglRetSuccess;
 }
 
-BoolErr PwcAppendMultiallelicGenovecHphase(const uintptr_t* __restrict genovec, const uintptr_t* __restrict patch_01_set, const AlleleCode* __restrict patch_01_vals, const uintptr_t* __restrict patch_10_set, const AlleleCode* __restrict patch_10_vals, const uintptr_t* __restrict phasepresent, const uintptr_t* __restrict phaseinfo, uint32_t patch_01_ct, uint32_t patch_10_ct, PgenWriterCommon* pwcp);
+BoolErr PwcAppendMultiallelicGenovecHphase(const uintptr_t* __restrict genovec, const uintptr_t* __restrict patch_01_set, const AlleleCode* __restrict patch_01_vals, const uintptr_t* __restrict patch_10_set, const AlleleCode* __restrict patch_10_vals, const uintptr_t* __restrict phasepresent, const uintptr_t* __restrict phaseinfo, uint32_t allele_ct, uint32_t patch_01_ct, uint32_t patch_10_ct, PgenWriterCommon* pwcp);
 
-HEADER_INLINE PglErr SpgwAppendMultiallelicGenovecHphase(const uintptr_t* __restrict genovec, const uintptr_t* __restrict patch_01_set, const AlleleCode* __restrict patch_01_vals, const uintptr_t* __restrict patch_10_set, const AlleleCode* __restrict patch_10_vals, const uintptr_t* __restrict phasepresent, const uintptr_t* __restrict phaseinfo, uint32_t patch_01_ct, uint32_t patch_10_ct, STPgenWriter* spgwp) {
+HEADER_INLINE PglErr SpgwAppendMultiallelicGenovecHphase(const uintptr_t* __restrict genovec, const uintptr_t* __restrict patch_01_set, const AlleleCode* __restrict patch_01_vals, const uintptr_t* __restrict patch_10_set, const AlleleCode* __restrict patch_10_vals, const uintptr_t* __restrict phasepresent, const uintptr_t* __restrict phaseinfo, uint32_t allele_ct, uint32_t patch_01_ct, uint32_t patch_10_ct, STPgenWriter* spgwp) {
   if (unlikely(SpgwFlush(spgwp))) {
     return kPglRetWriteFail;
   }
   PgenWriterCommon* pwcp = &GET_PRIVATE(*spgwp, pwc);
-  if (unlikely(PwcAppendMultiallelicGenovecHphase(genovec, patch_01_set, patch_01_vals, patch_10_set, patch_10_vals, phasepresent, phaseinfo, patch_01_ct, patch_10_ct, pwcp))) {
+  if (unlikely(PwcAppendMultiallelicGenovecHphase(genovec, patch_01_set, patch_01_vals, patch_10_set, patch_10_vals, phasepresent, phaseinfo, allele_ct, patch_01_ct, patch_10_ct, pwcp))) {
     return kPglRetVarRecordTooLarge;
   }
   return kPglRetSuccess;
