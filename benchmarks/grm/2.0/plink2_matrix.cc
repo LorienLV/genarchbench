@@ -17,6 +17,10 @@
 
 #include "plink2_matrix.h"
 
+#ifdef USE_SSL2
+#include "cssl.h"
+#endif
+
 #ifndef NOLAPACK
 #  ifndef __APPLE__
 
@@ -733,22 +737,27 @@ void ColMajorMatrixMultiplyStridedAddassign(const double* inmatrix1, const doubl
   // stride2 should be close to common_ct
   // output matrix uses stride3, which should be close to row1_ct
 #ifdef NOLAPACK
-  const uintptr_t row1_ct_l = row1_ct;
-  const uintptr_t col2_ct_l = col2_ct;
-  const uintptr_t common_ct_l = common_ct;
-  // not optimized, no beta == 0 special case
-  for (uintptr_t col_idx = 0; col_idx != col2_ct_l; ++col_idx) {
-    double* outmatrix_row_iter = &(outmatrix[col_idx * stride3]);
-    for (uintptr_t row_idx = 0; row_idx != row1_ct_l; ++row_idx) {
-      double cur_entry = 0.0;
-      const double* col2_iter = &(inmatrix2[col_idx * stride2]);
-      for (uintptr_t com_idx = 0; com_idx != common_ct_l; com_idx++) {
-        cur_entry += (*col2_iter++) * inmatrix1[com_idx * stride1 + row_idx];
+  #ifdef USE_SSL2
+    int icon;
+    c_dvmggm(K_CAST(double*, inmatrix1), stride1, K_CAST(double*, inmatrix2), stride2, outmatrix, stride3, row1_ct, common_ct, col2_ct, &icon);
+  #else
+    const uintptr_t row1_ct_l = row1_ct;
+    const uintptr_t col2_ct_l = col2_ct;
+    const uintptr_t common_ct_l = common_ct;
+    // not optimized, no beta == 0 special case
+    for (uintptr_t col_idx = 0; col_idx != col2_ct_l; ++col_idx) {
+      double* outmatrix_row_iter = &(outmatrix[col_idx * stride3]);
+      for (uintptr_t row_idx = 0; row_idx != row1_ct_l; ++row_idx) {
+        double cur_entry = 0.0;
+        const double* col2_iter = &(inmatrix2[col_idx * stride2]);
+        for (uintptr_t com_idx = 0; com_idx != common_ct_l; com_idx++) {
+          cur_entry += (*col2_iter++) * inmatrix1[com_idx * stride1 + row_idx];
+        }
+        *outmatrix_row_iter = (*outmatrix_row_iter) * beta + cur_entry;
+        ++outmatrix_row_iter;
       }
-      *outmatrix_row_iter = (*outmatrix_row_iter) * beta + cur_entry;
-      ++outmatrix_row_iter;
     }
-  }
+  #endif
 #else
 #  ifndef USE_CBLAS_XGEMM
   char blas_char = 'N';
@@ -1022,22 +1031,26 @@ void MultiplySelfTransposeStridedF(const float* input_matrix, uint32_t dim, uint
 
 void TransposeMultiplySelfIncr(double* input_part, uint32_t dim, uint32_t partial_row_ct, double* result) {
 #ifdef NOLAPACK
-  // friends do not let friends use this implementation
-  const uintptr_t dim_l = dim;
-  const uintptr_t row_ct_l = partial_row_ct;
-  for (uintptr_t idx1 = 0; idx1 != dim_l; ++idx1) {
-    const double* col1 = &(input_part[idx1]);
-    double* write_iter = &(result[idx1 * dim_l]);
-    for (uintptr_t idx2 = 0; idx2 <= idx1; ++idx2) {
-      double cur_dotprod = *write_iter;
-      const double* col2 = &(input_part[idx2]);
-      for (uintptr_t row_idx = 0; row_idx != row_ct_l; ++row_idx) {
-        cur_dotprod += col1[row_idx * dim_l] * col2[row_idx * dim_l];
+  #ifdef USE_SSL2
+    dsyrk_(&uplo, &trans, &tmp_n, &tmp_k, &alpha, input_part, &tmp_n, &beta, result, &tmp_n);
+  #else
+    // friends do not let friends use this implementation
+    const uintptr_t dim_l = dim;
+    const uintptr_t row_ct_l = partial_row_ct;
+    for (uintptr_t idx1 = 0; idx1 != dim_l; ++idx1) {
+      const double* col1 = &(input_part[idx1]);
+      double* write_iter = &(result[idx1 * dim_l]);
+      for (uintptr_t idx2 = 0; idx2 <= idx1; ++idx2) {
+        double cur_dotprod = *write_iter;
+        const double* col2 = &(input_part[idx2]);
+        for (uintptr_t row_idx = 0; row_idx != row_ct_l; ++row_idx) {
+          cur_dotprod += col1[row_idx * dim_l] * col2[row_idx * dim_l];
+        }
+        *write_iter = cur_dotprod;
+        ++write_iter;
       }
-      *write_iter = cur_dotprod;
-      ++write_iter;
     }
-  }
+  #endif
 #else
 #  ifndef USE_CBLAS_XGEMM
   char uplo = 'U';

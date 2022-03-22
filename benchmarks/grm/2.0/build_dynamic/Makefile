@@ -20,6 +20,10 @@
 # NO_SSE42 =
 CPU_CHECK = 1
 # NO_LAPACK =
+# USE_SSL2 =
+# SSL2_INCLUDES=
+# SSL2_LDFLAGS=
+SSL2_FLAG =
 BLAS_FLAG = -lblas -lcblas
 LAPACK_FLAG = -llapack 
 ATLAS_FLAG = -latlas
@@ -134,7 +138,12 @@ endif
 
 ifdef NO_LAPACK
   BASEFLAGS += -DNOLAPACK
-  BLASFLAGS=
+  BLASFLAGS =
+  ifdef USE_SSL2
+	BASEFLAGS += -DUSE_SSL2 ${SSL2_INCLUDES}
+    # BLASFLAGS = -L${SSL2}/lib/intel64
+	BLASFLAGS = ${SSL2_LDFLAGS}
+  endif
 endif
 
 # Intel VTune Profiler
