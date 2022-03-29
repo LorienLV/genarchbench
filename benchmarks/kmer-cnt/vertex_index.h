@@ -20,14 +20,14 @@
 #include "config.h"
 #include "logger.h"
 
-#define COUNT_VERSION 2
+#define COUNT_VERSION 3
 
 typedef std::map<size_t, size_t> KmerDistribution;
 
 class KmerCounter
 {
 public:
-#if (COUNT_VERSION == 0 || COUNT_VERSION == 1)
+#if (COUNT_VERSION == 0 || COUNT_VERSION == 1 || COUNT_VERSION == 3)
 	KmerCounter(const SequenceContainer& seqContainer):
 		_seqContainer(seqContainer), 
 		_flatCounter(nullptr), _numKmers(0)
@@ -38,7 +38,7 @@ public:
 	{}
 #endif
 
-#if (COUNT_VERSION == 0 || COUNT_VERSION == 1)
+#if (COUNT_VERSION == 0 || COUNT_VERSION == 1 || COUNT_VERSION == 3)
 	~KmerCounter()
 	{
 		if (_flatCounter) 
@@ -66,7 +66,7 @@ private:
 	bool _useFlatCounter;
 
 	//std::vector<std::atomic<char>>  _flatCounter;
-#if (COUNT_VERSION == 0 || COUNT_VERSION == 1)
+#if (COUNT_VERSION == 0 || COUNT_VERSION == 1 || COUNT_VERSION == 3)
 	std::atomic<uint8_t>*			_flatCounter;
 	cuckoohash_map<Kmer, size_t> 	_hashCounter;
 #elif (COUNT_VERSION == 2)
