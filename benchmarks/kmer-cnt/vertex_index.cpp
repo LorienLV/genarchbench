@@ -814,27 +814,24 @@ void KmerCounter::count(bool useFlatCounter)
 		for (auto kmerPos : IterKmers(_seqContainer.getSeq(readId)))
 		{
 			kmerPos.kmer.standardForm();
-			bool addOne = true;
+
 			if (_useFlatCounter)
 			{
 				size_t arrayPos = kmerPos.kmer.numRepr();
 				
-				uint8_t old = std::atomic_fetch_add_explicit(
-					&_flatCounter[arrayPos], 1, 
-				    std::memory_order::memory_order_relaxed);
+				uint8_t old = _flatCounter[arrayPos].fetch_add(1, std::memory_order_relaxed);
 
-				if (old != 255)
+				// WARNING: This is wrong if there is overflow. Uncomment
+				// the second part of the statement to always get the correct
+				// number of kmers.
+				if (old == 0 /*&& !_hashCounter.contains(kmerPos.kmer)*/)
 				{
-					addOne = false;
+					_numKmers++;
 				}
-
-				// WARNING: THIS IS WRONG IF THERE ARE MORE THAN 1 OVERFLOWS.
-				_numKmers++;
-			}
-
-			if (addOne)
-			{
-				_hashCounter.upsert(kmerPos.kmer, [](size_t& num){++num;}, 1);
+				else if (old == 255)
+				{
+					_hashCounter.upsert(kmerPos.kmer, [](size_t& num){++num;}, 1);
+				}
 			}
 		}
 	};
