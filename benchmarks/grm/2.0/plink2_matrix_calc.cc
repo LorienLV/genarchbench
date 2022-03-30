@@ -4080,10 +4080,7 @@ PglErr CalcGrm(const uintptr_t* orig_sample_include, const SampleIdInfo* siip, c
     uint32_t row_start_idx = 0;
     uintptr_t row_end_idx = sample_ct;
     uint32_t* thread_start = nullptr;
-    // We need to use CalcGrmPartThread if we use SSL2.
-#if !defined(USE_SSL2)
     if ((calc_thread_ct != 1) || (parallel_tot != 1)) {
-#endif
       // note that grm should be allocated on bottom if no --parallel, since it
       // may continue to be used after function exit.  So we allocate this on
       // top.
@@ -4115,12 +4112,10 @@ PglErr CalcGrm(const uintptr_t* orig_sample_include, const SampleIdInfo* siip, c
         ClearBitsNz(sample_uidx_end, raw_sample_ctl * kBitsPerWord, new_sample_include);
         sample_include = new_sample_include;
       }
-#if !defined(USE_SSL2)
       if ((!parallel_idx) && (calc_thread_ct == 1)) {
         thread_start = nullptr;
       }
     }
-#endif
 
     CalcGrmPartCtx ctx;
     ctx.thread_start = thread_start;

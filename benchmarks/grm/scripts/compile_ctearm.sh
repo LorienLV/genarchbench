@@ -24,7 +24,6 @@ for compiler in "${compilers[@]}"; do
 
     case "$compiler" in
         gcc)
-            module load fuji
             module load gcc/10.2.0
 
             # make CC=gcc CXX=g++ arch='-march=armv8-a+sve -I/opt/FJSVxtclanga/tcsds-1.2.26b/clang-comp/include/external/' \
@@ -37,17 +36,24 @@ for compiler in "${compilers[@]}"; do
             # # LAPACK_FLAG='-SSL2'
 
             make CC=gcc CXX=g++ \
-            arch='-march=armv8-a+sve' \
-            NO_LAPACK=1 SSL2_INCLUDES='-I/opt/FJSVxtclanga/tcsds-1.2.26b/clang-comp/include/external/' \
-            SSL2_LDFLAGS='-L/opt/FJSVxtclanga/tcsds-1.2.26/lib64 -lssl2mtexsve -lfj90f -lfj90i -lfjlapacksve -lfjsrcinfo -lelf' \
-            FAPP_ANALYSIS=1 DYNAMORIO_ANALYSIS=1
+            arch="-march=armv8-a+sve \
+                  -I/fefs/scratch/bsc18/bsc18248/lapack-3.10.0/CBLAS/include" \
+            BLAS_FLAG="/fefs/scratch/bsc18/bsc18248/lapack-3.10.0/libcblas.a \
+                       /fefs/scratch/bsc18/bsc18248/lapack-3.10.0/libblas.a" \
+            LAPACK_FLAG="/fefs/scratch/bsc18/bsc18248/lapack-3.10.0/liblapack.a -lgfortran" \
+            ATLAS_FLAG='' \
+            DYNAMORIO_ANALYSIS=1
             ;;
         fcc)
             module load fuji
 
             make CC='fcc -Nclang' CXX='FCC -Nclang' \
-            arch='-march=armv8-a+sve' \
-            NO_LAPACK=1 SSL2_INCLUDES='' SSL2_LDFLAGS='-SSL2'
+            arch="-march=armv8-a+sve \
+                  -I/fefs/scratch/bsc18/bsc18248/lapack-3.10.0/CBLAS/include" \
+            BLAS_FLAG="/fefs/scratch/bsc18/bsc18248/lapack-3.10.0/libcblas.a \
+                       /fefs/scratch/bsc18/bsc18248/lapack-3.10.0/libblas.a" \
+            LAPACK_FLAG="/fefs/scratch/bsc18/bsc18248/lapack-3.10.0/liblapack.a -lgfortran" \
+            ATLAS_FLAG='' \
             FAPP_ANALYSIS=1 DYNAMORIO_ANALYSIS=1
             ;;
         *)

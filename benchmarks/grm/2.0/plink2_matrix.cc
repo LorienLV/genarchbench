@@ -762,9 +762,9 @@ void ColMajorMatrixMultiplyStridedAddassign(const double* inmatrix1, const doubl
 #  ifndef USE_CBLAS_XGEMM
   char blas_char = 'N';
   double alpha = 1;
-  dgemm_(&blas_char, &blas_char, &row1_ct, &col2_ct, &common_ct, &alpha, K_CAST(double*, inmatrix1), &stride1, K_CAST(double*, inmatrix2), &stride2, &beta, outmatrix, &stride3);
+  // dgemm_(&blas_char, &blas_char, &row1_ct, &col2_ct, &common_ct, &alpha, K_CAST(double*, inmatrix1), &stride1, K_CAST(double*, inmatrix2), &stride2, &beta, outmatrix, &stride3);
 #  else
-  cblas_dgemm(CblasColMajor, CblasNoTrans, CblasNoTrans, row1_ct, col2_ct, common_ct, 1.0, inmatrix1, stride1, inmatrix2, stride2, beta, outmatrix, stride3);
+  // cblas_dgemm(CblasColMajor, CblasNoTrans, CblasNoTrans, row1_ct, col2_ct, common_ct, 1.0, inmatrix1, stride1, inmatrix2, stride2, beta, outmatrix, stride3);
 #  endif  // USE_CBLAS_XGEMM
 #endif  // !NOLAPACK
 }
