@@ -810,6 +810,8 @@ void KmerCounter::count(bool useFlatCounter)
 	[this] (const FastaRecord::Id& readId)
 	{
 		if (!readId.strand()) return;
+
+		size_t pnumKmers = 0;
 		
 		for (auto kmerPos : IterKmers(_seqContainer.getSeq(readId)))
 		{
@@ -826,7 +828,7 @@ void KmerCounter::count(bool useFlatCounter)
 				// number of kmers.
 				if (old == 0 /*&& !_hashCounter.contains(kmerPos.kmer)*/)
 				{
-					_numKmers++;
+					pnumKmers++;
 				}
 				else if (old == 255)
 				{
@@ -834,6 +836,8 @@ void KmerCounter::count(bool useFlatCounter)
 				}
 			}
 		}
+
+		_numKmers += pnumKmers;
 	};
 	std::vector<FastaRecord::Id> allReads;
 	for (const auto& seq : _seqContainer.iterSeqs())
