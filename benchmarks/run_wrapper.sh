@@ -351,7 +351,7 @@ for i in ${!jobs_id[@]}; do
                 elif [[ $job_exit_code -ne 0 ]]; then
                     job_state="JOB EXITED WITH CODE: $job_exit_code"
                 elif [[ "$job_state" == "COMPLETED" ]]; then
-                    job_energy="$(sacct -p -n -o ConsumedEnergy -j $job_id 2>/dev/null | sed -n '1p' | sed 's/|//')"
+                    job_energy="$(sacct -p -n -o ConsumedEnergy -j $job_id 2>/dev/null | sed 's/|//' | sed '/^[[:space:]]*$/d' | sed -n '1p')"
                     status="OK"
                 fi
                 break
@@ -371,7 +371,7 @@ for i in ${!jobs_id[@]}; do
                 elif [[ $job_exit_code -ne 0 ]]; then
                     job_state="JOB EXITED WITH CODE: $job_exit_code"
                 elif [[ "$job_state" == "EXT" ]]; then
-                    job_energy="$(sacct -p -n -o ConsumedEnergy -j $job_id 2>/dev/null | sed -n '1p' | sed 's/|//')"
+                    job_energy="$(pjstat -H -S $job_id 2>/dev/null | egrep "ENERGY CONSUMPTION OF NODE \(MEASURED\)" | sed -n '1p' | cut -d ' ' -f7)"
                     job_energy="${job_energy}K" # KJ.
                     status="OK"
                 fi
