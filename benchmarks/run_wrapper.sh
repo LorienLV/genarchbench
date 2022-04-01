@@ -329,6 +329,7 @@ for i in ${!jobs_id[@]}; do
     omp="${jobs_omp[i]}"
 
     # Wait for job to finish
+    job_energy="-"
     job_state=""
     while :; do
         sleep 1
@@ -350,6 +351,7 @@ for i in ${!jobs_id[@]}; do
                 elif [[ $job_exit_code -ne 0 ]]; then
                     job_state="JOB EXITED WITH CODE: $job_exit_code"
                 elif [[ "$job_state" == "COMPLETED" ]]; then
+                    job_energy="$(sacct -p -n -o ConsumedEnergy -j $job_id 2>/dev/null | sed -n '1p' | sed 's/|//')"
                     status="OK"
                 fi
                 break
@@ -369,6 +371,8 @@ for i in ${!jobs_id[@]}; do
                 elif [[ $job_exit_code -ne 0 ]]; then
                     job_state="JOB EXITED WITH CODE: $job_exit_code"
                 elif [[ "$job_state" == "EXT" ]]; then
+                    job_energy="$(sacct -p -n -o ConsumedEnergy -j $job_id 2>/dev/null | sed -n '1p' | sed 's/|//')"
+                    job_energy="${job_energy}K" # KJ.
                     status="OK"
                 fi
                 break
@@ -415,6 +419,7 @@ for i in ${!jobs_id[@]}; do
     echo "    - Nodes: $nodes"
     echo "    - MPI ranks: $mpi"
     echo "    - OMP threads: $omp"
+    echo "    - Energy consumed (Joules): $job_energy"
     echo -e "    - Status: $status_string"
     echo "Message:"
     echo "$after_run_out"
