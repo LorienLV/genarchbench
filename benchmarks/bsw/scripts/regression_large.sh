@@ -144,6 +144,7 @@ after_run() (
     fi
 
     echo "Kernel execution time $kernel_time s"
+    cat "$job_name.out" | grep "Energy consumption:"
 
     return 0 # OK
 )

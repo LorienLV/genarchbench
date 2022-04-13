@@ -41,6 +41,10 @@ Authors: Vasimuddin Md <vasimuddin.md@intel.com>; Sanchit Misra <sanchit.misra@i
 
 // #define VTUNE_ANALYSIS 1
 
+#if PWR
+	#include "pwr.h"
+#endif
+
 #define CLMUL 8
 
 #if VTUNE_ANALYSIS
@@ -274,44 +278,65 @@ int main(int argc, char *argv[])
     readTim += __rdtsc() - tim;
 
     startTick = __rdtsc();
-    
-	#if VTUNE_ANALYSIS
-		__itt_resume();
-	#endif
-	#if FAPP_ANALYSIS
-		fapp_start("getScores", 1, 0);
-	#endif
-	#if DYNAMORIO_ANALYSIS
-      	dr_app_setup_and_start();
-	#endif
+
+#if PWR
+	// 1. Initialize Power API
+	PWR_Cntxt pwr_cntxt = NULL;
+	PWR_CntxtInit(PWR_CNTXT_FX1000, PWR_ROLE_APP, "app", &pwr_cntxt);
+	// 2. Get Object (In this step, get an Object that indicates the entire compute node.)
+	PWR_Obj pwr_obj = NULL;
+	PWR_CntxtGetObjByName(pwr_cntxt, "plat.node", &pwr_obj);
+	// 3. Get electric energy at the start.
+	double energy0 = 0.0;
+	PWR_ObjAttrGetValue(pwr_obj, PWR_ATTR_MEASURED_ENERGY, &energy0, NULL);
+#endif
+#if VTUNE_ANALYSIS
+	__itt_resume();
+#endif
+#if FAPP_ANALYSIS
+	fapp_start("getScores", 1, 0);
+#endif
+#if DYNAMORIO_ANALYSIS
+	dr_app_setup_and_start();
+#endif
 
     int64_t workTicks[CLMUL * numThreads];
     memset(workTicks, 0, CLMUL * numThreads * sizeof(int64_t));
 
-#pragma omp parallel num_threads(numThreads)
-{
-    int tid = omp_get_thread_num();
-    #pragma omp for schedule(dynamic, 1) 
-        for (int64_t i = 0; i < roundNumPairs; i += batchSize) {
-            int nPairsBatch = (numPairs - i) >= batchSize ? batchSize : numPairs - i;
-            int64_t st1 = __rdtsc();
-            bsw[tid]->getScores16(seqPairArray + i, seqBufRef + i * MAX_SEQ_LEN_REF, seqBufQer + i * MAX_SEQ_LEN_QER, nPairsBatch, 1, w);
-            int64_t et1 = __rdtsc();
-            workTicks[CLMUL * tid] += (et1 - st1);
-        }
-    printf("%d] workTicks = %ld\n", tid, workTicks[CLMUL * tid]);  
-}
+	#pragma omp parallel num_threads(numThreads)
+	{
+		int tid = omp_get_thread_num();
+		#pragma omp for schedule(dynamic, 1) 
+			for (int64_t i = 0; i < roundNumPairs; i += batchSize) {
+				int nPairsBatch = (numPairs - i) >= batchSize ? batchSize : numPairs - i;
+				int64_t st1 = __rdtsc();
+				bsw[tid]->getScores16(seqPairArray + i, seqBufRef + i * MAX_SEQ_LEN_REF, seqBufQer + i * MAX_SEQ_LEN_QER, nPairsBatch, 1, w);
+				int64_t et1 = __rdtsc();
+				workTicks[CLMUL * tid] += (et1 - st1);
+			}
+		printf("%d] workTicks = %ld\n", tid, workTicks[CLMUL * tid]);  
+	}
 
-	#if DYNAMORIO_ANALYSIS
-      	dr_app_stop_and_cleanup();
-	#endif
-	#if VTUNE_ANALYSIS
-		__itt_pause();
-	#endif
-	#if FAPP_ANALYSIS
-		fapp_stop("getScores", 1, 0);
-	#endif
     totalTicks += __rdtsc() - startTick;
+
+#if DYNAMORIO_ANALYSIS
+	dr_app_stop_and_cleanup();
+#endif
+#if VTUNE_ANALYSIS
+	__itt_pause();
+#endif
+#if FAPP_ANALYSIS
+	fapp_stop("getScores", 1, 0);
+#endif
+#if PWR
+	// 3. Get electric energy at the end.
+	double energy1 = 0.0;
+	PWR_ObjAttrGetValue(pwr_obj, PWR_ATTR_MEASURED_ENERGY, &energy1, NULL);
+	// 4. Terminate processing of Power API
+	PWR_CntxtDestroy(pwr_cntxt);
+
+	printf("Energy consumption: %0.4lf J\n", energy1 - energy0);
+#endif
 
 #if __AVX512BW__
 	printf("Executed AVX512 vector code...\n");
@@ -380,7 +405,7 @@ int main(int argc, char *argv[])
         bsw[i]->getTicks();
 	    delete bsw[i];
     }
-	
+
 	fclose(pairFile);
 	return EXIT_SUCCESS;
 }

@@ -24,15 +24,15 @@ for compiler in "${compilers[@]}"; do
     case "$compiler" in
         gcc)
             module load gcc/10.2.0
-            make CC=gcc CXX=g++ arch=-march=armv8-a+sve \
+            make CC=gcc CXX=g++ arch='-march=armv8-a+sve' \
             BUILDDIR=build_gcc \
-            DYNAMORIO_ANALYSIS=1
+            DYNAMORIO_ANALYSIS=0 PWR=1
             ;;
         fcc)
             module load fuji
-            make CC='fcc -Nclang' CXX='FCC -Nclang -lstdc++' arch=-march=armv8-a+sve \
+            make CC='fcc -Nclang' CXX='FCC -Nclang -lstdc++' arch='-march=armv8-a+sve' \
             BUILDDIR=build_fcc \
-            FAPP_ANALYSIS=1 DYNAMORIO_ANALYSIS=1
+            FAPP_ANALYSIS=1 DYNAMORIO_ANALYSIS=0 PWR=1
             ;;
         *)
             echo "ERROR: Compiler '$compiler' not supported."
