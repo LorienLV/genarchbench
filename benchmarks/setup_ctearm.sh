@@ -9,3 +9,6 @@ export DYNAMORIO_ARCH="ARM_64"
 export LD_LIBRARY_PATH="$LD_LIBRARY_PATH:${DYNAMORIO_INSTALL_PATH}/lib64/release"
 export DYNAMORIO_INCLUDES="-D${DYNAMORIO_OS} -D${DYNAMORIO_ARCH} -I${DYNAMORIO_INSTALL_PATH}/include"
 export DYNAMORIO_LDFLAGS="-L${DYNAMORIO_INSTALL_PATH}/lib64/release -ldynamorio"
+
+export PWR_INCLUDES="-I/opt/FJSVtcs/pwrm/aarch64/include"
+export PWR_LDFLAGS="-L/opt/FJSVtcs/pwrm/aarch64/lib64 -lpwr"
