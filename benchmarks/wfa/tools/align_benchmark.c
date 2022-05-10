@@ -29,16 +29,19 @@
  * DESCRIPTION: Wavefront Alignment benchmarking tool
  */
 
+#if PWR
+	#include "pwr.h"
+#endif
 #if VTUNE_ANALYSIS
-    #include <ittnotify.h>
+  #include <ittnotify.h>
 #endif
 #if FAPP_ANALYSIS
-    #include "fj_tool/fapp.h"
+  #include "fj_tool/fapp.h"
 #endif
 #if DYNAMORIO_ANALYSIS
-    #define bool DR_BOOL
-    #include <dr_api.h>
-    #undef bool
+  #define bool DR_BOOL
+  #include <dr_api.h>
+  #undef bool
 #endif
 
 #include "utils/commons.h"
@@ -316,6 +319,17 @@ int main(int argc,char* argv[]) {
   struct timeval alignment_start;
   struct timeval alignment_end;
 
+#if PWR
+	// 1. Initialize Power API
+	PWR_Cntxt pwr_cntxt = NULL;
+	PWR_CntxtInit(PWR_CNTXT_FX1000, PWR_ROLE_APP, "app", &pwr_cntxt);
+	// 2. Get Object (In this step, get an Object that indicates the entire compute node.)
+	PWR_Obj pwr_obj = NULL;
+	PWR_CntxtGetObjByName(pwr_cntxt, "plat.node", &pwr_obj);
+
+	double energy0 = 0.0;
+#endif
+
   int progress_mod = 0;
   #pragma omp parallel num_threads(parameters.nthreads)
   {
@@ -346,6 +360,10 @@ int main(int argc,char* argv[]) {
 #endif
 #if FAPP_ANALYSIS
       fapp_start("align", 1, 0);
+#endif
+#if PWR
+      // 3. Get electric energy at the start.
+      PWR_ObjAttrGetValue(pwr_obj, PWR_ATTR_MEASURED_ENERGY, &energy0, NULL);
 #endif
       gettimeofday(&alignment_start, NULL);
     }
@@ -406,6 +424,15 @@ int main(int argc,char* argv[]) {
 #endif
 #if FAPP_ANALYSIS
       fapp_stop("align", 1, 0);
+#endif
+#if PWR
+      // 3. Get electric energy at the end.
+      double energy1 = 0.0;
+      PWR_ObjAttrGetValue(pwr_obj, PWR_ATTR_MEASURED_ENERGY, &energy1, NULL);
+      // 4. Terminate processing of Power API
+      PWR_CntxtDestroy(pwr_cntxt);
+
+      printf("Energy consumption: %0.4lf J\n", energy1 - energy0);
 #endif
     }
 

@@ -28,7 +28,7 @@ for compiler in "${compilers[@]}"; do
         gcc)
             module load gcc/10.2.0
             make CC=gcc CXX=g++ FMI=fmi_gcc arch=-march=armv8-a+sve TARGET_ARCH=aarch64 \
-            DYNAMORIO_ANALYSIS=1
+            DYNAMORIO_ANALYSIS=0 PWR=1
 
             make TARGET_ARCH=aarch64 clean
             ;;
@@ -36,7 +36,7 @@ for compiler in "${compilers[@]}"; do
             module load fuji
             make CC="fcc -Nclang" CXX='FCC -Nclang -lstdc++' FMI=fmi_fcc \
             arch=-march=armv8-a+sve TARGET_ARCH=aarch64 \
-            FAPP_ANALYSIS=1 DYNAMORIO_ANALYSIS=1
+            FAPP_ANALYSIS=1 DYNAMORIO_ANALYSIS=0 PWR=1
 
             make TARGET_ARCH=aarch64 clean
             ;;

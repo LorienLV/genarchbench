@@ -135,6 +135,8 @@ after_run() (
         fi
     fi
 
+    cat "$job_name.err" | grep "Energy consumption:"
+
     return 0 # OK
 )
 

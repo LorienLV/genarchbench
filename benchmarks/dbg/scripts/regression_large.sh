@@ -124,13 +124,13 @@ after_run() (
     # The reference file of this input would be huge. Check the correctness with the
     # small input.
 
-    if [[ -n $wall_time ]]; then
-        echo "Kernel runtime: $wall_time s"
-        return 0
-    else
+    if [[ -z $wall_time ]]; then
         echo "Error: Check \"$job_name\" folder"
         return 1
     fi
+
+    echo "Kernel runtime: $wall_time s"
+    cat "$job_name.err" | grep "Energy consumption:"
 )
 
 source "$scriptfolder/../../run_wrapper.sh"

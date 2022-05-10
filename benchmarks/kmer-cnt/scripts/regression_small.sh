@@ -152,6 +152,7 @@ after_run() (
     fi
 
     echo "Kernel time: $wall_time s"
+    cat "$job_name.err" | grep "Energy consumption:"
 
     return 0 # OK
 )

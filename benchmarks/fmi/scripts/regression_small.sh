@@ -144,6 +144,8 @@ after_run() (
     sed -n 5p "$job_name.out"
     sed -n 6p "$job_name.out"
 
+    cat "$job_name.err" | grep "Energy consumption:"
+
     return 0 # OK
 )
 

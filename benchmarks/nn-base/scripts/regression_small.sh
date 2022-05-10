@@ -42,7 +42,7 @@ case "$GENARCH_BENCH_CLUSTER" in
 MN4)
     commands=(
         "module load gcc/8.1.0 impi/2018.1 mkl/2018.1 opencv/4.1.2 python/3.6.4_ML; \
-         python3 $benchmark_path/bonito/basecall.py"
+        $benchmark_path/basecall_wrapper_gcc"
     )
 
     parallelism=(
@@ -65,7 +65,7 @@ CTEARM)
     before_command+="source $scriptfolder/../../setup_ctearm.sh;"
 
     commands=(
-        "module load gcc/11.0.0-3503git python/3.6.8; python3 $benchmark_path/bonito/basecall.py"
+        "module load gcc/11.0.0-3503git python/3.6.8; $benchmark_path/basecall_wrapper_fcc"
     )
 
     parallelism=(
@@ -85,7 +85,7 @@ CTEARM)
     ;;
 *)
     commands=(
-        "python3 $benchmark_path/bonito/basecall.py"
+        "$benchmark_path/basecall_wrapper_gcc"
     )
 
     parallelism=(
@@ -97,8 +97,9 @@ CTEARM)
 esac
 
 # Additional arguments to pass to the commands.
-command_opts="\"$benchmark_path/models/bonito_dna_r941\" \"$inputs_path/reads\" \
---chunksize 3000 --fastq > out.fastq"
+command_opts="\"$benchmark_path/bonito/basecall.py\" \
+              \"$benchmark_path/models/bonito_dna_r941\" \
+              \"$inputs_path/reads\" --chunksize 3000 --fastq > out.fastq"
 
 #
 # This function is executed before launching a job. You can use this function to
@@ -127,6 +128,8 @@ after_run() (
         echo "The output file is not identical to the reference file"
         return 1 # Failure
     fi
+
+    cat "$job_name.err" | grep "Energy consumption:"
 
     return 0 # OK
 )

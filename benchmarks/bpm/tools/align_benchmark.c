@@ -22,6 +22,9 @@
  * DESCRIPTION: Wavefront Alignments Algorithms Benchmark
  */
 
+#if PWR
+	  #include "pwr.h"
+#endif
 #if VTUNE_ANALYSIS
     #include <ittnotify.h>
 #endif
@@ -100,6 +103,17 @@ void align_benchmark(const alg_algorithm_type alg_algorithm) {
   // Init
   timer_reset(&(parameters.timer_global));
 
+#if PWR
+  // 1. Initialize Power API
+  PWR_Cntxt pwr_cntxt = NULL;
+  PWR_CntxtInit(PWR_CNTXT_FX1000, PWR_ROLE_APP, "app", &pwr_cntxt);
+  // 2. Get Object (In this step, get an Object that indicates the entire compute node.)
+  PWR_Obj pwr_obj = NULL;
+  PWR_CntxtGetObjByName(pwr_cntxt, "plat.node", &pwr_obj);
+
+  double energy0 = 0.0;
+#endif
+
   FILE *input_file = fopen(parameters.input, "r");
   if (input_file == NULL) {
     fprintf(stderr,"Input file '%s' couldn't be opened\n", parameters.input);
@@ -174,6 +188,9 @@ void align_benchmark(const alg_algorithm_type alg_algorithm) {
     #pragma omp master
     {
       timer_start(&(parameters.timer_global));
+#if PWR
+      PWR_ObjAttrGetValue(pwr_obj, PWR_ATTR_MEASURED_ENERGY, &energy0, NULL);
+#endif
 #if VTUNE_ANALYSIS
       __itt_resume();
 #endif
@@ -252,6 +269,15 @@ void align_benchmark(const alg_algorithm_type alg_algorithm) {
 #endif
 #if FAPP_ANALYSIS
       fapp_stop("benchmark_edit_bpm", 1, 0);
+#endif
+#if PWR
+      // 3. Get electric energy at the end.
+      double energy1 = 0.0;
+      PWR_ObjAttrGetValue(pwr_obj, PWR_ATTR_MEASURED_ENERGY, &energy1, NULL);
+      // 4. Terminate processing of Power API
+      PWR_CntxtDestroy(pwr_cntxt);
+
+      fprintf(stderr, "Energy consumption: %0.4lf J\n", energy1 - energy0);
 #endif
       timer_stop(&(parameters.timer_global));
     }

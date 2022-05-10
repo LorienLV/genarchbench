@@ -20,6 +20,9 @@
 
 // #define VTUNE_ANALYSIS 1
 
+#if PWR
+	#include "pwr.h"
+#endif
 #if VTUNE_ANALYSIS
     #include <ittnotify.h>
 #endif
@@ -1588,6 +1591,17 @@ int main(int argc,char** argv){
 }
 
     gettimeofday(&start_time, NULL);
+#if PWR
+	// 1. Initialize Power API
+	PWR_Cntxt pwr_cntxt = NULL;
+	PWR_CntxtInit(PWR_CNTXT_FX1000, PWR_ROLE_APP, "app", &pwr_cntxt);
+	// 2. Get Object (In this step, get an Object that indicates the entire compute node.)
+	PWR_Obj pwr_obj = NULL;
+	PWR_CntxtGetObjByName(pwr_cntxt, "plat.node", &pwr_obj);
+	// 3. Get electric energy at the start.
+	double energy0 = 0.0;
+	PWR_ObjAttrGetValue(pwr_obj, PWR_ATTR_MEASURED_ENERGY, &energy0, NULL);
+#endif
 #if VTUNE_ANALYSIS
     __itt_resume();
 #endif
@@ -1622,6 +1636,15 @@ int main(int argc,char** argv){
 #endif
 #if FAPP_ANALYSIS
     fapp_stop("assembleReadsAndDetectVariants", 1, 0);
+#endif
+#if PWR
+	// 3. Get electric energy at the end.
+	double energy1 = 0.0;
+	PWR_ObjAttrGetValue(pwr_obj, PWR_ATTR_MEASURED_ENERGY, &energy1, NULL);
+	// 4. Terminate processing of Power API
+	PWR_CntxtDestroy(pwr_cntxt);
+
+	fprintf(stderr, "Energy consumption: %0.4lf J\n", energy1 - energy0);
 #endif
     gettimeofday(&end_time, NULL);
     runtime += (end_time.tv_sec - start_time.tv_sec)*1e6 + end_time.tv_usec - start_time.tv_usec;

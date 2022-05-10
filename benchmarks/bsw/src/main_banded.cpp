@@ -41,12 +41,11 @@ Authors: Vasimuddin Md <vasimuddin.md@intel.com>; Sanchit Misra <sanchit.misra@i
 
 // #define VTUNE_ANALYSIS 1
 
+#define CLMUL 8
+
 #if PWR
 	#include "pwr.h"
 #endif
-
-#define CLMUL 8
-
 #if VTUNE_ANALYSIS
     #include <ittnotify.h>
 #endif
@@ -307,13 +306,13 @@ int main(int argc, char *argv[])
 	{
 		int tid = omp_get_thread_num();
 		#pragma omp for schedule(dynamic, 1) 
-			for (int64_t i = 0; i < roundNumPairs; i += batchSize) {
-				int nPairsBatch = (numPairs - i) >= batchSize ? batchSize : numPairs - i;
-				int64_t st1 = __rdtsc();
-				bsw[tid]->getScores16(seqPairArray + i, seqBufRef + i * MAX_SEQ_LEN_REF, seqBufQer + i * MAX_SEQ_LEN_QER, nPairsBatch, 1, w);
-				int64_t et1 = __rdtsc();
-				workTicks[CLMUL * tid] += (et1 - st1);
-			}
+		for (int64_t i = 0; i < roundNumPairs; i += batchSize) {
+			int nPairsBatch = (numPairs - i) >= batchSize ? batchSize : numPairs - i;
+			int64_t st1 = __rdtsc();
+			bsw[tid]->getScores16(seqPairArray + i, seqBufRef + i * MAX_SEQ_LEN_REF, seqBufQer + i * MAX_SEQ_LEN_QER, nPairsBatch, 1, w);
+			int64_t et1 = __rdtsc();
+			workTicks[CLMUL * tid] += (et1 - st1);
+		}
 		printf("%d] workTicks = %ld\n", tid, workTicks[CLMUL * tid]);  
 	}
 

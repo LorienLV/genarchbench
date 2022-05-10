@@ -25,7 +25,7 @@ for compiler in "${compilers[@]}"; do
         gcc)
             module load gcc/10.2.0
             make CC=gcc CXX=g++ BINARY=f5c_gcc BUILD_DIR=build_gcc \
-            DYNAMORIO_ANALYSIS=1
+            DYNAMORIO_ANALYSIS=0 PWR=1
             ;;
         fcc)
             module load fuji
@@ -34,7 +34,7 @@ for compiler in "${compilers[@]}"; do
             export LANG=en_US.utf8
             export LC_ALL=en_US.utf8
             make CC='fcc -Nclang' CXX='FCC -Nclang' BINARY=f5c_fcc BUILD_DIR=build_fcc \
-            FAPP_ANALYSIS=1 DYNAMORIO_ANALYSIS=1
+            FAPP_ANALYSIS=0 DYNAMORIO_ANALYSIS=0 PWR=1
             ;;
         *)
             echo "ERROR: Compiler '$compiler' not supported."

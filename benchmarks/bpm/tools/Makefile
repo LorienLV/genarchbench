@@ -38,6 +38,14 @@ ifeq ($(DYNAMORIO_ANALYSIS),1)
 	LIBS+=$(DYNAMORIO_LDFLAGS)
 endif
 
+# PWR
+PWR=0
+
+ifeq ($(PWR),1)
+	INCLUDES+=$(PWR_INCLUDES)
+	LIBS+=$(PWR_LDFLAGS)
+endif
+
 ###############################################################################
 # Rules
 ###############################################################################
@@ -48,7 +56,7 @@ all: FLAGS=$(CC_FLAGS)
 all: $(TOOLS)
 
 align_benchmark: ../$(FOLDER_BUILD)/*.o align_benchmark.c
-	$(CC) -I$(FOLDER_ROOT) $(INCLUDES) -DVTUNE_ANALYSIS=$(VTUNE_ANALYSIS) -DFAPP_ANALYSIS=$(FAPP_ANALYSIS) -DDYNAMORIO_ANALYSIS=$(DYNAMORIO_ANALYSIS) $(FLAGS) -fopenmp align_benchmark.c $(OBJS) -o ../$(FOLDER_BIN)/align_benchmark $(LIBS)
+	$(CC) -I$(FOLDER_ROOT) $(INCLUDES) -DVTUNE_ANALYSIS=$(VTUNE_ANALYSIS) -DFAPP_ANALYSIS=$(FAPP_ANALYSIS) -DDYNAMORIO_ANALYSIS=$(DYNAMORIO_ANALYSIS) -DPWR=$(PWR) $(FLAGS) -fopenmp align_benchmark.c $(OBJS) -o ../$(FOLDER_BIN)/align_benchmark $(LIBS)
 	
 generate_datasets: generate_datasets.c
 	$(CC) $(CC_FLAGS) generate_datasets.c -o ../$(FOLDER_BIN)/generate_datasets $(LD_FLAGS)

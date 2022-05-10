@@ -146,12 +146,13 @@ after_run() (
         echo "Error in the execution"
         return 1 # Failure
     fi
-    if [[ "$refkmers" != "$outkmers" ]]; then
-        echo "Reference number of k-mers != output number of k-mers"
-        return 1 # Failure
-    fi
+    # if [[ "$refkmers" != "$outkmers" ]]; then
+    #     echo "Reference number of k-mers != output number of k-mers"
+    #     return 1 # Failure
+    # fi
 
     echo "Kernel time: $wall_time s"
+    cat "$job_name.err" | grep "Energy consumption:"
 
     return 0 # OK
 )

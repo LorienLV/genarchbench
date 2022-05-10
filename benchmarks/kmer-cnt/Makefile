@@ -26,7 +26,15 @@ ifeq ($(DYNAMORIO_ANALYSIS),1)
 	LIBS+=$(DYNAMORIO_LDFLAGS)
 endif
 
-CPPFLAGS+=-DVTUNE_ANALYSIS=$(VTUNE_ANALYSIS) -DFAPP_ANALYSIS=$(FAPP_ANALYSIS) -DDYNAMORIO_ANALYSIS=$(DYNAMORIO_ANALYSIS)
+# PWR
+PWR=0
+
+ifeq ($(PWR),1)
+	INCLUDES+=$(PWR_INCLUDES)
+	LIBS+=$(PWR_LDFLAGS)
+endif
+
+CPPFLAGS+=-DVTUNE_ANALYSIS=$(VTUNE_ANALYSIS) -DFAPP_ANALYSIS=$(FAPP_ANALYSIS) -DDYNAMORIO_ANALYSIS=$(DYNAMORIO_ANALYSIS) -DPWR=$(PWR)
 
 all: sequence_container.cpp sequence.cpp vertex_index.cpp kmer_cnt.cpp
 	$(CXX) $(CXXFLAGS) $(CPPFLAGS) sequence_container.cpp sequence.cpp vertex_index.cpp kmer_cnt.cpp $(INC) $(LIBS) -o $(EXE)
