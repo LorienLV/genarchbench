@@ -1,0 +1,11 @@
+tensorflow==2.1.0
+pypy==3.6
+intervaltree==3.0.2
+mpmath==1.2.1
+tensorflow-addons==3.6.1
+tables==3.6.1
+pigz==4.4
+parallel==20191122
+zstd==1.4.4
+samtools==1.1.0
+whatshap==1.0
