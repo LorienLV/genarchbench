@@ -1,10 +1,9 @@
 #!/bin/bash
 
-#SBATCH --nodes=1
-#SBATCH --ntasks=1
-#SBATCH --cpus-per-task=1
-
-export OMP_NUM_THREADS=1
+if [[ "$GENARCH_BENCH_CLUSTER" != "local" ]]; then
+    echo "ERROR: Run 'source setup_local.sh' before using this script"
+    exit 1
+fi
 
 # The compilers to use.
 compilers=(
@@ -16,9 +15,9 @@ for compiler in "${compilers[@]}"; do
 
     case "$compiler" in
         gcc)
-            module load gcc/10.1.0
-            make CC=gcc CXX=g++ arch=native BUILD_PATH=build_gcc BIN_NAME=chain_gcc \
-            VTUNE_ANALYSIS=1 DYNAMORIO_ANALYSIS=0 RAPL_STOPWATCH=1
+            make CC=gcc CXX=g++ \
+            BIN_NAME=basecall_wrapper_gcc \
+            VTUNE_ANALYSIS=1 DYNAMORIO_ANALYSIS=0
             ;;
         *)
             echo "ERROR: Compiler '$compiler' not supported."

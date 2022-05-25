@@ -1,0 +1,5 @@
+/build_*
+
+# Ignore regression test stage folders.
+DBG-REGRESSION-*
+DBG-DETAILED-*

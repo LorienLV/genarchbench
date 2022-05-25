@@ -12,8 +12,11 @@
 #include <stdlib.h>
 #include <string.h>
 
+#if RAPL_STOPWATCH
+	#include <rapl_stopwatch.h>
+#endif
 #if PWR
-	#include "pwr.h"
+	#include <pwr.h>
 #endif
 #if DYNAMORIO_ANALYSIS
     #include <dr_api.h>
@@ -22,7 +25,7 @@
     #include <ittnotify.h>
 #endif
 #if FAPP_ANALYSIS
-    #include "fj_tool/fapp.h"
+    #include <fj_tool/fapp.h>
 #endif
 
 #include "f5c.h"
@@ -1508,6 +1511,17 @@ void process_single(core_t* core, db_t* db,int32_t i) {
 }
 
 void process_db(core_t* core, db_t* db) {
+#if RAPL_STOPWATCH
+	int err = rapl_stopwatch_api_init();
+	if (err) {
+		fprintf(stderr, "Error initializing the RAPL-stopwatch API\n");
+	}
+
+	rapl_stopwatch_t rapl_sw;
+	rapl_stopwatch_init(&rapl_sw);
+
+	rapl_stopwatch_play(&rapl_sw);
+#endif
 #if PWR
 	// 1. Initialize Power API
 	PWR_Cntxt pwr_cntxt = NULL;
@@ -1607,6 +1621,20 @@ void process_db(core_t* core, db_t* db) {
 	PWR_CntxtDestroy(pwr_cntxt);
 
 	fprintf(stderr, "Energy consumption: %0.4lf J\n", energy1 - energy0);
+#endif
+#if RAPL_STOPWATCH
+	rapl_stopwatch_pause(&rapl_sw);
+
+	uint64_t count = 0;
+	err = rapl_stopwatch_get_mj(&rapl_sw, RAPL_NODE, &count);
+	if (err) {
+		fprintf(stderr, "Error reading the RAPL-stopwatch counter\n");
+	}
+
+	fprintf(stderr, "Energy consumption: %0.4lf J\n", (double)count / 1E3);
+
+	rapl_stopwatch_destroy(&rapl_sw);
+	rapl_stopwatch_api_destroy();
 #endif
 
     double process_end= realtime();

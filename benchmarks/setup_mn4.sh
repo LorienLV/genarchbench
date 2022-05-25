@@ -14,3 +14,6 @@ export DYNAMORIO_ARCH="X86_64"
 export LD_LIBRARY_PATH="$LD_LIBRARY_PATH:${DYNAMORIO_INSTALL_PATH}/lib64/release"
 export DYNAMORIO_INCLUDES="-D${DYNAMORIO_OS} -D${DYNAMORIO_ARCH} -I${DYNAMORIO_INSTALL_PATH}/include"
 export DYNAMORIO_LDFLAGS="-L${DYNAMORIO_INSTALL_PATH}/lib64/release -ldynamorio"
+
+export RAPL_STOPWATCH_INCLUDES="-I/gpfs/scratch/bsc18/bsc18248/rapl_stopwatch/install/include/rapl_stopwatch"
+export RAPL_STOPWATCH_LDFLAGS="-L/gpfs/scratch/bsc18/bsc18248/rapl_stopwatch/install/lib64 -lrapl_stopwatch"

@@ -29,14 +29,17 @@
  * DESCRIPTION: Wavefront Alignment benchmarking tool
  */
 
+#if RAPL_STOPWATCH
+	#include <rapl_stopwatch.h>
+#endif
 #if PWR
-	#include "pwr.h"
+	#include <pwr.h>
 #endif
 #if VTUNE_ANALYSIS
   #include <ittnotify.h>
 #endif
 #if FAPP_ANALYSIS
-  #include "fj_tool/fapp.h"
+  #include <fj_tool/fapp.h>
 #endif
 #if DYNAMORIO_ANALYSIS
   #define bool DR_BOOL
@@ -319,6 +322,15 @@ int main(int argc,char* argv[]) {
   struct timeval alignment_start;
   struct timeval alignment_end;
 
+#if RAPL_STOPWATCH
+	int err = rapl_stopwatch_api_init();
+	if (err) {
+		fprintf(stderr, "Error initializing the RAPL-stopwatch API\n");
+	}
+
+	rapl_stopwatch_t rapl_sw;
+	rapl_stopwatch_init(&rapl_sw);
+#endif
 #if PWR
 	// 1. Initialize Power API
 	PWR_Cntxt pwr_cntxt = NULL;
@@ -364,6 +376,9 @@ int main(int argc,char* argv[]) {
 #if PWR
       // 3. Get electric energy at the start.
       PWR_ObjAttrGetValue(pwr_obj, PWR_ATTR_MEASURED_ENERGY, &energy0, NULL);
+#endif
+#if RAPL_STOPWATCH
+      rapl_stopwatch_play(&rapl_sw);
 #endif
       gettimeofday(&alignment_start, NULL);
     }
@@ -433,6 +448,20 @@ int main(int argc,char* argv[]) {
       PWR_CntxtDestroy(pwr_cntxt);
 
       printf("Energy consumption: %0.4lf J\n", energy1 - energy0);
+#endif
+#if RAPL_STOPWATCH
+      rapl_stopwatch_pause(&rapl_sw);
+
+      uint64_t count = 0;
+      err = rapl_stopwatch_get_mj(&rapl_sw, RAPL_NODE, &count);
+      if (err) {
+        fprintf(stderr, "Error reading the RAPL-stopwatch counter\n");
+      }
+
+      printf("Energy consumption: %0.4lf J\n", (double)count / 1E3);
+
+      rapl_stopwatch_destroy(&rapl_sw);
+      rapl_stopwatch_api_destroy();
 #endif
     }
 

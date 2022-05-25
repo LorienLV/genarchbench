@@ -23,7 +23,7 @@ for compiler in "${compilers[@]}"; do
         gcc)
             module load gcc/10.1.0
             make CC=gcc CXX=g++ FMI=fmi_gcc arch='-march=skylake-avx512' TARGET_ARCH=x86_64 \
-            VTUNE_ANALYSIS=1 DYNAMORIO_ANALYSIS=1
+            VTUNE_ANALYSIS=1 DYNAMORIO_ANALYSIS=0 RAPL_STOPWATCH=1
             ;;
         *)
             echo "ERROR: Compiler '$compiler' not supported."
