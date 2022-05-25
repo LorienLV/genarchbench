@@ -8,19 +8,22 @@ if [[ -z "$inputs_path" || ! -d "$inputs_path" ]]; then
     exit 1
 fi
 
+output_folder="$(pwd)/out"
+mkdir "$output_folder"
+
 scriptfolder="$(dirname $(realpath $0))"
 benchmark_path="$(dirname "$scriptfolder")"
 
 # Clean the stage folder of the jobs after finishing? 1 -> yes, 0 -> no.
-clean=1
+clean=0
 
 # The name of the job.
-job="NN-VARIANT-REGRESSION-SMALL"
+job="NN-VARIANT-DETAILED-PROFILING"
 
 contig="chr20"
 contig_len=64444167 # Mbps
 start_pos=0
-end_pos=500000
+end_pos=10000000
 
 # Commands to run.
 # You can access the number of mpi-ranks using the environment variable
@@ -50,23 +53,23 @@ MN4)
                      conda activate tf2-bio; export KERAS_BACKEND=tensorflow;"
 
     commands=(
-        "$benchmark_path/variantcaller_wrapper_gcc"
+        "$scriptfolder/../../mn4_vtune_profiling.sh $benchmark_path/variantcaller_wrapper_gcc"
     )
 
     parallelism=(
         'nodes=1, mpi=1, omp=1'
-        'nodes=1, mpi=1, omp=2'
-        'nodes=1, mpi=1, omp=4'
-        'nodes=1, mpi=1, omp=8'
-        'nodes=1, mpi=1, omp=12'
-        'nodes=1, mpi=1, omp=24'
-        'nodes=1, mpi=1, omp=36'
-        'nodes=1, mpi=1, omp=48'
+        # 'nodes=1, mpi=1, omp=2'
+        # 'nodes=1, mpi=1, omp=4'
+        # 'nodes=1, mpi=1, omp=8'
+        # 'nodes=1, mpi=1, omp=12'
+        # 'nodes=1, mpi=1, omp=24'
+        # 'nodes=1, mpi=1, omp=36'
+        # 'nodes=1, mpi=1, omp=48'
     )
 
     job_options=(
         '--exclusive'
-        '--time=00:04:00'
+        '--time=00:30:00'
     )
     ;;
 CTEARM)
@@ -76,18 +79,18 @@ CTEARM)
                      module load parallel samtools;"
 
     commands=(
-        "$benchmark_path/variantcaller_wrapper_fcc"
+        "$scriptfolder/../../ctearm_fapp_profiling.sh -e pa1-pa17 $benchmark_path/variantcaller_wrapper_fcc"
     )
 
     parallelism=(
         'nodes=1, mpi=1, omp=1'
-        'nodes=1, mpi=1, omp=2'
-        'nodes=1, mpi=1, omp=4'
-        'nodes=1, mpi=1, omp=8'
-        'nodes=1, mpi=1, omp=12'
-        'nodes=1, mpi=1, omp=24'
-        'nodes=1, mpi=1, omp=36'
-        'nodes=1, mpi=1, omp=48'
+        # 'nodes=1, mpi=1, omp=2'
+        # 'nodes=1, mpi=1, omp=4'
+        # 'nodes=1, mpi=1, omp=8'
+        # 'nodes=1, mpi=1, omp=12'
+        # 'nodes=1, mpi=1, omp=24'
+        # 'nodes=1, mpi=1, omp=36'
+        # 'nodes=1, mpi=1, omp=48'
     )
 
     job_options=(
@@ -96,13 +99,11 @@ CTEARM)
     ;;
 *)
     commands=(
-        "$benchmark_path/variantcaller_wrapper_gcc"
+        "$scriptfolder/../../dynamorio_imix.sh $benchmark_path/variantcaller_wrapper_gcc"
     )
 
     parallelism=(
         'nodes=1, mpi=1, omp=1'
-        'nodes=1, mpi=1, omp=2'
-        'nodes=1, mpi=1, omp=4'
     )
     ;;
 esac
@@ -138,17 +139,24 @@ before_run() (
 after_run() (
     job_name="$1"
 
-    diff --brief \
-        <(cat "./tmp/pileup_output/"*.vcf | grep -v "^#" | sort -u -k 2,2 -n) \
-        <(cat "$inputs_path/HG003_chr20_0_500000_reference.vcf" | grep -v "^#" | sort -k 2,2 -n)
+    # We assume that the result is correct.
 
-    if [[ $? -ne 0 ]]; then
-        echo "The output file is not identical to the reference file"
-        return 1 # Failure
-    fi
+    job_output_folder="$output_folder/$job_name"
+    mkdir "$job_output_folder"
 
-    cat "$job_name.err" | grep "Energy consumption:"
-    cat "$job_name.err" | grep "VariantCalling execution time:"
+    case "$GENARCH_BENCH_CLUSTER" in
+    MN4)
+        cp -r *.out *.err *runsa "$job_output_folder"
+        ;;
+    CTEARM)
+        cp -r *.out *.err *.csv "$job_output_folder"
+        ;;
+    *)
+        cp -r *.out *.err *runsa "$job_output_folder"
+        ;;
+    esac
+
+    echo "The profiling files can be found in $job_output_folder"
 
     return 0 # OK
 )

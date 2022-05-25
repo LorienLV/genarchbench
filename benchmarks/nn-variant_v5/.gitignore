@@ -1,5 +1,0 @@
-/basecall_wrapper_*
-
-# Ignore regression test stage folders.
-NN-VARIANT-REGRESSION-*
-NN-VARIANT-DETAILED-*
