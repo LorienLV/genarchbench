@@ -4,23 +4,23 @@ A port of [GenomicsBench](https://github.com/arun-sub/genomicsbench) to A64FX. T
 
 ## Benchmarks
 
-| #  | Benchmark  | Description                               | Language | Status                                          | Next Step         |
-|----|------------|-------------------------------------------|----------|-------------------------------------------------|-------------------|
-| 1  | abea       | Adaptive Banded Signal to Event Alignment | C/C++    | <span style="color:green">PORTED</span>         | Tuning            |
-| 2  | bpm        | Bit-Parallel Myers Alignment              | C        | <span style="color:green">PORTED</span>         | Tuning            |
-| 3  | bsw        | Banded Smith-Waterman                     | C++      | <span style="color:green">PORTED</span>         | ---               |
-| 4  | chain      | Seed Chaining                             | C++      | <span style="color:green">PORTED</span>         | Tuning            |
-| 5  | fast-chain | SVE version of Chain (fast-chain)         | C++      | <span style="color:green">PORTED</span>         | ---               |
-| 6  | dbg        | De-Bruijn Graph Construction              | C/C++    | <span style="color:green">PORTED</span>         | Tuning            |
-| 7  | fmi        | FM-Index                                  | C++      | <span style="color:green">PORTED</span>         | Tuning            |
-| 8  | grm        | Genomic Relationship Matrix               | C/C++    | <span style="color:green">PORTED</span>         | Improve math libraries performance in CTE-ARM  |
-| 9  | kmer-cnt   | K-mer Counting                            | C++      | <span style="color:green">PORTED</span>         | Tuning            |
-| 10 | nn-base    | Neural Network-based Base Calling         | Python   | <span style="color:green">PORTED</span>         | Tuning            |
-| 11 | nn-variant | Neural Network-based Variant Calling      | Python   | <span style="color:orange">PENDING</span>       | Compile in A64FX  |
-| 12 | pairHMM    | Pairwise Hidden Markov Model              | C++/Java | <span style="color:orange">PENDING</span>       | Compile in A64FX  |
-| 13 | pileup     | Pileup Counting                           | C        | <span style="color:green">PORTED</span>         | Tuning            |
-| 14 | poa        | Partial-Order Alignment                   | C++      | <span style="color:green">PORTED</span>         | Tuning            |
-| 15 | wfa        | Wavefront Alignment Algorithm             | C        | <span style="color:green">PORTED</span>         | Tuning            |
+| #   | Benchmark  | Description                               | Language | Status                                  | Notes                                                                                         |
+| --- | ---------- | ----------------------------------------- | -------- | --------------------------------------- | --------------------------------------------------------------------------------------------- |
+| 1   | abea       | Adaptive Banded Signal to Event Alignment | C/C++    | <span style="color:green">PORTED</span> |                                                                                               |
+| 2   | bpm        | Bit-Parallel Myers Alignment              | C        | <span style="color:green">PORTED</span> |                                                                                               |
+| 3   | bsw        | Banded Smith-Waterman                     | C++      | <span style="color:green">PORTED</span> | Vectorized for SVE                                                                            |
+| 4   | chain      | Seed Chaining                             | C++      | <span style="color:green">PORTED</span> |                                                                                               |
+| 5   | fast-chain | SVE version of Chain (fast-chain)         | C++      | <span style="color:green">PORTED</span> | Vectorized for SVE                                                                            |
+| 6   | dbg        | De-Bruijn Graph Construction              | C/C++    | <span style="color:green">PORTED</span> |                                                                                               |
+| 7   | fmi        | FM-Index                                  | C++      | <span style="color:green">PORTED</span> | Tunned for A64FX                                                                              |
+| 8   | grm        | Genomic Relationship Matrix               | C/C++    | <span style="color:red">PENDING</span>  | No math libraries available in A64FX. Terrible performance with manually compiled LAPACK/BLAS |
+| 9   | kmer-cnt   | K-mer Counting                            | C++      | <span style="color:green">PORTED</span> |                                                                                               |
+| 10  | nn-base    | Neural Network-based Base Calling         | Python   | <span style="color:green">PORTED</span> |                                                                                               |
+| 11  | nn-variant | Neural Network-based Variant Calling      | Python   | <span style="color:green">PORTED</span> |                                                                                               |
+| 12  | pairHMM    | Pairwise Hidden Markov Model              | C++/Java | <span style="color:red">PENDING</span>  | No serial/NEON/SVE version available                                                          |
+| 13  | pileup     | Pileup Counting                           | C        | <span style="color:green">PORTED</span> |                                                                                               |
+| 14  | poa        | Partial-Order Alignment                   | C++      | <span style="color:green">PORTED</span> |                                                                                               |
+| 15  | wfa        | Wavefront Alignment Algorithm             | C        | <span style="color:green">PORTED</span> |                                                                                               |
 
 ## Working with the Benchmarks
 
@@ -38,6 +38,7 @@ source benchmarks/setup_ctearm.sh
 ```
 
 #### Setup the environment in MN4
+
 ```
 source benchmarks/setup_ctearm.sh
 ```
@@ -49,6 +50,8 @@ source benchmarks/setup_local.sh
 ```
 
 The scripts will prepare the environment to be able to use the compilation, execution, and profiling scripts of the benchmarks.
+
+You will need to install VTune, [rapl_stopwatch](https://github.com/LorienLV/rapl_stopwatch) and our modified version of [DynamoRio](https://github.com/LorienLV/dynamorio) in order to fully profile the applications. 
 
 :exclamation: The following sections explain how to compile, execute and profile a benchmark. Some benchmarks, like ABEA, require an initial setup. If you are working outside of CTE-ARM or MN4, please check the README of the benchmark you are working with. 
 
