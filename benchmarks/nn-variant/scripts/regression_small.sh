@@ -19,8 +19,8 @@ job="NN-VARIANT-REGRESSION-SMALL"
 
 contig="chr20"
 contig_len=64444167 # Mbps
-start_pos=0
-end_pos=500000
+start_pos=100000
+end_pos=200000
 
 # Commands to run.
 # You can access the number of mpi-ranks using the environment variable
@@ -139,8 +139,8 @@ after_run() (
     job_name="$1"
 
     diff --brief \
-        <(cat "./tmp/pileup_output/"*.vcf | grep -v "^#" | sort -u -k 2,2 -n) \
-        <(cat "$inputs_path/HG003_chr20_0_500000_reference.vcf" | grep -v "^#" | sort -k 2,2 -n)
+        <(cat "./tmp/pileup_output/"*.vcf | grep -v "^#" | sort -u -k 2,2 -n | cut -f 1-5,7-9) \
+        <(cat "$inputs_path/HG003_chr20_100000_200000_reference.vcf" | grep -v "^#" | sort -k 2,2 -n | cut -f 1-5,7-9)
 
     if [[ $? -ne 0 ]]; then
         echo "The output file is not identical to the reference file"

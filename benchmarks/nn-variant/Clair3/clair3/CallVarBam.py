@@ -130,8 +130,6 @@ def Run(args):
         chunk_id = CommandOption('chunk_id', args.chunk_id)
         chunk_num = CommandOption('chunk_num', args.chunk_num)
 
-    '''
-    # A64FX os library does not support sched_getaffinity, therefore we use the multiprocessing library, see below.
     sched_getaffinity_list = list(os.sched_getaffinity(0))
     maxCpus = len(sched_getaffinity_list)
     if args.tensorflow_threads is None:
@@ -140,15 +138,6 @@ def Run(args):
         numCpus = args.tensorflow_threads if args.tensorflow_threads < maxCpus else maxCpus
 
     _cpuSet = ",".join(str(x) for x in random.sample(sched_getaffinity_list, numCpus))
-    '''
-    # Using multiprocessing library instead of OS, specific case for ARM-CTE
-    if args.tensorflow_threads is None:
-        numCpus = multiprocessing.cpu_count()
-    else:
-        numCpus = args.tensorflow_threads if args.tensorflow_threads < multiprocessing.cpu_count() else multiprocessing.cpu_count()
-
-    maxCpus = multiprocessing.cpu_count()
-    _cpuSet = ",".join(str(x) for x in random.sample(range(0, maxCpus), numCpus))
 
     taskSet = "taskset -c %s" % (_cpuSet)
     try:

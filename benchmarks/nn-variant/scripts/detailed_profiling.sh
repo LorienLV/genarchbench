@@ -22,8 +22,8 @@ job="NN-VARIANT-DETAILED-PROFILING"
 
 contig="chr20"
 contig_len=64444167 # Mbps
-start_pos=0
-end_pos=10000000
+start_pos=10000
+end_pos=9990000
 
 # Commands to run.
 # You can access the number of mpi-ranks using the environment variable
