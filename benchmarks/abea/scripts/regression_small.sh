@@ -125,7 +125,7 @@ after_run() (
 
     # Check that columns "reference_kmer" and "model_kmer" are identical in the
     # reference and the output files.
-    awk -F $'\t' 'NR==FNR{a[$3$10]++;next} a[$3$10] == 0 {exit 1}' "events.tsv" "$inputs_path/small-reference.tsv"
+    diff --brief <(awk '{print $3$10}' "events.tsv") <(awk '{print $3$10}' "$inputs_path/small-reference.tsv")
     if [[ $? -ne 0 || ! -s "events.tsv" ]]; then
         echo "The output file is not identical to the reference file"
         return 1 # Failure
