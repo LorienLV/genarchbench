@@ -57,7 +57,12 @@ Authors: Vasimuddin Md <vasimuddin.md@intel.com>; Sanchit Misra <sanchit.misra@i
     #include <fj_tool/fapp.h>
 #endif
 #if DYNAMORIO_ANALYSIS
-    #include <dr_api.h>
+    #if defined(__x86_64__) || defined(_M_X64)
+        #define __DR_START_TRACE() { asm volatile ("nopw 0x24"); }
+        #define __DR_STOP_TRACE() { asm volatile ("nopw 0x42"); }
+    #else
+        #error invalid TARGET
+    #endif
 #endif
 
 #define DEFAULT_MATCH 1
@@ -311,7 +316,7 @@ int main(int argc, char *argv[])
 	fapp_start("getScores", 1, 0);
 #endif
 #if DYNAMORIO_ANALYSIS
-	dr_app_setup_and_start();
+	__DR_START_TRACE();
 #endif
 
     int64_t workTicks[CLMUL * numThreads];
@@ -334,7 +339,7 @@ int main(int argc, char *argv[])
     totalTicks += __rdtsc() - startTick;
 
 #if DYNAMORIO_ANALYSIS
-	dr_app_stop_and_cleanup();
+	__DR_STOP_TRACE();
 #endif
 #if VTUNE_ANALYSIS
 	__itt_pause();

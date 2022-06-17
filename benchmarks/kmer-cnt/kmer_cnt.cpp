@@ -35,7 +35,12 @@
     #include <fj_tool/fapp.h>
 #endif
 #if DYNAMORIO_ANALYSIS
-    #include <dr_api.h>
+    #if defined(__x86_64__) || defined(_M_X64)
+        #define __DR_START_TRACE() { asm volatile ("nopw 0x24"); }
+        #define __DR_STOP_TRACE() { asm volatile ("nopw 0x42"); }
+    #else
+        #error invalid TARGET
+    #endif
 #endif
 
 bool parseArgs(int argc, char** argv, std::string& readsFasta, 
@@ -259,7 +264,7 @@ int main(int argc, char** argv)
     fapp_start("computing", 1, 0);
 #endif
 #if DYNAMORIO_ANALYSIS
-    dr_app_setup_and_start();
+    __DR_START_TRACE();
 #endif
 	roi_q = __parsec_roi_begin(roi_s, &roi_i, &roi_j);
 	bool useMinimizers = Config::get("use_minimizers");
@@ -276,7 +281,7 @@ int main(int argc, char** argv)
 	}
 	roi_q = __parsec_roi_end(roi_s, &roi_i, &roi_j);
 #if DYNAMORIO_ANALYSIS
-    dr_app_stop_and_cleanup();
+    __DR_STOP_TRACE();
 #endif
 #if VTUNE_ANALYSIS
     __itt_pause();

@@ -25,7 +25,12 @@
     #include <fj_tool/fapp.h>
 #endif
 #if DYNAMORIO_ANALYSIS
-    #include <dr_api.h>
+    #if defined(__x86_64__) || defined(_M_X64)
+        #define __DR_START_TRACE() { asm volatile ("nopw 0x24"); }
+        #define __DR_STOP_TRACE() { asm volatile ("nopw 0x42"); }
+    #else
+        #error invalid TARGET
+    #endif
 #endif
 
 const char *prof_pipe = "prof_pipe";
@@ -88,7 +93,7 @@ int wait_and_profile() {
     fapp_start("variant", 1, 0);
 #endif
 #if DYNAMORIO_ANALYSIS
-    dr_app_setup_and_start();
+    __DR_START_TRACE();
 #endif
     auto time_start = std::chrono::high_resolution_clock::now();
 
@@ -110,7 +115,7 @@ int wait_and_profile() {
 
     auto time_end = std::chrono::high_resolution_clock::now();
 #if DYNAMORIO_ANALYSIS
-    dr_app_stop_and_cleanup();
+    __DR_STOP_TRACE();
 #endif
 #if VTUNE_ANALYSIS
     __itt_pause();

@@ -19,7 +19,12 @@
 	#include <pwr.h>
 #endif
 #if DYNAMORIO_ANALYSIS
-    #include <dr_api.h>
+    #if defined(__x86_64__) || defined(_M_X64)
+        #define __DR_START_TRACE() { asm volatile ("nopw 0x24"); }
+        #define __DR_STOP_TRACE() { asm volatile ("nopw 0x42"); }
+    #else
+        #error invalid TARGET
+    #endif
 #endif
 #if VTUNE_ANALYSIS
     #include <ittnotify.h>
@@ -1540,7 +1545,7 @@ void process_db(core_t* core, db_t* db) {
     fapp_start("process_db", 1, 0);
 #endif
 #if DYNAMORIO_ANALYSIS
-    dr_app_setup_and_start();
+    __DR_START_TRACE();
 #endif
 
     double process_start = realtime();
@@ -1605,7 +1610,7 @@ void process_db(core_t* core, db_t* db) {
     }
 
 #if DYNAMORIO_ANALYSIS
-    dr_app_stop_and_cleanup();
+    __DR_STOP_TRACE();
 #endif
 #if VTUNE_ANALYSIS
     __itt_pause();

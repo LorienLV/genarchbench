@@ -42,7 +42,7 @@ for compiler in "${compilers[@]}"; do
                        /fefs/scratch/bsc18/bsc18248/lapack-3.10.0/libblas.a" \
             LAPACK_FLAG="/fefs/scratch/bsc18/bsc18248/lapack-3.10.0/liblapack.a -lgfortran" \
             ATLAS_FLAG='' \
-            DYNAMORIO_ANALYSIS=1
+            DYNAMORIO_ANALYSIS=0
             ;;
         fcc)
             module load fuji
@@ -54,7 +54,7 @@ for compiler in "${compilers[@]}"; do
                        /fefs/scratch/bsc18/bsc18248/lapack-3.10.0/libblas.a" \
             LAPACK_FLAG="/fefs/scratch/bsc18/bsc18248/lapack-3.10.0/liblapack.a -lgfortran" \
             ATLAS_FLAG='' \
-            FAPP_ANALYSIS=1 DYNAMORIO_ANALYSIS=1
+            FAPP_ANALYSIS=1 DYNAMORIO_ANALYSIS=0
             ;;
         *)
             echo "ERROR: Compiler '$compiler' not supported."

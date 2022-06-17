@@ -13,9 +13,12 @@
     #include <fj_tool/fapp.h>
 #endif
 #if DYNAMORIO_ANALYSIS
-    #define bool DR_BOOL
-    #include <dr_api.h>
-    #undef bool
+    #if defined(__x86_64__) || defined(_M_X64)
+        #define __DR_START_TRACE() { asm volatile ("nopw 0x24"); }
+        #define __DR_STOP_TRACE() { asm volatile ("nopw 0x42"); }
+    #else
+        #error invalid TARGET
+    #endif
 #endif
 
 #include "omp.h"
@@ -589,7 +592,7 @@ int main(int argc, char *argv[]) {
     fapp_start("calculate_pileup", 1, 0);
 #endif
 #if DYNAMORIO_ANALYSIS
-    dr_app_setup_and_start();
+    __DR_START_TRACE();
 #endif
     // process batches in parallel
     #pragma omp parallel num_threads(numThreads)
@@ -603,7 +606,7 @@ int main(int argc, char *argv[]) {
             }
     }
 #if DYNAMORIO_ANALYSIS
-    dr_app_stop_and_cleanup();
+    __DR_STOP_TRACE();
 #endif
 #if VTUNE_ANALYSIS
     __itt_pause();

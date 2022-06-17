@@ -35,9 +35,12 @@
   #include <fj_tool/fapp.h>
 #endif
 #if DYNAMORIO_ANALYSIS
-  #define bool DR_BOOL
-  #include <dr_api.h>
-  #undef bool
+  #if defined(__x86_64__) || defined(_M_X64)
+    #define __DR_START_TRACE() { asm volatile ("nopw 0x24"); }
+    #define __DR_STOP_TRACE() { asm volatile ("nopw 0x42"); }
+  #else
+    #error invalid TARGET
+  #endif
 #endif
 
 #include "utils/commons.h"
@@ -213,7 +216,7 @@ void align_benchmark(const alg_algorithm_type alg_algorithm) {
       fapp_start("benchmark_edit_bpm", 1, 0);
 #endif
 #if DYNAMORIO_ANALYSIS
-      dr_app_setup_and_start();
+      __DR_START_TRACE();
 #endif
     }
 
@@ -277,7 +280,7 @@ void align_benchmark(const alg_algorithm_type alg_algorithm) {
     #pragma omp master
     {
 #if DYNAMORIO_ANALYSIS
-      dr_app_stop_and_cleanup();
+      __DR_STOP_TRACE();
 #endif
 #if VTUNE_ANALYSIS
       __itt_pause();

@@ -15,7 +15,12 @@
     #include <fj_tool/fapp.h>
 #endif
 #if DYNAMORIO_ANALYSIS
-    #include <dr_api.h>
+    #if defined(__x86_64__) || defined(_M_X64)
+        #define __DR_START_TRACE() { asm volatile ("nopw 0x24"); }
+        #define __DR_STOP_TRACE() { asm volatile ("nopw 0x42"); }
+    #else
+        #error invalid TARGET
+    #endif
 #endif
 
 /**
@@ -58,7 +63,7 @@ int main(int argc, char *const argv[]) {
 		fapp_start("basecall", 1, 0);
 #endif
 #if DYNAMORIO_ANALYSIS
-		dr_app_setup_and_start();
+		__DR_START_TRACE();
 #endif
 
         // Wait until bonito finishes.
@@ -67,7 +72,7 @@ int main(int argc, char *const argv[]) {
         rvalue = WEXITSTATUS(wstatus);
 
 #if DYNAMORIO_ANALYSIS
-		dr_app_stop_and_cleanup();
+		__DR_STOP_TRACE();
 #endif
 #if VTUNE_ANALYSIS
 		__itt_pause();

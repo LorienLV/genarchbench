@@ -17,7 +17,7 @@ for compiler in "${compilers[@]}"; do
         gcc)
             make CC=gcc CXX=g++ \
             BIN_NAME=variantcaller_wrapper_gcc \
-            VTUNE_ANALYSIS=1 DYNAMORIO_ANALYSIS=0
+            VTUNE_ANALYSIS=1 DYNAMORIO_ANALYSIS=1
             ;;
         *)
             echo "ERROR: Compiler '$compiler' not supported."
