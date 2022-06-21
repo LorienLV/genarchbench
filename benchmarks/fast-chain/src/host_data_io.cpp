@@ -46,7 +46,8 @@ call_t read_call(FILE *fp) {
     //     call.anchors[i] = t;
     // }
 
-    call.anchors_x.resize(call.n + 64); // Some extra space for vectorization with intrinsics.
+    // Some extra space for vectorization with intrinsics.
+    call.anchors_x.resize(call.n + 64);
     call.anchors_x32.resize(call.n + 64);
 
     call.anchors_y.resize(call.n + 64);
@@ -54,7 +55,8 @@ call_t read_call(FILE *fp) {
 
     call.q_spans.resize(call.n + 64);
 
-    for (anchor_idx_t i = 0; i < call.n; i++) {
+    // Add padding before and after the data.
+    for (anchor_idx_t i = 32; i < call.n + 32; i++) {
         uint64_t x, y;
         fscanf(fp, "%llu%llu", &x, &y);
 
@@ -74,7 +76,8 @@ call_t read_call(FILE *fp) {
 void print_return(FILE *fp, const return_t &data)
 {
     fprintf(fp, "%lld\n", (long long)data.n);
-    for (anchor_idx_t i = 0; i < data.n; i++) {
+    // Keep padding in mind (32 before and 32 after)
+    for (anchor_idx_t i = 32; i < data.n + 32; i++) {
         fprintf(fp, "%d\t%d\n", (int)data.scores[i], (int)data.parents[i]);
     }
     fprintf(fp, "EOR\n");

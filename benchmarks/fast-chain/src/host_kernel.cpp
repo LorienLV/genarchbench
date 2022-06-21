@@ -148,19 +148,27 @@ static void chain_dp(call_t *a, return_t *ret) {
     // const auto n_segs = a->n_segs;
     const auto n = a->n;
 
-    uint64_t *anchors_x = a->anchors_x.data();
-    uint32_t *anchors_x32 = a->anchors_x32.data();
+    auto *anchors_x = a->anchors_x.data() + 32;
+    auto *anchors_x32 = a->anchors_x32.data() + 32;
 
-    uint64_t *anchors_y = a->anchors_y.data();
-    uint32_t *anchors_y32 = a->anchors_y32.data();
+    auto *anchors_y = a->anchors_y.data() + 32;
+    auto *anchors_y32 = a->anchors_y32.data() + 32;
 
-    int32_t *q_spans = a->q_spans.data();
+    auto *q_spans = a->q_spans.data() + 32;
 
     ret->n = n;
-    ret->scores.resize(n);
-    ret->parents.resize(n);
-    ret->targets.resize(n);
-    ret->peak_scores.resize(n);
+
+    // Some extra space for vectorization with intrinsics.
+    ret->scores.resize(n + 64);
+    ret->parents.resize(n + 64);
+    ret->targets.resize(n + 64);
+    ret->peak_scores.resize(n + 64);
+
+    // Add padding before and after the data.
+    auto *scores = ret->scores.data() + 32;
+    auto *parents = ret->parents.data() + 32;
+    auto *targets = ret->targets.data() + 32;
+    auto *peak_scores = ret->peak_scores.data() + 32;
 
     int32_t st = 0;
 
@@ -243,8 +251,8 @@ static void chain_dp(call_t *a, return_t *ret) {
 
                 __mmask16 loopContinueMask = ~(bw_gt | mask_eq | mask_leq | mask_gt1 | mask_gt2);
 
-                // Load ret->scores[j-8, j]
-                __m512i fj_v = _mm512_loadu_si512(&ret->scores[j - 15]);
+                // Load scores[j-8, j]
+                __m512i fj_v = _mm512_loadu_si512(&scores[j - 15]);
 
                 //Vectorized gap cost function
                 __m512i gc_v = get_gap_cost_vectorized_int32(dd_v, avg_qspan, gap_scale);
@@ -302,8 +310,8 @@ static void chain_dp(call_t *a, return_t *ret) {
 
 
 
-                    // Load ret->scores[j-8, j]
-                    __m512i fj_v = _mm512_loadu_si512(&ret->scores[j - 15]);
+                    // Load scores[j-8, j]
+                    __m512i fj_v = _mm512_loadu_si512(&scores[j - 15]);
 
                     //Vectorized gap cost function
                     __m512i gc_v = get_gap_cost_vectorized_int32(dd_v, avg_qspan, gap_scale);
@@ -370,7 +378,7 @@ static void chain_dp(call_t *a, return_t *ret) {
 
                 int32_t oc = 0;
 
-                int32_t score = ret->scores[j];//q_spans[i];
+                int32_t score = scores[j];//q_spans[i];
                 oc = ddr < ddq ? ddr : ddq;
                 oc = oc < (int32_t)q_spans[i] ? oc : q_spans[i];
                 score += oc;
@@ -393,9 +401,9 @@ static void chain_dp(call_t *a, return_t *ret) {
 
         }
 
-        ret->scores[i] = max_f;
-        ret->parents[i] = max_j;
-        ret->peak_scores[i] = max_j >= 0 && ret->peak_scores[max_j] > max_f ? ret->peak_scores[max_j] : max_f; // v[] keeps the peak score up to i; ret->scores[] is the score ending at i, not always the peak
+        scores[i] = max_f;
+        parents[i] = max_j;
+        peak_scores[i] = max_j >= 0 && peak_scores[max_j] > max_f ? peak_scores[max_j] : max_f; // v[] keeps the peak score up to i; scores[] is the score ending at i, not always the peak
     }
 #elif __AVX2__
     #pragma message("Using AVX2 version")
@@ -491,8 +499,8 @@ static void chain_dp(call_t *a, return_t *ret) {
 
                 __m256i loopContinueMask = _mm256_or_si256(_mm256_or_si256(tmp1, tmp2), tmp3);
 
-                // Load ret->scores[j-8, j]
-                __m256i fj_v = _mm256_loadu_si256((__m256i *) &ret->scores[j_stride]);
+                // Load scores[j-8, j]
+                __m256i fj_v = _mm256_loadu_si256((__m256i *) &scores[j_stride]);
 
                 //Vectorized gap cost function
                 __m256i gc_v = get_gap_cost_vectorized_int32(dd_v, avg_qspan, gap_scale);
@@ -571,8 +579,8 @@ static void chain_dp(call_t *a, return_t *ret) {
 
 
 
-                    // Load ret->scores[j-8, j]
-                    __m256i fj_v = _mm256_loadu_si256((__m256i *) &ret->scores[j_stride]);
+                    // Load scores[j-8, j]
+                    __m256i fj_v = _mm256_loadu_si256((__m256i *) &scores[j_stride]);
 
                     //Vectorized gap cost function
                     __m256i gc_v = get_gap_cost_vectorized_int32(dd_v, avg_qspan, gap_scale);
@@ -645,7 +653,7 @@ static void chain_dp(call_t *a, return_t *ret) {
                 int32_t ref_overlap = rj + lj - ri;
                 int32_t query_overlap = qj + lj - qi;
 
-                int32_t score = ret->scores[j];//q_spans[i];
+                int32_t score = scores[j];//q_spans[i];
                 oc = ddr < ddq ? ddr : ddq;
                 oc = oc < q_spans[i] ? oc : q_spans[i];
                 score += oc;
@@ -669,9 +677,9 @@ static void chain_dp(call_t *a, return_t *ret) {
 
         }
 
-        ret->scores[i] = max_f;
-        ret->parents[i] = max_j;
-        ret->peak_scores[i] = max_j >= 0 && ret->peak_scores[max_j] > max_f ? ret->peak_scores[max_j] : max_f; // v[] keeps the peak score up to i; ret->scores[] is the score ending at i, not always the peak
+        scores[i] = max_f;
+        parents[i] = max_j;
+        peak_scores[i] = max_j >= 0 && peak_scores[max_j] > max_f ? peak_scores[max_j] : max_f; // v[] keeps the peak score up to i; scores[] is the score ending at i, not always the peak
     }
 #elif __ARM_FEATURE_SVE
     #pragma message("Using SVE version")
@@ -758,8 +766,8 @@ static void chain_dp(call_t *a, return_t *ret) {
             log_dd = svreinterpret_s32(svlsr_n_u32_x(valid_elements,svreinterpret_u32(log_dd),1));
             gap_cost = svadd_s32_x(valid_elements,gap_cost,log_dd);
 
-            //const int32_t score = ret->scores[j] + oc - gap_cost;
-            svint32_t score = svld1_s32(valid_elements,&ret->scores[real_j]);
+            //const int32_t score = scores[j] + oc - gap_cost;
+            svint32_t score = svld1_s32(valid_elements,&scores[real_j]);
             score = svadd_s32_x(valid_elements,score,oc);
             score = svsub_s32_x(valid_elements,score,gap_cost);
 
@@ -785,10 +793,10 @@ static void chain_dp(call_t *a, return_t *ret) {
                 max_j = svlastb_s32(max_index,index);
             }
         }
-        ret->scores[i] = max_f;
-        ret->parents[i] = max_j;
+        scores[i] = max_f;
+        parents[i] = max_j;
         //if (max_f == 36 && max_j == 18821) {printf("ee\n");exit(0);}
-        ret->peak_scores[i] = max_j >= 0 && ret->peak_scores[max_j] > max_f ? ret->peak_scores[max_j] : max_f;
+        peak_scores[i] = max_j >= 0 && peak_scores[max_j] > max_f ? peak_scores[max_j] : max_f;
     }
 #else // SCALAR VERSION
     #pragma message("Using SCALAR version")
@@ -836,7 +844,7 @@ static void chain_dp(call_t *a, return_t *ret) {
             const int32_t log_dd = (dd) ? ilog2_32(dd) : 0;
             const int32_t gap_cost = static_cast<int>(dd * 0.01f * avg_qspan) + (log_dd >> 1);
 
-            const int32_t score = ret->scores[j] + oc - gap_cost;
+            const int32_t score = scores[j] + oc - gap_cost;
 
             // TODO: CAN'T VECTORIZE THIS. THE COMPILER IS ONLY ABLE TO PERFORM
             // ONE REDUCTION.
@@ -849,9 +857,9 @@ static void chain_dp(call_t *a, return_t *ret) {
                 max_j = j;
             }
         }
-        ret->scores[i] = max_f;
-        ret->parents[i] = max_j;
-        ret->peak_scores[i] = max_j >= 0 && ret->peak_scores[max_j] > max_f ? ret->peak_scores[max_j] : max_f;
+        scores[i] = max_f;
+        parents[i] = max_j;
+        peak_scores[i] = max_j >= 0 && peak_scores[max_j] > max_f ? peak_scores[max_j] : max_f;
     }
 #endif
 }
