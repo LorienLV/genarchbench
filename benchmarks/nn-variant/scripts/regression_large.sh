@@ -140,7 +140,7 @@ after_run() (
 
     diff --brief \
         <(cat "./tmp/pileup_output/"*.vcf | grep -v "^#" | sort -u -k 2,2 -n | cut -f 1-5,7-9) \
-        <(cat "$inputs_path/HG003_chr20_10000_9990000_reference.vcf" | grep -v "^#" | sort -k 2,2 -n | cut -f 1-5,7-9)
+        <(cat "$inputs_path/HG002_chr20_10000_9990000_reference.vcf" | grep -v "^#" | sort -k 2,2 -n | cut -f 1-5,7-9)
 
     if [[ $? -ne 0 ]]; then
         echo "The output file is not identical to the reference file"
