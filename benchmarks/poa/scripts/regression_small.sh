@@ -41,6 +41,9 @@ job="POA-REGRESSION-SMALL"
 #     # 'nodes=1, mpi=1, omp=48'
 # )
 
+# Everything you want to do before executing the commands.
+before_command="export OMP_PROC_BIND=true;"
+
 case "$GENARCH_BENCH_CLUSTER" in
 MN4)
     commands=(
