@@ -26,7 +26,7 @@ for compiler in "${compilers[@]}"; do
             module load intel/2020.1
             module load mkl/2021.3
 
-            make CC=gcc CXX=g++ arch='-march=native' \
+            make CC=gcc CXX=g++ arch='-march=skylake-avx512' \
             DYNAMIC_MKL=1 MKLROOT='/apps/INTEL/oneapi/2021.3/mkl/2021.3.0' \
             MKL_IOMP5_DIR='/apps/INTEL/oneapi/2021.3/compiler/2021.3.0/linux/compiler/lib/intel64_lin' \
             VTUNE_ANALYSIS=1 DYNAMORIO_ANALYSIS=1

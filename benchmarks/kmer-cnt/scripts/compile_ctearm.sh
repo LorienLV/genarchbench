@@ -24,12 +24,13 @@ for compiler in "${compilers[@]}"; do
     case "$compiler" in
         gcc)
             module load gcc/10.2.0
-            make CC=gcc CXX=g++ EXE=kmer-cnt_gcc \
+            make CC=gcc CXX=g++ EXE=kmer-cnt_gcc arch=-march=armv8-a+sve \
             DYNAMORIO_ANALYSIS=0 PWR=1
             ;;
         fcc)
             module load fuji
             make CC='fcc -Nclang' CXX='FCC -Nclang' EXE=kmer-cnt_fcc \
+            arch=-march=armv8-a+sve \
             FAPP_ANALYSIS=1 DYNAMORIO_ANALYSIS=0 PWR=1
             ;;
         *)

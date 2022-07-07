@@ -22,7 +22,8 @@ for compiler in "${compilers[@]}"; do
     case "$compiler" in
         gcc)
             module load gcc/10.1.0_binutils
-            make CC=gcc CXX=g++ BUILD_DIR=build_gcc \
+            make CC=gcc CXX=g++ arch='-march=skylake-avx512' \
+            BUILD_DIR=build_gcc \
             VTUNE_ANALYSIS=1 DYNAMORIO_ANALYSIS=1 RAPL_STOPWATCH=1
             ;;
         *)

@@ -17,7 +17,8 @@ for compiler in "${compilers[@]}"; do
     case "$compiler" in
         gcc)
             module load gcc/10.1.0
-            make CC=gcc CXX=g++ arch=native BUILD_PATH=build_gcc BIN_NAME=chain_gcc \
+            make CC=gcc CXX=g++ arch='-march=skylake-avx512' \
+            BUILD_PATH=build_gcc BIN_NAME=chain_gcc \
             VTUNE_ANALYSIS=1 DYNAMORIO_ANALYSIS=1 RAPL_STOPWATCH=1
             ;;
         *)

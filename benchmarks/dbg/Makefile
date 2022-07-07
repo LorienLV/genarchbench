@@ -1,8 +1,29 @@
 # Set compiler
 CXX:=g++
 
+ifeq ($(arch),sse41)
+	ARCH_FLAGS=-msse4.1
+else ifeq ($(arch),avx2)
+	ifeq ($(CXX), icpc)
+		ARCH_FLAGS=-march=core-avx2 #-xCORE-AVX2
+	else	
+		ARCH_FLAGS=-mavx2
+	endif
+else ifeq ($(arch),avx512)
+	ifeq ($(CXX), icpc)
+		ARCH_FLAGS=-xCORE-AVX512
+	else	
+		ARCH_FLAGS=-mavx512bw
+	endif
+else ifeq ($(arch),native)
+		ARCH_FLAGS=-march=native
+else ifneq ($(arch),)
+	## To provide a different architecture flag like -march=core-avx2.
+		ARCH_FLAGS=$(arch)
+endif
+
 # Set flags.
-CXXFLAGS:=-Wall -O2 -fopenmp -g
+CXXFLAGS:=-Wall -O2 -fopenmp -g $(ARCH_FLAGS)
 DEPFLAGS:=-MD -MP # Autogenerate dependencies.
 LDFLAGS:=-lcurl -lcrypto -lz -lm -lbz2 -llzma -lpthread -ldl -fopenmp
 # INCLUDES=
@@ -61,7 +82,7 @@ $(HTS_LIB):
 	tar -xf $(HTS_LIB_BUILD_DIR)/htslib.tar.bz2 -C $(HTS_LIB_BUILD_DIR)
 	rm -f $(HTS_LIB_BUILD_DIR)/htslib.tar.bz2
 	cd $(HTS_LIB_BUILD_DIR)/htslib && \
-	CC='$(CC)' CXX='$(CXX)' ./configure --prefix=`pwd`/../ --enable-bz2=no --enable-lzma=no --with-libdeflate=no --enable-libcurl=no  --enable-gcs=no --enable-s3=no && \
+	CC='$(CC) $(ARCH_FLAGS)' CXX='$(CXX) $(ARCH_FLAGS)' ./configure --prefix=`pwd`/../ --enable-bz2=no --enable-lzma=no --with-libdeflate=no --enable-libcurl=no  --enable-gcs=no --enable-s3=no && \
 	$(MAKE) && \
 	$(MAKE) install
 

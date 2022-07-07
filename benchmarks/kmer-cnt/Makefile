@@ -3,8 +3,29 @@ CXX= g++
 
 EXE=kmer-cnt
 
+ifeq ($(arch),sse41)
+	ARCH_FLAGS=-msse4.1
+else ifeq ($(arch),avx2)
+	ifeq ($(CXX), icpc)
+		ARCH_FLAGS=-march=core-avx2 #-xCORE-AVX2
+	else	
+		ARCH_FLAGS=-mavx2
+	endif
+else ifeq ($(arch),avx512)
+	ifeq ($(CXX), icpc)
+		ARCH_FLAGS=-xCORE-AVX512
+	else	
+		ARCH_FLAGS=-mavx512bw
+	endif
+else ifeq ($(arch),native)
+		ARCH_FLAGS=-march=native
+else ifneq ($(arch),)
+	## To provide a different architecture flag like -march=core-avx2.
+		ARCH_FLAGS=$(arch)
+endif
+
 LIBS= -lz -lm -lbz2 -llzma -ldl -fopenmp
-CXXFLAGS=-O3 -fopenmp -std=c++11
+CXXFLAGS=-O3 -fopenmp -std=c++11 $(ARCH_FLAGS) 
 INC = -Ilibcuckoo
 
 # Intel VTune Profiler

@@ -2,8 +2,29 @@
 CC:=gcc
 CXX:=g++
 
+ifeq ($(arch),sse41)
+	ARCH_FLAGS=-msse4.1
+else ifeq ($(arch),avx2)
+	ifeq ($(CXX), icpc)
+		ARCH_FLAGS=-march=core-avx2 #-xCORE-AVX2
+	else	
+		ARCH_FLAGS=-mavx2
+	endif
+else ifeq ($(arch),avx512)
+	ifeq ($(CXX), icpc)
+		ARCH_FLAGS=-xCORE-AVX512
+	else	
+		ARCH_FLAGS=-mavx512bw
+	endif
+else ifeq ($(arch),native)
+		ARCH_FLAGS=-march=native
+else ifneq ($(arch),)
+	## To provide a different architecture flag like -march=core-avx2.
+		ARCH_FLAGS=$(arch)
+endif
+
 # Set flags.
-CFLAGS:=-g -Wall -pthread -fPIC -std=c99 -O3 -fopenmp
+CFLAGS:=-g -Wall -pthread -fPIC -std=c99 -O3 -fopenmp $(ARCH_FLAGS)
 CPPFLAGS:=-D_FORTIFY_SOURCE=2 -DPRINT_OUTPUT=1
 DEPFLAGS:=-MD -MP # Autogenerate dependencies.
 LDFLAGS:=-lz -lm -lbz2 -llzma -lpthread -lcurl -lcrypto -ldl

@@ -39,7 +39,7 @@ SUBDIRS=benchmark \
         system \
         utils
 
-all: CC_FLAGS+=-O3
+all: CC_FLAGS+=-O3 $(ARCH_FLAGS)
 all: MODE=all
 all: setup
 all: $(SUBDIRS) tools

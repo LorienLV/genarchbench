@@ -22,7 +22,7 @@ for compiler in "${compilers[@]}"; do
     case "$compiler" in
         gcc)
             module load gcc/10.1.0
-            make CC=gcc CXX=g++ EXE=kmer-cnt_gcc \
+            make CC=gcc CXX=g++ EXE=kmer-cnt_gcc arch='-march=skylake-avx512' \
             VTUNE_ANALYSIS=1 DYNAMORIO_ANALYSIS=1 RAPL_STOPWATCH=1
             ;;
         *)
