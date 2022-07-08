@@ -9,12 +9,6 @@ FOLDER_BUILD:=build
 CC=gcc
 CPP=g++
 
-LD_FLAGS=-lm
-CC_FLAGS=-Wall -fopenmp # -g
-# ifeq ($(UNAME), Linux)
-#   LD_FLAGS+=-lrt 
-# endif
-
 ifeq ($(arch),sse41)
 	ARCH_FLAGS=-msse4.1
 else ifeq ($(arch),avx2)
@@ -35,6 +29,12 @@ else ifneq ($(arch),)
 	## To provide a different architecture flag like -march=core-avx2.
 		ARCH_FLAGS=$(arch)
 endif
+
+LD_FLAGS=-lm
+CC_FLAGS=-Wall -fopenmp $(ARCH_FLAGS) # -g
+# ifeq ($(UNAME), Linux)
+#   LD_FLAGS+=-lrt 
+# endif
 
 AR=ar
 AR_FLAGS=-rsc
