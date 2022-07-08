@@ -1,6 +1,27 @@
 HDF5 ?= install
 HTS ?= install
 
+ifeq ($(arch),sse41)
+	ARCH_FLAGS=-msse4.1
+else ifeq ($(arch),avx2)
+	ifeq ($(CXX), icpc)
+		ARCH_FLAGS=-march=core-avx2 #-xCORE-AVX2
+	else	
+		ARCH_FLAGS=-mavx2
+	endif
+else ifeq ($(arch),avx512)
+	ifeq ($(CXX), icpc)
+		ARCH_FLAGS=-xCORE-AVX512
+	else	
+		ARCH_FLAGS=-mavx512bw
+	endif
+else ifeq ($(arch),native)
+		ARCH_FLAGS=-march=native
+else ifneq ($(arch),)
+	## To provide a different architecture flag like -march=core-avx2.
+		ARCH_FLAGS=$(arch)
+endif
+
 HTS_VERSION = 1.9
 HDF5_VERSION = 1.10.4
 HDF5_MAJOR_MINOR = `echo $(HDF5_VERSION) | sed -E 's/\.[0-9]+$$//'`
@@ -35,7 +56,7 @@ LDFLAGS += $(HTS_SYS_LIB) $(HDF5_SYS_LIB)
 CC       = gcc
 CXX      = g++
 LANG 	 = -x c++
-CFLAGS   += -g -Wall -O2 -std=c++11
+CFLAGS   += -g -Wall -O2 -std=c++11 $(ARCH_FLAGS)
 LDFLAGS  += $(LIBS) -lpthread -lz -rdynamic
 BUILD_DIR = build
 
@@ -71,7 +92,7 @@ endif
 
 # If input, processing and output are not interleaved (serial mode).
 # Do not use pthread (to work with FAPP)
-IO_PROC_NO_INTERLEAVE=0
+IO_PROC_NO_INTERLEAVE=1
 
 CPPFLAGS+=-DVTUNE_ANALYSIS=$(VTUNE_ANALYSIS) -DFAPP_ANALYSIS=$(FAPP_ANALYSIS) -DDYNAMORIO_ANALYSIS=$(DYNAMORIO_ANALYSIS) -DPWR=$(PWR) -DRAPL_STOPWATCH=$(RAPL_STOPWATCH) -DIO_PROC_NO_INTERLEAVE=$(IO_PROC_NO_INTERLEAVE)
 
@@ -174,7 +195,7 @@ $(BUILD_DIR)/lib/libhts.a:
 	mv $(BUILD_DIR)/htslib-$(HTS_VERSION) $(BUILD_DIR)/htslib
 	rm -f $(BUILD_DIR)/htslib.tar.bz2
 	cd $(BUILD_DIR)/htslib && \
-	CC='$(CC)' CXX='$(CXX)' ./configure --prefix=`pwd`/../ --enable-bz2=no --enable-lzma=no --with-libdeflate=no --enable-libcurl=no  --enable-gcs=no --enable-s3=no && \
+	CC='$(CC) $(ARCH_FLAGS)' CXX='$(CXX) $(ARCH_FLAGS)' ./configure --prefix=`pwd`/../ --enable-bz2=no --enable-lzma=no --with-libdeflate=no --enable-libcurl=no  --enable-gcs=no --enable-s3=no && \
 	$(MAKE) -j8 && \
 	$(MAKE) install
 
@@ -184,7 +205,7 @@ $(BUILD_DIR)/lib/libhdf5.a:
 	mv $(BUILD_DIR)/hdf5-$(HDF5_VERSION) $(BUILD_DIR)/hdf5
 	rm -f $(BUILD_DIR)/hdf5.tar.bz2
 	cd $(BUILD_DIR)/hdf5 && \
-	CC='$(CC)' CXX='$(CXX)' ./configure --prefix=`pwd`/../ && \
+	CC='$(CC) $(ARCH_FLAGS)' CXX='$(CXX) $(ARCH_FLAGS)' ./configure --prefix=`pwd`/../ && \
 	$(MAKE) -j8 && \
 	$(MAKE) install
 

@@ -51,7 +51,7 @@ using namespace std;
 using Alignment = std::vector<std::pair<std::int32_t, std::int32_t>>;
 
 // #define DEBUG_FILE_READ
-#define PRINT_OUTPUT
+#define PRINT_OUTPUT 1
 
 typedef struct {
     int id;

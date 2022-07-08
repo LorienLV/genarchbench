@@ -21,8 +21,10 @@ for compiler in "${compilers[@]}"; do
 
     case "$compiler" in
         gcc)
+            # arch='-march=skylake-avx512'
             module load gcc/10.1.0_binutils
-            make CC=gcc CXX=g++ BINARY=f5c_gcc BUILD_DIR=build_gcc \
+            make CC=gcc CXX=g++ \
+            BINARY=f5c_gcc BUILD_DIR=build_gcc \
             VTUNE_ANALYSIS=1 DYNAMORIO_ANALYSIS=1 RAPL_STOPWATCH=1
             ;;
         *)
