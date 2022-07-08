@@ -14,8 +14,8 @@
 #endif
 #if DYNAMORIO_ANALYSIS
     #if defined(__x86_64__) || defined(_M_X64)
-        #define __DR_START_TRACE() { asm volatile ("nopw 0x24"); }
-        #define __DR_STOP_TRACE() { asm volatile ("nopw 0x42"); }
+        #define __DR_START_TRACE() { __asm__ volatile ("nopw 0x24"); }
+        #define __DR_STOP_TRACE() { __asm__ volatile ("nopw 0x42"); }
     #else
         #error invalid TARGET
     #endif
