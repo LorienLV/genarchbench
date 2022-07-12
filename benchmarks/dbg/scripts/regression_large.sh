@@ -131,6 +131,8 @@ after_run() (
 
     echo "Kernel runtime: $wall_time s"
     cat "$job_name.err" | grep "Energy consumption:"
+
+    return 0 # OK
 )
 
 source "$scriptfolder/../../run_wrapper.sh"
