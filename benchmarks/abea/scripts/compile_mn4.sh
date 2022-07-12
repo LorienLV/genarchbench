@@ -21,7 +21,7 @@ for compiler in "${compilers[@]}"; do
 
     case "$compiler" in
         gcc)
-            # arch='-march=skylake-avx512'
+            # arch='-march=native'
             module load gcc/10.1.0_binutils
             make CC=gcc CXX=g++ \
             BINARY=f5c_gcc BUILD_DIR=build_gcc \
