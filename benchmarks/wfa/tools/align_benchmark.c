@@ -126,6 +126,9 @@ input_pair_sequences_t** parse_input_sequences(
     // Input reading loop
     int total_parsed = 0;
     while(more_seqs) {
+      // Avoid that some threads exit the while loop if another thread enters the
+      // critical section before the threads check the while condition.
+      #pragma omp barrier
       #pragma omp for schedule(static, 1)
       for (size_t i = 0; i < omp_get_num_threads(); ++i) {
         #pragma omp critical
