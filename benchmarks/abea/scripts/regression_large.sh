@@ -118,9 +118,13 @@ after_run() (
     echo "Data processing time: $wall_time s"
 
     # Check that columns "reference_kmer" and "model_kmer" are identical in the
-    # reference and the output files.
-    diff --brief <(awk '{print $3$10}' "events.tsv") <(awk '{print $3$10}' "$inputs_path/large-reference.tsv")
-    if [[ $? -ne 0 || ! -s "events.tsv" ]]; then
+    # reference and the output files. We allow some diffs since the output depends
+    # on floating-point operations.
+    ndiffs="$(diff --speed-large-files \
+              <(awk '{print $3$10}' "events.tsv") \
+              <(awk '{print $3$10}' "$inputs_path/small-reference.tsv") \
+              | grep "^>" | wc -l)"
+    if [[ ! -s "events.tsv" || $ndiffs -gt 50 ]]; then
         echo "The output file is not identical to the reference file"
         return 1 # Failure
     fi
