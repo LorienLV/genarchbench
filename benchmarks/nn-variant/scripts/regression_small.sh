@@ -94,6 +94,22 @@ CTEARM)
         '-L rscgrp=large'
     )
     ;;
+GR3)
+    commands=(
+        "$benchmark_path/variantcaller_wrapper_gcc"
+    )
+
+    parallelism=(
+        'nodes=1, mpi=1, omp=1'
+        'nodes=1, mpi=1, omp=2'
+        'nodes=1, mpi=1, omp=4'
+        'nodes=1, mpi=1, omp=8'
+        'nodes=1, mpi=1, omp=12'
+        'nodes=1, mpi=1, omp=24'
+        'nodes=1, mpi=1, omp=36'
+        'nodes=1, mpi=1, omp=48'
+    )
+    ;;
 *)
     commands=(
         "$benchmark_path/variantcaller_wrapper_gcc"

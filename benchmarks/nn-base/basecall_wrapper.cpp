@@ -1,6 +1,8 @@
 #include <string>
 #include <vector>
 #include <iostream>
+#include <unistd.h>
+#include <sys/wait.h>
 
 #if RAPL_STOPWATCH
 	#include <rapl_stopwatch.h>
@@ -31,7 +33,7 @@ int main(int argc, char *const argv[]) {
     int rvalue = EXIT_SUCCESS;
     int cpid = fork();
     if (cpid == 0) { // Child.
-        execvp(argv[1], argv); // Execute Clair3.
+        execvp(argv[1], &argv[1]); // Execute Clair3.
     }
     else { // Parent.
 #if RAPL_STOPWATCH

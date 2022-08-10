@@ -165,18 +165,18 @@ int main(int argc, char *const argv[]) {
     int rvalue = EXIT_SUCCESS;
     int cpid = fork();
     if (cpid == 0) { // Child.
-        execvp(argv[1], argv); // Execute Clair3.
+        execvp(argv[1], &argv[1]); // Execute callVar.sh.
     }
     else { // Parent.
         // Create a thread to read from the fifo pipe.
         auto profile_thread = std::async(wait_and_profile);
 
-        // Wait until Clair3 finishes.
+        // Wait until callVar finishes.
         int wstatus;
         waitpid(cpid, &wstatus, 0);
         rvalue = WEXITSTATUS(wstatus);
 
-        // Write to the pipe to release the thread in case Clair3 has crashed.
+        // Write to the pipe to release the thread in case callVar has crashed.
         int pipe_fd = open(prof_pipe, O_RDWR);
         if (pipe_fd == -1) {
             fprintf(stderr, "ERROR opening the fifo pipe\n");

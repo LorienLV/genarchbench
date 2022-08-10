@@ -85,6 +85,22 @@ CTEARM)
         'nodes=1, mpi=1, omp=48'
     )
     ;;
+GR3)
+    commands=(
+        "$binaries_path/msa_spoa_omp_gcc"
+    )
+
+    parallelism=(
+        'nodes=1, mpi=1, omp=1'
+        'nodes=1, mpi=1, omp=2'
+        'nodes=1, mpi=1, omp=4'
+        'nodes=1, mpi=1, omp=8'
+        'nodes=1, mpi=1, omp=12'
+        'nodes=1, mpi=1, omp=24'
+        'nodes=1, mpi=1, omp=36'
+        'nodes=1, mpi=1, omp=48'
+    )
+    ;;
 *)
     commands=(
         "$binaries_path/msa_spoa_omp_gcc"

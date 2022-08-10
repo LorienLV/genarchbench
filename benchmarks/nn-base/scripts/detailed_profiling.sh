@@ -112,7 +112,7 @@ CTEARM)
 esac
 
 # Additional arguments to pass to the commands.
-command_opts="\"$benchmark_path/bonito/basecall.py\" \
+command_opts="python3 \"$benchmark_path/bonito/basecall.py\" \
               \"$benchmark_path/models/bonito_dna_r941\" \
               \"$inputs_path/reads\" --chunksize 3000 --fastq > out.fastq"
 
