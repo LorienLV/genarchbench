@@ -42,6 +42,9 @@ SPOA_LIB=$(BUILD_DIR)/spoa/build/lib/libspoa.a
 INCLUDES+=-I$(BUILD_DIR)/spoa/include/spoa
 LDFLAGS+=-L$(BUILD_DIR)/spoa/build/lib/ -lspoa
 
+# Perf
+PERF_ANALYSIS=0
+
 # Intel VTune Profiler
 VTUNE_ANALYSIS=0
 
@@ -72,7 +75,7 @@ ifeq ($(RAPL_STOPWATCH),1)
 	LDFLAGS+=$(RAPL_STOPWATCH_LDFLAGS)
 endif
 
-CPPFLAGS+=-DVTUNE_ANALYSIS=$(VTUNE_ANALYSIS) -DFAPP_ANALYSIS=$(FAPP_ANALYSIS) -DDYNAMORIO_ANALYSIS=$(DYNAMORIO_ANALYSIS) -DPWR=$(PWR) -DRAPL_STOPWATCH=$(RAPL_STOPWATCH)
+CPPFLAGS+=-DPERF_ANALYSIS=$(PERF_ANALYSIS) -DVTUNE_ANALYSIS=$(VTUNE_ANALYSIS) -DFAPP_ANALYSIS=$(FAPP_ANALYSIS) -DDYNAMORIO_ANALYSIS=$(DYNAMORIO_ANALYSIS) -DPWR=$(PWR) -DRAPL_STOPWATCH=$(RAPL_STOPWATCH)
 
 # Files.
 SRCS:=$(shell find $(SRC_DIR) -name "*.cpp")
@@ -109,7 +112,7 @@ $(SPOA_LIB):
 	rm -f $(BUILD_DIR)/spoa.tar.bz2
 	cd $(BUILD_DIR)/spoa/build && \
 	CC='$(CC)' CXX='$(CXX)' CXXFLAGS='$(ARCH_FLAGS)' \
-	cmake -Dspoa_optimize_for_native=OFF -DCMAKE_BUILD_TYPE=Release .. && \
+	cmake -Dspoa_optimize_for_native=ON -DCMAKE_BUILD_TYPE=Release .. && \
 	$(MAKE)
 
 all: $(MSA_SPOA_OMP)

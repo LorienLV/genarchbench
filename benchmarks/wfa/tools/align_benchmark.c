@@ -367,11 +367,26 @@ int main(int argc,char* argv[]) {
           parameters.max_distance_threshold,mm_allocator);
     }
 
+#if PERF_ANALYSIS
+	  const char *perf_pipe = "perf_ctl.fifo";
+    const char *perf_enable = "enable";
+    const char *perf_disable = "disable";
+
+    int perf_pipe_fd;
+#endif
+
     #pragma omp barrier
     #pragma omp master
     {
 #if DYNAMORIO_ANALYSIS
       __DR_START_TRACE();
+#endif
+#if PERF_ANALYSIS
+      perf_pipe_fd = open(perf_pipe, O_WRONLY);
+      if (perf_pipe_fd == -1) {
+          fprintf(stderr, "ERROR opening the Perf pipe\n");
+      }
+      write(perf_pipe_fd, perf_enable, strlen(perf_enable));
 #endif
 #if VTUNE_ANALYSIS
       __itt_resume();
@@ -439,6 +454,10 @@ int main(int argc,char* argv[]) {
       gettimeofday(&alignment_end, NULL);
 #if DYNAMORIO_ANALYSIS
       __DR_STOP_TRACE();
+#endif
+#if PERF_ANALYSIS
+      write(perf_pipe_fd, perf_disable, strlen(perf_disable));
+      close(perf_pipe_fd);
 #endif
 #if VTUNE_ANALYSIS
       __itt_pause();

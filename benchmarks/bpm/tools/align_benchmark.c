@@ -199,6 +199,14 @@ void align_benchmark(const alg_algorithm_type alg_algorithm) {
       }
     }
 
+#if PERF_ANALYSIS
+	  const char *perf_pipe = "perf_ctl.fifo";
+    const char *perf_enable = "enable";
+    const char *perf_disable = "disable";
+
+    int perf_pipe_fd;
+#endif
+
     #pragma omp barrier
     #pragma omp master
     {
@@ -208,6 +216,13 @@ void align_benchmark(const alg_algorithm_type alg_algorithm) {
 #endif
 #if PWR
       PWR_ObjAttrGetValue(pwr_obj, PWR_ATTR_MEASURED_ENERGY, &energy0, NULL);
+#endif
+#if PERF_ANALYSIS
+      perf_pipe_fd = open(perf_pipe, O_WRONLY);
+      if (perf_pipe_fd == -1) {
+        fprintf(stderr, "ERROR opening the Perf pipe\n");
+      }
+      write(perf_pipe_fd, perf_enable, strlen(perf_enable));
 #endif
 #if VTUNE_ANALYSIS
       __itt_resume();
@@ -281,6 +296,10 @@ void align_benchmark(const alg_algorithm_type alg_algorithm) {
     {
 #if DYNAMORIO_ANALYSIS
       __DR_STOP_TRACE();
+#endif
+#if PERF_ANALYSIS
+      write(perf_pipe_fd, perf_disable, strlen(perf_disable));
+      close(perf_pipe_fd);
 #endif
 #if VTUNE_ANALYSIS
       __itt_pause();

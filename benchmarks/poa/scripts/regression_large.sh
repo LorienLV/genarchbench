@@ -12,7 +12,7 @@ scriptfolder="$(dirname $(realpath $0))"
 binaries_path="$(dirname "$scriptfolder")"
 
 # Clean the stage folder of the jobs after finishing? 1 -> yes, 0 -> no.
-clean=0
+clean=1
 
 # The name of the job.
 job="POA-REGRESSION-LARGE"
@@ -71,6 +71,27 @@ MN4)
     job_options=(
         '--exclusive'
         # '--time=00:03:00'
+    )
+    ;;
+CTEAMD)
+    commands=(
+        "module load gcc/10.2.0; $binaries_path/msa_spoa_omp_gcc"
+    )
+
+    parallelism=(
+        'nodes=1, mpi=1, omp=1'
+        'nodes=1, mpi=1, omp=2'
+        'nodes=1, mpi=1, omp=4'
+        'nodes=1, mpi=1, omp=8'
+        'nodes=1, mpi=1, omp=12'
+        'nodes=1, mpi=1, omp=24'
+        'nodes=1, mpi=1, omp=36'
+        'nodes=1, mpi=1, omp=48'
+    )
+
+    job_options=(
+        '--exclusive'
+        '--time=00:03:00'
     )
     ;;
 CTEARM)

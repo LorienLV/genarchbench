@@ -4,8 +4,8 @@
 #SBATCH --ntasks=1
 #SBATCH --cpus-per-task=1
 
-if [[ "$GENARCH_BENCH_CLUSTER" != "MN4" ]]; then
-    echo "ERROR: Run 'source setup_mn4.sh' before using this script"
+if [[ "$GENARCH_BENCH_CLUSTER" != "CTEAMD" ]]; then
+    echo "ERROR: Run 'source setup_cteamd.sh' before using this script"
     exit 1
 fi
 
@@ -21,10 +21,10 @@ for compiler in "${compilers[@]}"; do
 
     case "$compiler" in
         gcc)
-            module load gcc/10.1.0
-            make CC=gcc CXX=g++ arch='-march=native' \
-            FOLDER_BUILD=build_gcc FOLDER_BIN=bin_gcc \
-            VTUNE_ANALYSIS=1 DYNAMORIO_ANALYSIS=1 RAPL_STOPWATCH=1
+            module load gcc/10.2.0
+            make CC=gcc CXX=g++ \
+            BINARY=f5c_gcc BUILD_DIR=build_gcc \
+            PERF_ANALYSIS=1 RAPL_STOPWATCH=1
             ;;
         *)
             echo "ERROR: Compiler '$compiler' not supported."

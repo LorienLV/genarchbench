@@ -73,6 +73,27 @@ MN4)
         '--time=00:00:30'
     )
     ;;
+CTEAMD)
+    commands=(
+        "module load gcc/10.2.0; $binaries_path/build_gcc/main_bsw"
+    )
+
+    parallelism=(
+        'nodes=1, mpi=1, omp=1'
+        'nodes=1, mpi=1, omp=2'
+        'nodes=1, mpi=1, omp=4'
+        'nodes=1, mpi=1, omp=8'
+        'nodes=1, mpi=1, omp=12'
+        'nodes=1, mpi=1, omp=24'
+        'nodes=1, mpi=1, omp=36'
+        'nodes=1, mpi=1, omp=48'
+    )
+
+    job_options=(
+        '--exclusive'
+        '--time=00:00:30'
+    )
+    ;;
 CTEARM)
     before_command+="source $scriptfolder/../../setup_ctearm.sh;"
 

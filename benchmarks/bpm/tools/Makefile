@@ -19,6 +19,9 @@ TOOLS_BIN=$(addprefix ../$(FOLDER_BIN)/, $(GEM_TOOLS))
 # Profiling
 ###############################################################################
 
+# Perf
+PERF_ANALYSIS=0
+
 # Intel VTune Profiler
 VTUNE_ANALYSIS=0
 
@@ -59,7 +62,7 @@ all: FLAGS=$(CC_FLAGS)
 all: $(TOOLS)
 
 align_benchmark: ../$(FOLDER_BUILD)/*.o align_benchmark.c
-	$(CC) -I$(FOLDER_ROOT) $(INCLUDES) -DVTUNE_ANALYSIS=$(VTUNE_ANALYSIS) -DFAPP_ANALYSIS=$(FAPP_ANALYSIS) -DDYNAMORIO_ANALYSIS=$(DYNAMORIO_ANALYSIS) -DPWR=$(PWR) -DRAPL_STOPWATCH=$(RAPL_STOPWATCH) $(FLAGS) -fopenmp align_benchmark.c $(OBJS) -o ../$(FOLDER_BIN)/align_benchmark $(LIBS)
+	$(CC) -I$(FOLDER_ROOT) $(INCLUDES) -DPERF_ANALYSIS=$(PERF_ANALYSIS) -DVTUNE_ANALYSIS=$(VTUNE_ANALYSIS) -DFAPP_ANALYSIS=$(FAPP_ANALYSIS) -DDYNAMORIO_ANALYSIS=$(DYNAMORIO_ANALYSIS) -DPWR=$(PWR) -DRAPL_STOPWATCH=$(RAPL_STOPWATCH) $(FLAGS) -fopenmp align_benchmark.c $(OBJS) -o ../$(FOLDER_BIN)/align_benchmark $(LIBS)
 	
 generate_datasets: generate_datasets.c
 	$(CC) $(CC_FLAGS) generate_datasets.c -o ../$(FOLDER_BIN)/generate_datasets $(LD_FLAGS)

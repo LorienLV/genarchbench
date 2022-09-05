@@ -8,6 +8,7 @@
 #include <unistd.h>
 #include <cmath>
 #include <execinfo.h>
+#include <fcntl.h>
 
 #include "vertex_index.h"
 #include "sequence_container.h"
@@ -257,6 +258,17 @@ int main(int argc, char** argv)
 	double energy0 = 0.0;
 	PWR_ObjAttrGetValue(pwr_obj, PWR_ATTR_MEASURED_ENERGY, &energy0, NULL);
 #endif
+#if PERF_ANALYSIS
+	const char *perf_pipe = "perf_ctl.fifo";
+    const char *perf_enable = "enable";
+    const char *perf_disable = "disable";
+
+    int perf_pipe_fd = open(perf_pipe, O_WRONLY);
+    if (perf_pipe_fd == -1) {
+        fprintf(stderr, "ERROR opening the Perf pipe\n");
+    }
+    write(perf_pipe_fd, perf_enable, strlen(perf_enable));
+#endif
 #if VTUNE_ANALYSIS
     __itt_resume();
 #endif
@@ -282,6 +294,10 @@ int main(int argc, char** argv)
 	roi_q = __parsec_roi_end(roi_s, &roi_i, &roi_j);
 #if DYNAMORIO_ANALYSIS
     __DR_STOP_TRACE();
+#endif
+#if PERF_ANALYSIS
+    write(perf_pipe_fd, perf_disable, strlen(perf_disable));
+    close(perf_pipe_fd);
 #endif
 #if VTUNE_ANALYSIS
     __itt_pause();

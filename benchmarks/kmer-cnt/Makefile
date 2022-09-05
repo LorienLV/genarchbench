@@ -28,6 +28,9 @@ LIBS= -lz -lm -lbz2 -llzma -ldl -fopenmp
 CXXFLAGS=-O3 -fopenmp -std=c++11 $(ARCH_FLAGS) 
 INC = -Ilibcuckoo
 
+# Perf
+PERF_ANALYSIS=0
+
 # Intel VTune Profiler
 VTUNE_ANALYSIS=0
 
@@ -58,7 +61,7 @@ ifeq ($(RAPL_STOPWATCH),1)
 	LIBS+=$(RAPL_STOPWATCH_LDFLAGS)
 endif
 
-CPPFLAGS+=-DVTUNE_ANALYSIS=$(VTUNE_ANALYSIS) -DFAPP_ANALYSIS=$(FAPP_ANALYSIS) -DDYNAMORIO_ANALYSIS=$(DYNAMORIO_ANALYSIS) -DPWR=$(PWR) -DRAPL_STOPWATCH=$(RAPL_STOPWATCH)
+CPPFLAGS+=-DPERF_ANALYSIS=$(PERF_ANALYSIS) -DVTUNE_ANALYSIS=$(VTUNE_ANALYSIS) -DFAPP_ANALYSIS=$(FAPP_ANALYSIS) -DDYNAMORIO_ANALYSIS=$(DYNAMORIO_ANALYSIS) -DPWR=$(PWR) -DRAPL_STOPWATCH=$(RAPL_STOPWATCH)
 
 all: sequence_container.cpp sequence.cpp vertex_index.cpp kmer_cnt.cpp
 	$(CXX) $(CXXFLAGS) $(CPPFLAGS) sequence_container.cpp sequence.cpp vertex_index.cpp kmer_cnt.cpp $(INC) $(LIBS) -o $(EXE)

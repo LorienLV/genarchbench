@@ -79,6 +79,27 @@ MN4)
         # '--time=00:15:00'
     )
     ;;
+CTEAMD)
+    commands=(
+        "module load gcc/10.2.0; $scriptfolder/../../cteamd_perf.sh $binaries_path/msa_spoa_omp_gcc"
+    )
+
+    parallelism=(
+        'nodes=1, mpi=1, omp=1'
+        # 'nodes=1, mpi=1, omp=2'
+        # 'nodes=1, mpi=1, omp=4'
+        # 'nodes=1, mpi=1, omp=8'
+        # 'nodes=1, mpi=1, omp=12'
+        # 'nodes=1, mpi=1, omp=24'
+        # 'nodes=1, mpi=1, omp=36'
+        # 'nodes=1, mpi=1, omp=48'
+    )
+
+    job_options=(
+        '--exclusive'
+        '--constraint=perfparanoid'
+    )
+    ;;
 CTEARM)
     before_command+="source $scriptfolder/../../setup_ctearm.sh;"
 
@@ -143,6 +164,9 @@ after_run() (
     case "$GENARCH_BENCH_CLUSTER" in
     MN4)
         cp -r *.out *.err *runsa "$job_output_folder"
+        ;;
+    CTEAMD)
+        cp -r *.out *.err perf_stat.txt "$job_output_folder"
         ;;
     CTEARM)
         cp -r *.out *.err *.csv "$job_output_folder"
