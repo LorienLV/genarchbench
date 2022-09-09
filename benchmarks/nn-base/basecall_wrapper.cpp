@@ -1,8 +1,10 @@
 #include <string>
 #include <vector>
 #include <iostream>
+#include <cstring>
 #include <unistd.h>
 #include <sys/wait.h>
+#include <fcntl.h>
 
 #if RAPL_STOPWATCH
 	#include <rapl_stopwatch.h>

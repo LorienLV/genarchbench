@@ -18,7 +18,8 @@ for compiler in "${compilers[@]}"; do
     case "$compiler" in
         gcc)
             make CC=gcc CXX=g++ arch='-mcpu=native' \
-            BUILD_PATH=build_gcc BIN_NAME=chain_gcc
+            BUILD_PATH=build_gcc BIN_NAME=chain_gcc \
+            PERF_ANALYSIS=1
             ;;
         *)
             echo "ERROR: Compiler '$compiler' not supported."

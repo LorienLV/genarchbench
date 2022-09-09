@@ -20,7 +20,9 @@ for compiler in "${compilers[@]}"; do
 
     case "$compiler" in
         gcc)
-            make CC=gcc CXX=g++ FMI=fmi_gcc arch='-mcpu=native' TARGET_ARCH=aarch64
+            make CC=gcc CXX=g++ FMI=fmi_gcc arch='-mcpu=native' \
+            TARGET_ARCH=aarch64 PERF_ANALYSIS=1 \
+            PERF_ANALYSIS=1
 
             make TARGET_ARCH=aarch64 clean
             ;;

@@ -100,6 +100,22 @@ CTEARM)
         # 'nodes=1, mpi=1, omp=48'
     )
     ;;
+GR3)
+    commands=(
+        "$scriptfolder/../../gr3_perf.sh $benchmark_path/basecall_wrapper_gcc"
+    )
+
+    parallelism=(
+        'nodes=1, mpi=1, omp=1'
+        # 'nodes=1, mpi=1, omp=2'
+        # 'nodes=1, mpi=1, omp=4'
+        # 'nodes=1, mpi=1, omp=8'
+        # 'nodes=1, mpi=1, omp=12'
+        # 'nodes=1, mpi=1, omp=24'
+        # 'nodes=1, mpi=1, omp=36'
+        # 'nodes=1, mpi=1, omp=48'
+    )
+    ;;
 *)
     commands=(
         "$scriptfolder/../../dynamorio_imix.sh $benchmark_path/basecall_wrapper_gcc"
@@ -145,6 +161,9 @@ after_run() (
         ;;
     CTEARM)
         cp -r *.out *.err *.csv "$job_output_folder"
+        ;;
+    GR3)
+        cp -r *.out *.err perf_stat.txt "$job_output_folder"
         ;;
     *)
         cp -r *.out *.err *runsa "$job_output_folder"

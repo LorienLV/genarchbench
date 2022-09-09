@@ -18,9 +18,11 @@ Second, install the docker environment and download the latest pytorch avaiable 
 aws$ sudo apt-get update
 aws$ sudo apt-get install docker-ce docker-ce-cli containerd.io docker-compose-plugin
 aws$ sudo docker run hello-world
-aws$ sudo docker pull armswdev/pytorch-arm-neoverse:r22.07-torch-1.12.0-openblas
+aws$ # sudo docker pull armswdev/pytorch-arm-neoverse:r22.07-torch-1.12.0-openblas
+aws$ sudo docker pull armswdev/pytorch-arm-neoverse:r22.07-torch-1.12.0-onednn-acl
 aws$ sudo docker image ls
-aws$ sudo docker run -it --init armswdev/pytorch-arm-neoverse:r22.07-torch-1.12.0-openblas
+aws$ # sudo docker run -it --init armswdev/pytorch-arm-neoverse:r22.07-torch-1.12.0-openblas
+aws$ sudo docker run -it --init armswdev/pytorch-arm-neoverse:r22.07-torch-1.12.0-onednn-acl
 docker$
 ```
 Last, we need to install the NN-Base related libraries inside the docker instance:
@@ -41,7 +43,8 @@ It is highly recomended to commit the changes we have done on the image. otherwi
 aws$ sudo docker ps
 # This will show you the current running docker sessions with container_ID
 aws$ sudo docker commit <container_ID> <new_name>
-aws$ sudo docker run -v /<data>:/<data> -it --init <new_name>
+aws$ sudo docker run -v /<data>:/<data> -it --init --security-opt --security-opt seccomp=/data/genarch-bench/docker_security.json <new_name>
+docker images
 ```
 For more information, see below [AWS and Docker cheat sheet](#AWS-and-Docker-cheat-sheet)
 
