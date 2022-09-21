@@ -49,7 +49,7 @@ job="POA-REGRESSION-LARGE"
 # )
 
 # Everything you want to do before executing the commands.
-before_command="export OMP_PROC_BIND=true;"
+before_command="export OMP_PROC_BIND=true; export OMP_PLACES=cores;"
 
 case "$GENARCH_BENCH_CLUSTER" in
 MN4)
