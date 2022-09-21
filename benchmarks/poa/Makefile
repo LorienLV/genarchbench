@@ -112,7 +112,7 @@ $(SPOA_LIB):
 	rm -f $(BUILD_DIR)/spoa.tar.bz2
 	cd $(BUILD_DIR)/spoa/build && \
 	CC='$(CC)' CXX='$(CXX)' CXXFLAGS='$(ARCH_FLAGS)' \
-	cmake -Dspoa_optimize_for_native=ON -DCMAKE_BUILD_TYPE=Release .. && \
+	cmake -Dspoa_optimize_for_native=OFF -DCMAKE_BUILD_TYPE=Release .. && \
 	$(MAKE)
 
 all: $(MSA_SPOA_OMP)
