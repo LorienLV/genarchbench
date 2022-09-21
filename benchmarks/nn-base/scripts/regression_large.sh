@@ -36,12 +36,35 @@ job="NN-BASE-REGRESSION-LARGE"
 # )
 
 # Everything you want to do before executing the commands.
-before_command="export OMP_PROC_BIND=true;"
+before_command="export OMP_PROC_BIND=true; export OMP_PLACES=cores;"
 
 case "$GENARCH_BENCH_CLUSTER" in
 MN4)
     commands=(
         "module load gcc/8.1.0 impi/2018.1 mkl/2018.1 opencv/4.1.2 python/3.6.4_ML; \
+         $benchmark_path/basecall_wrapper_gcc"
+    )
+
+    parallelism=(
+        'nodes=1, mpi=1, omp=1'
+        'nodes=1, mpi=1, omp=2'
+        'nodes=1, mpi=1, omp=4'
+        'nodes=1, mpi=1, omp=8'
+        'nodes=1, mpi=1, omp=12'
+        'nodes=1, mpi=1, omp=24'
+        'nodes=1, mpi=1, omp=36'
+        'nodes=1, mpi=1, omp=48'
+    )
+
+    job_options=(
+        '--exclusive'
+        '--time=00:50:00'
+    )
+    ;;
+CTEAMD)
+    commands=(
+        "module load anaconda rocm intel impi/2018.4 parallel samtools; \
+         source activate tensorflow_py3.9; \
          $benchmark_path/basecall_wrapper_gcc"
     )
 

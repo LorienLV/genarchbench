@@ -76,6 +76,30 @@ MN4)
         # '--time=00:14:00'
     )
     ;;
+CTEAMD)
+    before_command+="module load anaconda rocm intel impi/2018.4 parallel samtools; \
+                     source activate tensorflow_py3.9;"
+
+    commands=(
+        "$scriptfolder/../../cteamd_perf.sh $benchmark_path/basecall_wrapper_gcc"
+    )
+
+    parallelism=(
+        'nodes=1, mpi=1, omp=1'
+        # 'nodes=1, mpi=1, omp=2'
+        # 'nodes=1, mpi=1, omp=4'
+        # 'nodes=1, mpi=1, omp=8'
+        # 'nodes=1, mpi=1, omp=12'
+        # 'nodes=1, mpi=1, omp=24'
+        # 'nodes=1, mpi=1, omp=36'
+        # 'nodes=1, mpi=1, omp=48'
+    )
+
+    job_options=(
+        '--exclusive'
+        '--constraint=perfparanoid'
+    )
+    ;;
 CTEARM)
     before_command+="source $scriptfolder/../../setup_ctearm.sh; module load gcc/11.0.0-3503git python/3.6.8; "
 
@@ -158,6 +182,9 @@ after_run() (
     case "$GENARCH_BENCH_CLUSTER" in
     MN4)
         cp -r *.out *.err *runsa "$job_output_folder"
+        ;;
+    CTEAMD)
+        cp -r *.out *.err perf_stat.txt "$job_output_folder"
         ;;
     CTEARM)
         cp -r *.out *.err *.csv "$job_output_folder"

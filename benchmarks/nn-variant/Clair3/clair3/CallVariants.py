@@ -1430,6 +1430,8 @@ def call_variants(args, output_config, output_utilities):
             tf.config.experimental.VirtualDeviceConfiguration(memory_limit=1024)])
     else:
         os.environ["CUDA_VISIBLE_DEVICES"] = ""
+        # GenArchBench: We do not want to use GPUs. Hide GPU from visible devices
+        tf.config.set_visible_devices([], 'GPU')
     global param
     if args.pileup:
         import shared.param_p as param
@@ -1659,6 +1661,8 @@ def predict(args, output_config, output_utilities):
             tf.config.experimental.VirtualDeviceConfiguration(memory_limit=1024)])
     else:
         os.environ["CUDA_VISIBLE_DEVICES"] = ""
+        # GenArchBench: We do not want to use GPUs. Hide GPU from visible devices
+        tf.config.set_visible_devices([], 'GPU')
 
     if args.pileup:
         from clair3.model import Clair3_P

@@ -41,7 +41,7 @@ end_pos=200000
 # )
 
 # Everything you want to do before executing the commands.
-before_command="export OMP_PROC_BIND=true;"
+before_command="export OMP_PROC_BIND=true; export OMP_PLACES=cores;"
 
 case "$GENARCH_BENCH_CLUSTER" in
 MN4)
@@ -62,6 +62,31 @@ MN4)
         'nodes=1, mpi=1, omp=24'
         'nodes=1, mpi=1, omp=36'
         'nodes=1, mpi=1, omp=48'
+    )
+
+    job_options=(
+        '--exclusive'
+        '--time=00:04:00'
+    )
+    ;;
+CTEAMD)
+    before_command+="module load anaconda rocm intel impi/2018.4 parallel samtools; \
+                     source activate tensorflow_py3.9; \
+                     PYPY=\"--pypy="/apps/ANACONDA/2022.05/envs/tensorflow_py3.9/bin/pypy"\";"
+
+    commands=(
+        "$benchmark_path/variantcaller_wrapper_gcc"
+    )
+
+    parallelism=(
+        'nodes=1, mpi=1, omp=1'
+        # 'nodes=1, mpi=1, omp=2'
+        # 'nodes=1, mpi=1, omp=4'
+        # 'nodes=1, mpi=1, omp=8'
+        # 'nodes=1, mpi=1, omp=12'
+        # 'nodes=1, mpi=1, omp=24'
+        # 'nodes=1, mpi=1, omp=36'
+        # 'nodes=1, mpi=1, omp=48'
     )
 
     job_options=(
@@ -132,7 +157,8 @@ command_opts="\"$benchmark_path/Clair3/callVar.sh\" \
 	          --model_path=\"$benchmark_path/models/r941_prom_hac_g360+g422\" \
 	          --bed_fn=region.bed \
               --output=. \
-              --chunk_size=\$((${contig_len}/\${OMP_NUM_THREADS}+1))"
+              --chunk_size=\$((${contig_len}/\${OMP_NUM_THREADS}+1)) \
+              \$PYPY"
 
 #
 # This function is executed before launching a job. You can use this function to
