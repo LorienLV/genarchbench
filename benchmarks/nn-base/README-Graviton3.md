@@ -1,4 +1,4 @@
-# NN-Base - Graviton3 - AWS
+# NN-BASE - AWS Graviton3 Ubuntu 22.04
 
 ## Environment Setup
 After you have logged in to the AWS node, you need to install the required packages.

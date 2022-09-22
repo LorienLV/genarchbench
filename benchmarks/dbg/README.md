@@ -1,3 +1,5 @@
+# De-Brujin graph (DBG)
+
 `dbg` uses the same license as [Platypus](https://github.com/andyrimmer/Platypus).
 
 If you find `dbg` useful, please cite:
@@ -13,4 +15,10 @@ If you find `dbg` useful, please cite:
   year={2014},
   publisher={Nature Publishing Group}
 }
+```
+
+## Execution
+
+```
+./dbg <file.bam> <chr:start-stop> <ref.fa> <n_threads> <verbose>
 ```

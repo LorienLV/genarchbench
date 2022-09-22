@@ -17,4 +17,13 @@ If you find `abea` useful, please cite:
 }
 ```
 
-:exclamation: If you have moved the input files to a new location, you will have to regenerate the index files. To do so you can use [scripts/generate_indexes.sh](scripts/generate_indexes.sh).
+## Running
+
+Command line: `./f5c eventalign -b <bam> -g <ref genome fasta> -r <fastq reads>`
+
+IMPORTANT: If you have moved the input files to a new location, you must regenerate the index files:
+```
+inputs_path="$GENARCH_BENCH_INPUTS_ROOT/abea"
+f5c index -d "$inputs_path"/fast5_files "$inputs_path"/1000reads.fastq
+f5c index -d "$inputs_path"/fast5_files "$inputs_path"/10000reads.fastq
+```

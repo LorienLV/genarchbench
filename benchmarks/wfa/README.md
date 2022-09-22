@@ -1,4 +1,4 @@
-# WFA
+# Wavefront Alignment (WFA)
 
 ## 1. INTRODUCTION
 
@@ -73,7 +73,7 @@ Please report any issue or suggestion on github, or by email to the main develop
 
 ## 4. LICENSE
 
-WFA is distributed under MIT licence.
+`WFA` uses the same license as [WFA](https://github.com/smarco/WFA).
 
 ## 5. CITATION
 

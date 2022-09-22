@@ -1,4 +1,4 @@
-# anded Smith-Waterman (BSW)
+# Banded Smith-Waterman (BSW)
 
 `bsw` uses the same license as [BWA-MEM2](https://github.com/bwa-mem2/bwa-mem2).
 

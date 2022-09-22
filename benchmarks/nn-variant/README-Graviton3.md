@@ -1,4 +1,4 @@
-# NN-Variant - Graviton3 - AWS
+# NN-VARIANT - AWS Graviton3 Ubuntu
 
 ## Environment Setup
 After you have logged in to the AWS node, you need to install the required packages.
