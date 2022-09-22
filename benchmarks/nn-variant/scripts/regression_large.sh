@@ -43,110 +43,15 @@ end_pos=9990000
 # Everything you want to do before executing the commands.
 before_command="export OMP_PROC_BIND=true; export OMP_PLACES=cores;"
 
-case "$GENARCH_BENCH_CLUSTER" in
-MN4)
-    before_command+="module load python/3-intel-2019.2; \
-                     source /apps/INTEL/PYTHON/2019.2.066/intelpython3/bin/init; \
-                     conda activate tf2-bio; export KERAS_BACKEND=tensorflow;"
+commands=(
+    "$benchmark_path/variantcaller_wrapper_gcc"
+)
 
-    commands=(
-        "$benchmark_path/variantcaller_wrapper_gcc"
-    )
-
-    parallelism=(
-        'nodes=1, mpi=1, omp=1'
-        'nodes=1, mpi=1, omp=2'
-        'nodes=1, mpi=1, omp=4'
-        'nodes=1, mpi=1, omp=8'
-        'nodes=1, mpi=1, omp=12'
-        'nodes=1, mpi=1, omp=24'
-        'nodes=1, mpi=1, omp=36'
-        'nodes=1, mpi=1, omp=48'
-    )
-
-    job_options=(
-        '--exclusive'
-        '--time=00:20:00'
-    )
-    ;;
-CTEAMD)
-    before_command+="module load anaconda rocm intel impi/2018.4 parallel samtools; \
-                     source activate tensorflow_py3.9; \
-                     PYPY=\"--pypy="/apps/ANACONDA/2022.05/envs/tensorflow_py3.9/bin/pypy"\";"
-
-    commands=(
-        "$benchmark_path/variantcaller_wrapper_gcc"
-    )
-
-    parallelism=(
-        'nodes=1, mpi=1, omp=1'
-        # 'nodes=1, mpi=1, omp=2'
-        # 'nodes=1, mpi=1, omp=4'
-        # 'nodes=1, mpi=1, omp=8'
-        # 'nodes=1, mpi=1, omp=12'
-        # 'nodes=1, mpi=1, omp=24'
-        # 'nodes=1, mpi=1, omp=36'
-        # 'nodes=1, mpi=1, omp=48'
-    )
-
-    job_options=(
-        '--exclusive'
-        '--time=00:45:00'
-    )
-    ;;
-CTEARM)
-    before_command+="source \"$scriptfolder/../../setup_ctearm.sh\"; \
-                     module load fuji/1.2.26b tensorflow/2.1.0-dnnl; \
-                     source /apps/TENSORFLOW/2.1.0-dnnl/FUJI/VENV/fccbuild_v210/bin/activate; \
-                     module load parallel samtools;"
-
-    commands=(
-        "$benchmark_path/variantcaller_wrapper_fcc"
-    )
-
-    parallelism=(
-        'nodes=1, mpi=1, omp=1'
-        'nodes=1, mpi=1, omp=2'
-        'nodes=1, mpi=1, omp=4'
-        'nodes=1, mpi=1, omp=8'
-        'nodes=1, mpi=1, omp=12'
-        'nodes=1, mpi=1, omp=24'
-        'nodes=1, mpi=1, omp=36'
-        'nodes=1, mpi=1, omp=48'
-    )
-
-    job_options=(
-        '-L rscgrp=large'
-    )
-    ;;
-GR3)
-    commands=(
-        "$benchmark_path/variantcaller_wrapper_gcc"
-    )
-
-    parallelism=(
-        'nodes=1, mpi=1, omp=1'
-        'nodes=1, mpi=1, omp=2'
-        'nodes=1, mpi=1, omp=4'
-        'nodes=1, mpi=1, omp=8'
-        'nodes=1, mpi=1, omp=12'
-        'nodes=1, mpi=1, omp=24'
-        'nodes=1, mpi=1, omp=36'
-        'nodes=1, mpi=1, omp=48'
-    )
-    ;;
-*)
-    commands=(
-        "$benchmark_path/variantcaller_wrapper_gcc"
-    )
-
-    parallelism=(
-        'nodes=1, mpi=1, omp=1'
-        'nodes=1, mpi=1, omp=2'
-        'nodes=1, mpi=1, omp=4'
-    )
-    ;;
-esac
+parallelism=(
+    'nodes=1, mpi=1, omp=1'
+    'nodes=1, mpi=1, omp=2'
+    'nodes=1, mpi=1, omp=4'
+)
 
 # Additional arguments to pass to the commands.
 command_opts="\"$benchmark_path/Clair3/callVar.sh\" \

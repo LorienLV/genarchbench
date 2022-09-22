@@ -38,100 +38,15 @@ job="PILEUP-REGRESSION-LARGE"
 # Everything you want to do before executing the commands.
 before_command="export OMP_PROC_BIND=true; export OMP_PLACES=cores;"
 
-case "$GENARCH_BENCH_CLUSTER" in
-MN4)
-    commands=(
-        "module load gcc/10.1.0_binutils; $binaries_path/build_gcc/pileup"
-    )
+commands=(
+    "$binaries_path/build_gcc/pileup"
+)
 
-    parallelism=(
-        'nodes=1, mpi=1, omp=1'
-        'nodes=1, mpi=1, omp=2'
-        'nodes=1, mpi=1, omp=4'
-        'nodes=1, mpi=1, omp=8'
-        'nodes=1, mpi=1, omp=12'
-        'nodes=1, mpi=1, omp=24'
-        'nodes=1, mpi=1, omp=36'
-        'nodes=1, mpi=1, omp=48'
-    )
-
-    job_options=(
-        '--exclusive'
-        '--time=00:04:00'
-    )
-    ;;
-CTEAMD)
-    commands=(
-        "module load gcc/10.2.0; $binaries_path/build_gcc/pileup"
-    )
-
-    parallelism=(
-        'nodes=1, mpi=1, omp=1'
-        'nodes=1, mpi=1, omp=2'
-        'nodes=1, mpi=1, omp=4'
-        'nodes=1, mpi=1, omp=8'
-        'nodes=1, mpi=1, omp=12'
-        'nodes=1, mpi=1, omp=24'
-        'nodes=1, mpi=1, omp=36'
-        'nodes=1, mpi=1, omp=48'
-    )
-
-    job_options=(
-        '--exclusive'
-        '--time=00:04:00'
-    )
-    ;;
-CTEARM)
-    before_command+="source $scriptfolder/../../setup_ctearm.sh;"
-
-    commands=(
-        "module load gcc/10.2.0; $binaries_path/build_gcc/pileup"
-        "module load fuji; $binaries_path/build_gcc/pileup"
-    )
-
-    parallelism=(
-        'nodes=1, mpi=1, omp=1'
-        'nodes=1, mpi=1, omp=2'
-        'nodes=1, mpi=1, omp=4'
-        'nodes=1, mpi=1, omp=8'
-        'nodes=1, mpi=1, omp=12'
-        'nodes=1, mpi=1, omp=24'
-        'nodes=1, mpi=1, omp=36'
-        'nodes=1, mpi=1, omp=48'
-    )
-
-    job_options=(
-        '-L rscgrp=large'
-    )
-    ;;
-GR3)
-    commands=(
-        "$binaries_path/build_gcc/pileup"
-    )
-
-    parallelism=(
-        'nodes=1, mpi=1, omp=1'
-        'nodes=1, mpi=1, omp=2'
-        'nodes=1, mpi=1, omp=4'
-        'nodes=1, mpi=1, omp=8'
-        'nodes=1, mpi=1, omp=12'
-        'nodes=1, mpi=1, omp=24'
-        'nodes=1, mpi=1, omp=36'
-        'nodes=1, mpi=1, omp=48'
-    )
-    ;;
-*)
-    commands=(
-        "$binaries_path/build_gcc/pileup"
-    )
-
-    parallelism=(
-        'nodes=1, mpi=1, omp=1'
-        'nodes=1, mpi=1, omp=2'
-        'nodes=1, mpi=1, omp=4'
-    )
-    ;;
-esac
+parallelism=(
+    'nodes=1, mpi=1, omp=1'
+    'nodes=1, mpi=1, omp=2'
+    'nodes=1, mpi=1, omp=4'
+)
 
 # Additional arguments to pass to the commands.
 command_opts="\"$inputs_path/HG002_prom_R941_guppy360_2_GRCh38_ch20.bam\" \

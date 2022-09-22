@@ -298,11 +298,6 @@ def CheckEnvs(args):
     contig_chunk_num = {}
 
     threads = args.threads
-    ''' 
-    # A64FX does not support os.sched_getaffinity, therefore we replaced it with multiprocessing
-    sched_getaffinity_list = list(os.sched_getaffinity(0))
-    numCpus = len(sched_getaffinity_list)
-    '''
     numCpus = multiprocessing.cpu_count()
 
     if threads > numCpus:

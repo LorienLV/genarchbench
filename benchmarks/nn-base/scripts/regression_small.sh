@@ -38,102 +38,15 @@ job="NN-BASE-REGRESSION-SMALL"
 # Everything you want to do before executing the commands.
 before_command="export OMP_PROC_BIND=true; export OMP_PLACES=cores;"
 
-case "$GENARCH_BENCH_CLUSTER" in
-MN4)
-    commands=(
-        "module load gcc/8.1.0 impi/2018.1 mkl/2018.1 opencv/4.1.2 python/3.6.4_ML; \
-        $benchmark_path/basecall_wrapper_gcc"
-    )
+commands=(
+    "$benchmark_path/basecall_wrapper_gcc"
+)
 
-    parallelism=(
-        'nodes=1, mpi=1, omp=1'
-        'nodes=1, mpi=1, omp=2'
-        'nodes=1, mpi=1, omp=4'
-        'nodes=1, mpi=1, omp=8'
-        'nodes=1, mpi=1, omp=12'
-        'nodes=1, mpi=1, omp=24'
-        'nodes=1, mpi=1, omp=36'
-        'nodes=1, mpi=1, omp=48'
-    )
-
-    job_options=(
-        '--exclusive'
-        '--time=00:50:00'
-    )
-    ;;
-CTEAMD)
-    commands=(
-        "module load anaconda rocm intel impi/2018.4 parallel samtools; \
-         source activate tensorflow_py3.9; \
-         $benchmark_path/basecall_wrapper_gcc"
-    )
-
-    parallelism=(
-        'nodes=1, mpi=1, omp=1'
-        'nodes=1, mpi=1, omp=2'
-        # 'nodes=1, mpi=1, omp=4'
-        # 'nodes=1, mpi=1, omp=8'
-        # 'nodes=1, mpi=1, omp=12'
-        # 'nodes=1, mpi=1, omp=24'
-        # 'nodes=1, mpi=1, omp=36'
-        # 'nodes=1, mpi=1, omp=48'
-    )
-
-    job_options=(
-        '--exclusive'
-        '--time=00:50:00'
-    )
-    ;;
-GR3)
-    commands=(
-        "$benchmark_path/basecall_wrapper_gcc"
-    )
-
-    parallelism=(
-        'nodes=1, mpi=1, omp=1'
-        'nodes=1, mpi=1, omp=2'
-        'nodes=1, mpi=1, omp=4'
-        'nodes=1, mpi=1, omp=8'
-        'nodes=1, mpi=1, omp=12'
-        'nodes=1, mpi=1, omp=24'
-        'nodes=1, mpi=1, omp=36'
-        'nodes=1, mpi=1, omp=48'
-    )
-    ;;
-CTEARM)
-    before_command+="source $scriptfolder/../../setup_ctearm.sh;"
-
-    commands=(
-        "module load gcc/11.0.0-3503git python/3.6.8; $benchmark_path/basecall_wrapper_fcc"
-    )
-
-    parallelism=(
-        'nodes=1, mpi=1, omp=1'
-        'nodes=1, mpi=1, omp=2'
-        'nodes=1, mpi=1, omp=4'
-        'nodes=1, mpi=1, omp=8'
-        'nodes=1, mpi=1, omp=12'
-        'nodes=1, mpi=1, omp=24'
-        'nodes=1, mpi=1, omp=36'
-        'nodes=1, mpi=1, omp=48'
-    )
-
-    job_options=(
-        '-L rscgrp=large'
-    )
-    ;;
-*)
-    commands=(
-        "$benchmark_path/basecall_wrapper_gcc"
-    )
-
-    parallelism=(
-        'nodes=1, mpi=1, omp=1'
-        'nodes=1, mpi=1, omp=2'
-        'nodes=1, mpi=1, omp=4'
-    )
-    ;;
-esac
+parallelism=(
+    'nodes=1, mpi=1, omp=1'
+    'nodes=1, mpi=1, omp=2'
+    'nodes=1, mpi=1, omp=4'
+)
 
 # Additional arguments to pass to the commands.
 command_opts="python3 \"$benchmark_path/bonito/basecall.py\" \

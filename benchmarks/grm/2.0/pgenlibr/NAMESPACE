@@ -1,3 +1,0 @@
-useDynLib(pgenlibr, .registration=TRUE)
-exportPattern("^[[:alpha:]]+")
-importFrom(Rcpp, evalCpp)

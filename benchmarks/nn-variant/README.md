@@ -17,26 +17,6 @@ If you find `NN-VARIANT` useful, please cite:
 }
 ```
 
-## Installation
-
-NN-Variant requires the following Python3 packages (requirements.txt):
-
-|Package|ARM|MN4|Officially Required|
-|-------|--|-|-|
-|Python|3.8.2|3.6.7|3.6.10|
-|TF|2|2.0.0|2.1.0|
-|pypy||3.6 |3.6|
-|intervaltree|3.1.0|3.1.0|3.0.2|
-|mpmath||1.0.0|1.2.1|
-|tensorflow-addons||0.6.0|0.11.2|
-|tables||3.4.4|3.6.1|
-|pigz||2.4|4.4|
-|parallel||20191122|20191122|
-|zstd||1.0|1.4.4|
-|samtools||1.10|1.1.0|
-|whatshap||1.0|1.0|
-|ensurepip||||
-
 ## Execution
 
 ```

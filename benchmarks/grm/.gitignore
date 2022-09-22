@@ -1,7 +1,0 @@
-# Ignore zlib download
-zlib-1.2.11*
-.Rproj.user
-
-# Ignore regression test stage folders.
-GRM-REGRESSION-*
-GRM-DETAILED-*
