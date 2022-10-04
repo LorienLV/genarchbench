@@ -7,7 +7,7 @@ GenArchBench is a Genomics benchmark suite targeting the Arm architecture. It co
 ### Source code
 
 ```
-git clone https://gitlab.bsc.es/smarco/genarch-bench.git
+git clone https://gitlab.bsc.es/Lorien/genarchbench.git
 ```
 
 ### Dataset
