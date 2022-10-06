@@ -2,15 +2,7 @@
 
 GenArchBench is a Genomics benchmark suite targeting the Arm architecture. It comprises 13 multithreaded CPU kernels from the most widely used genomics tools covering the most important genome sequencing steps. GenArchBench includes 10 kernels from [GenomicsBench](https://github.com/arun-sub/genomicsbench) and three additional kernels: the Bit-Parallel Myers algorithm, the Wavefront Alignment algorithm, and a SIMD accelerated version of minimap2's chaining implementation (FAST-CHAIN). The kernels have been optimized for Arm and tunned in two Arm processors: the A64FX and Graviton3.
 
-## Download
-
-### Source code
-
-```
-git clone https://gitlab.bsc.es/Lorien/genarchbench.git
-```
-
-### Dataset
+## Dataset
 
 GenArchBench includes two inputs for each kernel, one small with a target execution time of less than a minute and one large with a target execution time of a couple of minutes. Additionally, we include the expected output for each benchmark and input. To download the dataset (~90 GB):
 
@@ -20,8 +12,8 @@ cd genarch-temp
 wget https://b2drop.bsc.es/index.php/s/Nyg7TXDRpkL5zTn/download
 unzip download
 rm -r download
-cat inputs/genarch-inputs.tar.gz* > genarch-inputs-merged.bz
-rm -r inputs
+cat inputs*/genarch-inputs.tar.gz* > genarch-inputs-merged.bz
+rm -r inputs*
 tar -xvjf genarch-inputs-merged.bz
 mv genarch-inputs ../
 cd ..
