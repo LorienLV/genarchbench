@@ -1927,7 +1927,7 @@ inline void sortPairsLen(SeqPair *pairArray, int32_t count,
 {
     int32_t i;
     __m512i zero512 = _mm512_setzero_si512();
-    for(i = 0; i <= MAX_SEQ_LEN8; i+=32)
+    for(i = 0; i <= MAX_SEQ_LEN16; i+=32)
     {
         _mm512_store_si512((__m512i *)(hist + i), zero512);
         // _mm512_store_si512((__m512i *)(histb + i), zero512);
@@ -1942,7 +1942,7 @@ inline void sortPairsLen(SeqPair *pairArray, int32_t count,
 
     int32_t prev = 0;
     int32_t cumulSum = 0;
-    for(i = 0; i <= MAX_SEQ_LEN8; i++)
+    for(i = 0; i <= MAX_SEQ_LEN16; i++)
     {
         int32_t cur = hist[i];
         hist[i] = cumulSum;
