@@ -57,7 +57,7 @@ else ifneq ($(arch),)
 		ARCH_FLAGS=$(arch)
 endif
 
-CXXFLAGS=-DENABLE_PREFETCH -DBWA_OTHER_ELE=0 -O3 -std=c++11 -fopenmp -fno-strict-aliasing $(ARCH_FLAGS) 
+CXXFLAGS=-DENABLE_PREFETCH -DBWA_OTHER_ELE=0 -DSORT_PAIRS=1 -O3 -std=c++11 -fopenmp -fno-strict-aliasing $(ARCH_FLAGS) 
 INCLUDES=
 LIBS=-fopenmp -lz -ldl
 

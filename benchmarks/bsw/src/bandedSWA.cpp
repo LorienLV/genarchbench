@@ -4870,12 +4870,15 @@ inline void sortPairsLen(SeqPair *pairArray, int32_t count, SeqPair *tempArray,
 						 int16_t *hist)
 {
     int32_t i;
-
-    __m128i zero128 = _mm_setzero_si128();
-    for(i = 0; i <= MAX_SEQ_LEN16; i+=8)
-    {
-        _mm_store_si128((__m128i *)(hist + i), zero128);
+    for (i = 0; i <= MAX_SEQ_LEN16; ++i) {
+        hist[i] = 0;
     }
+
+    // __m128i zero128 = _mm_setzero_si128();
+    // for(i = 0; i <= MAX_SEQ_LEN16; i+=8)
+    // {
+    //     _mm_store_si128((__m128i *)(hist + i), zero128);
+    // }
     
     for(i = 0; i < count; i++)
     {
