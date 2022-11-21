@@ -74,7 +74,7 @@ after_run() (
     # on floating-point operations.
     ndiffs="$(diff --speed-large-files \
               <(awk '{print $3$10}' "events.tsv") \
-              <(awk '{print $3$10}' "$inputs_path/small-reference.tsv") \
+              <(awk '{print $3$10}' "$inputs_path/large-reference.tsv") \
               | grep "^>" | wc -l)"
     if [[ ! -s "events.tsv" || $ndiffs -gt 50 ]]; then
         echo "The output file is not identical to the reference file"
