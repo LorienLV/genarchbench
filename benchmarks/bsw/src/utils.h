@@ -32,6 +32,14 @@
 #include <stdio.h>
 #include <zlib.h>
 
+#if defined(__i386__) || defined(__x86_64__)
+#ifdef _MSC_VER
+#include <intrin.h>
+#else
+#include <x86intrin.h>
+#endif
+#endif
+
 #ifdef __GNUC__
 // Tell GCC to validate printf format string and args
 #define ATTRIBUTE(list) __attribute__ (list)
@@ -47,24 +55,6 @@
 #define xzopen(fn, mode) err_xzopen_core(__func__, fn, mode)
 
 #define xassert(cond, msg) if ((cond) == 0) _err_fatal_simple_core(__func__, msg)
-
-#if defined(__GNUC__) && !defined(__clang__)
-#if defined(__i386__)
-static inline unsigned long long __rdtsc(void)
-{
-    unsigned long long int x;
-    __asm__ volatile (".byte 0x0f, 0x31" : "=A" (x));
-    return x;
-}
-#elif defined(__x86_64__)
-static inline unsigned long long __rdtsc(void)
-{
-    unsigned hi, lo;
-    __asm__ __volatile__ ("rdtsc" : "=a"(lo), "=d"(hi));
-    return ( (unsigned long long)lo)|( ((unsigned long long)hi)<<32 );
-}
-#endif
-#endif
 
 typedef struct {
 	uint64_t x, y;

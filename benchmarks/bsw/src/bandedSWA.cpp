@@ -122,8 +122,13 @@ int64_t BandedPairWiseSW::getTicks()
 // Banded SWA - scalar code
 // ------------------------------------------------------------------------------------
 
-__attribute__((optimize("no-tree-vectorize"))) __attribute__((target("no-sse")))
-__attribute__((target("no-sse2"))) __attribute__((target("no-sse3")))
+#if defined(__GNUC__) || defined(__GNUG__)
+__attribute__((optimize("no-tree-vectorize")))
+#if defined(__x86_64__) || defined(_M_X64)
+__attribute__((target("no-sse"))) __attribute__((target("no-sse2"))) 
+__attribute__((target("no-sse3")))
+#endif
+#endif
 int BandedPairWiseSW::scalarBandedSWA(int qlen, const uint8_t *query,
                                       int tlen, const uint8_t *target,
                                       int32_t w, int h0, int *_qle, int *_tle,
