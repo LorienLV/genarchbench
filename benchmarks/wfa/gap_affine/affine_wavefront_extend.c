@@ -175,99 +175,64 @@ void affine_wavefronts_extend(
 
   const int k_min = mwavefront->lo;
   const int k_max = mwavefront->hi;
-  // Extend diagonally each wavefront point
-  int k;
 
   uint64_t num_elems = svcntw();
-  // fprintf(stderr, "num elements: %zu\n", num_elems);
-  // fprintf(stderr, "text_len: %d, pattern_len=%d\n", text_length, pattern_length);
 
-  // init mask
-  //size_t wf_length = k_max - k_min;
   svbool_t mask;
 
-  for (k=k_min;k<=k_max;k+=num_elems) {
+  // Extend diagonally each wavefront point
+  for (int k=k_min;k<=k_max;k+=num_elems) {
     // Get number of elements that will be computed in this iteration
     //int active_elements = wf_length - k;
     svint32_t ks = svindex_s32(k, 1);
     mask = svcmple_s32(svptrue_b32(), ks, svdup_s32(k_max));
     svbool_t original_mask = mask;
-    // fprintf(stderr, "Ks: "); print_svint32(ks);
-    // fprintf(stderr, "FIRST MASK!! active_elements=%d\n", active_elements);
 
     svint32_t sv_offsets = svld1(mask, &offsets[k]);
-    // fprintf(stderr, "Offsets: "); print_svint32(sv_offsets);
+
+    // h = o
+    svint32_t h = sv_offsets;
+    // v = o - k
+    svint32_t v = svsub_z(mask, sv_offsets, ks);
 
     bool svtest = svptest_any(svptrue_b32(), mask);
 
     while (svtest) {
-        // fprintf(stderr, "Initial mask: "); print_mask(mask);
-        // h = o
-        svint32_t h_signed = sv_offsets;
-        // v = o - k
-        svint32_t v_signed = svsub_z(mask, sv_offsets, ks);
-
-        // fprintf(stderr, "vs: "); print_svint32(v_signed);
-        // fprintf(stderr, "hs: "); print_svint32(h_signed);
-        // Cast to unsigned to do the shift
-        svuint32_t v = svreinterpret_u32_s32(v_signed);
-        svuint32_t h = svreinterpret_u32_s32(h_signed);
-        // fprintf(stderr, "v: "); print_svuint32(v);
-        // fprintf(stderr, "h: "); print_svuint32(h);
-
-        svuint32_t bases_pattern = svld1_gather_s32offset_u32(mask, (uint32_t*)pattern, v_signed);
+        svuint32_t bases_pattern = svld1_gather_s32offset_u32(mask, (uint32_t*)pattern, v);
         bases_pattern = svrevb_u32_z(mask, bases_pattern);
-        svuint32_t bases_text = svld1_gather_s32offset_u32(mask, (uint32_t*)text, h_signed);
+        svuint32_t bases_text = svld1_gather_s32offset_u32(mask, (uint32_t*)text, h);
         bases_text = svrevb_u32_z(mask, bases_text);
-        // fprintf(stderr, "Pattern: "); print_svuint32_hex(bases_pattern);
-        // fprintf(stderr, "Text: "); print_svuint32_hex(bases_text);
-        // END TODO
-
 
         svuint32_t xor_result = sveor_u32_z(mask, bases_pattern, bases_text);
-        // fprintf(stderr, "XOR: "); print_svuint32(xor_result);
         svuint32_t clz_res = svclz_u32_z(mask, xor_result);
-        // fprintf(stderr, "CLZ: "); print_svuint32(clz_res);
-        svuint32_t Eq = svlsr_u32_z(mask, clz_res, svdup_u32(3U));
-        // fprintf(stderr, "Eq: "); print_svuint32(Eq);
+        svint32_t Eq = svreinterpret_s32(svlsr_u32_z(mask, clz_res, svdup_u32(3U)));
 
         // Make sure we don't count beyond the sequence
-        svuint32_t remaining_v = svsub_u32_z(mask, svdup_u32(pattern_length), v);
-        svuint32_t remaining_h = svsub_u32_z(mask, svdup_u32(text_length), h);
-        Eq = svmin_u32_z(mask, Eq, remaining_v);
-        Eq = svmin_u32_z(mask, Eq, remaining_h);
+        svint32_t remaining_v = svsub_s32_z(mask, svdup_s32(pattern_length), v);
+        svint32_t remaining_h = svsub_s32_z(mask, svdup_s32(text_length), h);
+        Eq = svmin_s32_z(mask, Eq, remaining_v);
+        Eq = svmin_s32_z(mask, Eq, remaining_h);
 
-        sv_offsets = svadd_s32_m(mask, sv_offsets, svreinterpret_s32(Eq));
-        // fprintf(stderr, "Offsets: "); print_svint32(sv_offsets);
+        sv_offsets = svadd_s32_m(mask, sv_offsets, Eq);
 
         // Only diagonals that have 4 elements equal (so they have not finished) will continue
-        // fprintf(stderr, "Mask v0: "); print_mask(mask);
-        mask = svcmpgt_n_u32(mask, Eq, 3U);
-
-        // fprintf(stderr, "Mask v1: "); print_mask(mask);
+        mask = svcmpgt_n_s32(mask, Eq, 3U);
 
         // v < pattern_length
-        svbool_t mask_v = svcmplt_n_u32(mask, v, (uint32_t)pattern_length);
-        // fprintf(stderr, "Mask v_len: "); print_mask(mask_v);
+        svbool_t mask_v = svcmplt_n_s32(mask, v, pattern_length);
         mask = svand_b_z(mask, mask, mask_v);
         // h < text_length
-        svbool_t mask_h = svcmplt_n_u32(mask, h, (uint32_t)text_length);
-        // fprintf(stderr, "Mask v_len: "); print_mask(mask_h);
+        svbool_t mask_h = svcmplt_n_s32(mask, h, text_length);
         mask = svand_b_z(mask, mask, mask_h);
 
         // v++ and h++
-        v = svadd_n_u32_z(mask, v, 4);
-        h = svadd_n_u32_z(mask, h, 4);
+        v = svadd_n_s32_z(mask, v, 4);
+        h = svadd_n_s32_z(mask, h, 4);
 
         svtest = svptest_any(svptrue_b32(), mask);
-        // // fprintf(stderr, "Mask: "); print_mask(mask); fprintf(stderr, "svtest=%d\n", svtest);
     }
     svst1_s32(original_mask, &offsets[k], sv_offsets);
-    // fprintf(stderr, "outside while!\n");
-    //exit(1);
   }
-  // fprintf(stderr, "\n");
-
 #else
   #pragma message("affine_wavefront_extend: SCALAR version")
   // // Fetch m-wavefront
