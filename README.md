@@ -161,3 +161,19 @@ To measure the energy consumption of a benchmark using the [RAPL-Stopwatch](http
 ## Licensing
 
 Each benchmark is individually licensed according to the tool it is extracted from.
+
+## Cite Us
+
+> **Lorién López-Villellas, Rubén Langarita-Benítez, Asaf Badouh, Víctor Soria-Pardos, Quim Aguado-Puig, Guillem López-Paradís, Max Doblas, Javier Setoain, Chulho Kim, Makoto Ono, Adrià Armejach, Santiago Marco-Sola, Jesús Alastruey-Benedé, Pablo Ibáñez, and Miquel Moretó.** *GenArchBench: A genomics benchmark suite for arm HPC processors*, Future Generation Computer Systems, 2024.
+
+```
+@article{lopezvillellas2024,
+    title = {GenArchBench: A genomics benchmark suite for arm HPC processors},
+    journal = {Future Generation Computer Systems},
+    year = {2024},
+    issn = {0167-739X},
+    doi = {https://doi.org/10.1016/j.future.2024.03.050},
+    url = {https://www.sciencedirect.com/science/article/pii/S0167739X24001250},
+    author = {Lorién López-Villellas and Rubén Langarita-Benítez and Asaf Badouh and Víctor Soria-Pardos and Quim Aguado-Puig and Guillem López-Paradís and Max Doblas and Javier Setoain and Chulho Kim and Makoto Ono and Adrià Armejach and Santiago Marco-Sola and Jesús Alastruey-Benedé and Pablo Ibáñez and Miquel Moretó},
+}
+```
