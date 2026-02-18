@@ -76,9 +76,9 @@ To profile a benchmark using [Intel VTune](https://www.intel.com/content/www/us/
     This will link the benchmark against the VTune library and active the code annotations to isolate the region of interest.
 3. Run the benchmark with VTune. You can do this by adding VTune's command before the benchmark's command in the `commands` variable of the regressions tests (`regression_small.sh` and `regression_large.sh`). IMPORTANT: You need to use the `-start-paused` flag of VTune to only take into account the region of interest of the benchmark. 
 
-#### Perf
+#### perf stat
 
-To profile a benchmark using [Perf](https://perf.wiki.kernel.org/index.php/Main_Page) follow the next steps.
+To profile a benchmark using [perf stat](https://perfwiki.github.io/main/tutorial/#counting-with-perf-stat) follow the next steps.
 
 1. Compile the benchmark setting `PERF_ANALYSIS=1`:
     ```
@@ -86,13 +86,18 @@ To profile a benchmark using [Perf](https://perf.wiki.kernel.org/index.php/Main_
     make PERF_ANALYSIS=1
     ```
     This will active the code annotations to isolate the region of interest.
-2. Create a fifo file named `perf_ctl.fifo` to communicate with the benchmark
+2. Create a fifo file named `perf_ctl.fifo` to communicate with the benchmark:
     ```
     perf_fifo="perf_ctl.fifo"
     test -p ${perf_fifo} && unlink ${perf_fifo}
     mkfifo ${perf_fifo}
     ```
-3. Run the benchmark with Perf. You can do this by adding Perf's command (such as `perf stat`) before the benchmark's command in the `commands` variable of the regressions tests (`regression_small.sh` and `regression_large.sh`). IMPORTANT: You need to use the `-D -1` flag of Perf to only take into account the region of interest of the benchmark.
+3. Run the benchmark with `perf stat`:
+    ```
+    perf stat -D -1 --control fifo:perf_ctl.fifo -- BENCHMARK
+    ```
+
+You can add `perf stat` before the benchmark's command in the `commands` variable of the regressions tests (`regression_small.sh` and `regression_large.sh`). IMPORTANT: You need to use the `-D -1` flag of `perf stat` to only take into account the region of interest of the benchmark, and the `--control` option to point to the correct FIFO.
 
 #### DynamoRIO (MOD)
 
