@@ -67,6 +67,8 @@ To profile a benchmark using [Intel VTune](https://www.intel.com/content/www/us/
 1. Set the following environment variable in [setup.sh](benchmarks/setup.sh):
     ```
     export VTUNE_HOME="THE_PATH_TO_THE_VTUNE_DIRECTORY_THAT_CONTAINS_THE_INCLUDE_FOLDER"
+    # VTUNE_HOME is used by setup.sh to automatically configure the VTUNE_INCLUDES and VTUNE_LDFLAGS environment variables required by each the Makefile of each benchmark. 
+    # If compilation of a kernel fails with errors related to VTUNE, verify that these two environment variables are correctly set.
     ```
 2. Compile the benchmark setting `VTUNE_ANALYSIS=1`:
     ```
